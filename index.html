@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanšu pārvaldnieks</title>
+<meta name="description" content="Personīgais budžeta un tēriņu pārvaldnieks ar sinhronizāciju starp ierīcēm.">
+<meta name="theme-color" content="#2d5f4f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ SETUP GATE ============ -->
+<div class="wrap">
+  <div class="gate" id="gate">
+    <h2>Pievienojies savai sinhronizācijai</h2>
+    <p>Ievadi savu Firebase konfigurāciju un slepeno telpas ID. Tas tiek atcerēts uz šīs ierīces. Ievadi to pašu ID uz citām ierīcēm, lai dati sinhronizētos.</p>
+
+    <label>Firebase config (JSON)</label>
+    <input id="fbConfig" placeholder='{"apiKey":"...","projectId":"...", ...}'>
+    <div class="hint">Atrodams Firebase konsolē → Project settings → Your apps → SDK setup → Config. Ielīmē visu objektu kā vienu rindu.</div>
+
+    <label>Slepenais telpas ID</label>
+    <div class="row">
+      <input id="roomId" placeholder="piem. budzets-x9f3k2m8q1">
+      <button class="btn ghost" id="genRoom" type="button">Ģenerēt</button>
+    </div>
+    <div class="hint">Ilga, grūti uzminama virkne. Tikai tas, kam ir šis ID, piekļūst datiem. Pieraksti to drošā vietā.</div>
+
+    <button class="btn full" id="connectBtn">Savienoties</button>
+    <div class="hint" id="gateErr" style="color:var(--red);margin-top:14px;"></div>
+  </div>
+
+  <!-- ============ APP ============ -->
+  <div id="app" class="hidden">
+    <header>
+      <div>
+        <div class="eyebrow">Personīgais budžets · sinhronizēts</div>
+        <h1>Finanšu pārvaldnieks</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
+        <div class="sync-badge"><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span></div>
+      </div>
+    </header>
+
+    <div class="summary">
+      <div class="stat">
+        <div class="label">Prognozējamā alga</div>
+        <div class="value input-val">€ <input id="income" type="number" step="0.01" inputmode="decimal"></div>
+      </div>
+      <div class="stat">
+        <div class="label">Kopā rēķini</div>
+        <div class="value" id="sumTotal">€ 0.00</div>
+        <div class="sub" id="sumPct">0 % no ieņēmumiem</div>
+      </div>
+      <div class="stat">
+        <div class="label">Paliek</div>
+        <div class="value" id="remaining">€ 0.00</div>
+        <div class="sub" id="remHint"></div>
+      </div>
+      <div class="stat">
+        <div class="label">Vēl jāmaksā</div>
+        <div class="value" id="toPay">€ 0.00</div>
+        <div class="sub" id="paidHint">0 no 0 samaksāti</div>
+      </div>
+    </div>
+
+    <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+
+    <div class="grid2">
+      <section>
+        <div class="sec-head"><h2>Rēķini</h2><div style="display:flex;gap:8px;"><button class="btn ghost sm" id="resetPaidBtn">Notīrīt ķeksīšus</button><button class="btn" id="addBill">+ Pievienot rēķinu</button></div></div>
+        <div class="bills" id="billsList"></div>
+        <div class="bills-foot"><span class="lbl">Kopā</span><span class="total" id="billsFootTotal">€ 0.00</span></div>
+      </section>
+      <section>
+        <div class="sec-head"><h2>Kredītu atlikumi</h2><button class="btn ghost sm" id="addCredit">+ Kredīts</button></div>
+        <div class="credits" id="creditsList"></div>
+        <div class="credits-foot"><span>Atlikums kopā</span><span class="total" id="creditsFootTotal">€ 0.00</span></div>
+      </section>
+    </div>
+
+    <section>
+      <div class="sec-head"><h2>Sadalījums pa kategorijām</h2></div>
+      <div class="cat-wrap">
+        <div class="donut">
+          <svg viewBox="0 0 100 100" width="200" height="200" id="donut"></svg>
+          <div class="center"><span class="big" id="donutTotal">€ 0</span><span class="small">kopā</span></div>
+        </div>
+        <div class="cat-legend" id="catLegend"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head">
+        <h2>Mēnešu arhīvs</h2>
+        <button class="btn" id="closeMonthBtn">✓ Aizvērt mēnesi → arhīvā</button>
+      </div>
+      <div class="archive-list" id="archiveList"></div>
+    </section>
+
+    <div class="toolbar">
+      <button class="btn ghost sm" id="exportBtn">↓ Eksportēt (JSON)</button>
+      <button class="btn ghost sm" id="exportCsvBtn">↓ Eksportēt (CSV)</button>
+      <button class="btn ghost sm" id="resetBtn">Sākt no jauna</button>
+      <button class="btn ghost sm" id="disconnectBtn">Atvienot ierīci</button>
+      <span class="saved-note" id="savedNote"></span>
+    </div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

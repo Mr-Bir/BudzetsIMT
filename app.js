@@ -2,8 +2,13 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ---- Version & changelog ----
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const CHANGELOG = [
+  { v:'1.5.0', date:'2026-07-02', notes:[
+    'Pievienots summējošs rēķina veids (piem. degviela) — krājas visu mēnesi ar "+" epizodēm',
+    'Katra epizode saglabājas ar summu, piezīmi un datumu; atsevišķas epizodes var dzēst',
+    'Jaunu rēķinu pievienojot, var izvēlēties veidu: parasts vai summējošs',
+  ]},
   { v:'1.4.0', date:'2026-07-02', notes:[
     'Dzēšot rēķinu, kredīta atlikumu vai kategoriju, tagad tiek prasīts apstiprinājums',
   ]},
@@ -53,6 +58,12 @@ const CHANGELOG = [
 ];
 
 const fmt = n => '€ ' + (Number(n)||0).toLocaleString('lv-LV',{minimumFractionDigits:2,maximumFractionDigits:2});
+// Effective amount: normal bill uses its amount; summing bill uses the sum of its entries
+function billAmount(b){
+  if(b && b.type==='summing') return (b.entries||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
+  return Number(b.amount)||0;
+}
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 // Default categories — now editable and stored in Firebase. 'cits' is protected (fallback).
 const DEFAULT_CATEGORIES = [
   { key:'partika', name:'Pārtika', color:'#c76b5a' },
@@ -74,7 +85,7 @@ const DEFAULT = {
     {name:'Pārtika', amount:380, cat:'partika'},
     {name:'Īre', amount:650, cat:'ire'},
     {name:'Komunālie pakalpojumi', amount:150, cat:'komunalie'},
-    {name:'Transports', amount:250, cat:'transports'},
+    {name:'Degviela', type:'summing', entries:[], cat:'transports'},
   ],
   credits: [
     {name:'In Credit', amount:550},
@@ -199,20 +210,38 @@ function render(){
   $('income').value = state.income;
   const list = $('billsList'); list.innerHTML='';
   (state.bills||[]).forEach((b,i)=>{
-    const pct = income>0 ? ((Number(b.amount)||0)/income*100) : 0;
+    const amt = billAmount(b);
+    const pct = income>0 ? (amt/income*100) : 0;
+    const isSum = b.type==='summing';
     const row = document.createElement('div');
-    row.className='bill' + (b.paid?' paid':''); row.dataset.cat=b.cat||'cits'; row.dataset.idx=i;
+    row.className='bill' + (b.paid?' paid':'') + (isSum?' summing':''); row.dataset.cat=b.cat||'cits'; row.dataset.idx=i;
+    const amountCell = isSum
+      ? `<div class="amount-wrap"><span class="eur">€</span><span class="amount amount-ro" title="Kopsumma no epizodēm">${amt.toFixed(2)}</span><button class="add-entry" data-addentry="${i}" title="Pievienot epizodi">+</button></div>`
+      : `<div class="amount-wrap"><span class="eur">€</span><input class="amount" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-i="${i}" data-f="amount"></div>`;
     row.innerHTML = `
       <div class="drag-handle" data-drag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot" style="border-left-color:${catColor(b.cat||'cits')}">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
       </div>
       <button class="pay-check" data-pay="${i}" title="Atzīmēt kā samaksātu" aria-label="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
       <input class="name" value="${escapeHtml(b.name)}" data-i="${i}" data-f="name" placeholder="Nosaukums">
-      <div class="amount-wrap"><span class="eur">€</span><input class="amount" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-i="${i}" data-f="amount"></div>
+      ${amountCell}
       <div class="pct">${pct.toFixed(2)} %</div>
       <select data-i="${i}" data-f="cat">${catOptions(b.cat||'cits')}</select>
       <button class="del" data-del="${i}" title="Dzēst">×</button>`;
     list.appendChild(row);
+    // Entries sub-list for summing bills
+    if(isSum && (b.entries||[]).length){
+      const sub = document.createElement('div');
+      sub.className = 'entries';
+      sub.innerHTML = (b.entries||[]).map((e,ei)=>`
+        <div class="entry-row">
+          <span class="entry-date">${escapeHtml(e.date||'')}</span>
+          <span class="entry-note">${escapeHtml(e.note||'')}</span>
+          <span class="entry-amt">${fmt(e.amount)}</span>
+          <button class="entry-del" data-entrydel="${i}" data-entryidx="${ei}" title="Dzēst epizodi">×</button>
+        </div>`).join('');
+      list.appendChild(sub);
+    }
   });
   const cl = $('creditsList'); cl.innerHTML='';
   (state.credits||[]).forEach((c,i)=>{
@@ -230,9 +259,9 @@ function render(){
 function updateTotals(){
   const income = Number(state.income)||0;
   const bills = state.bills||[];
-  const total = bills.reduce((s,b)=>s+(Number(b.amount)||0),0);
+  const total = bills.reduce((s,b)=>s+billAmount(b),0);
   const ctotal = (state.credits||[]).reduce((s,c)=>s+(Number(c.amount)||0),0);
-  const paidSum = bills.filter(b=>b.paid).reduce((s,b)=>s+(Number(b.amount)||0),0);
+  const paidSum = bills.filter(b=>b.paid).reduce((s,b)=>s+billAmount(b),0);
   const toPay = total - paidSum;
   const paidCount = bills.filter(b=>b.paid).length;
   $('sumTotal').textContent = fmt(total);
@@ -245,8 +274,9 @@ function updateTotals(){
   const rem = $('remaining');
   rem.textContent = fmt(remaining); rem.className='value '+(remaining>=0?'pos':'neg');
   $('remHint').textContent = remaining>=0?'pāri pēc rēķiniem':'iztrūkums';
-  document.querySelectorAll('#billsList .bill').forEach((row,i)=>{
-    const pct = income>0?((Number(state.bills[i].amount)||0)/income*100):0;
+  document.querySelectorAll('#billsList .bill').forEach((row,idx)=>{
+    const bi = +row.dataset.idx;
+    const pct = income>0?(billAmount(state.bills[bi])/income*100):0;
     row.querySelector('.pct').textContent = pct.toFixed(2)+' %';
   });
   const bar=$('bar'); const ratio=income>0?Math.min(total/income,1):0;
@@ -258,7 +288,7 @@ function updateTotals(){
 function renderCategories(total){
   const sums = {};
   catList().forEach(c=>sums[c.key]=0);
-  (state.bills||[]).forEach(b=>{ const c=b.cat||'cits'; sums[c]=(sums[c]||0)+(Number(b.amount)||0); });
+  (state.bills||[]).forEach(b=>{ const c=b.cat||'cits'; sums[c]=(sums[c]||0)+billAmount(b); });
   const entries = Object.entries(sums).filter(([k,v])=>v>0).sort((a,b)=>b[1]-a[1]);
 
   // Donut
@@ -332,7 +362,7 @@ function renderArchive(){
   }
   list.innerHTML = '';
   archiveCache.forEach(a=>{
-    const total = (a.bills||[]).reduce((s,b)=>s+(Number(b.amount)||0),0);
+    const total = (a.bills||[]).reduce((s,b)=>s+billAmount(b),0);
     const remaining = (Number(a.income)||0) - total;
     const row = document.createElement('div');
     row.className = 'arch-row';
@@ -457,14 +487,14 @@ function openArchiveModal(key){
 
   function renderMini(){
     const income = Number(draft.income)||0;
-    const total = draft.bills.reduce((s,b)=>s+(Number(b.amount)||0),0);
+    const total = draft.bills.reduce((s,b)=>s+billAmount(b),0);
     const remaining = income - total;
     $('mMini').innerHTML = `
       <div class="ms"><div class="l">Alga</div><div class="v">${fmt(income)}</div></div>
       <div class="ms"><div class="l">Rēķini</div><div class="v">${fmt(total)}</div></div>
       <div class="ms"><div class="l">Paliek</div><div class="v" style="color:${remaining>=0?'var(--green)':'var(--red)'}">${fmt(remaining)}</div></div>`;
     const paidCount = draft.bills.filter(b=>b.paid).length;
-    const paidSum = draft.bills.filter(b=>b.paid).reduce((s,b)=>s+(Number(b.amount)||0),0);
+    const paidSum = draft.bills.filter(b=>b.paid).reduce((s,b)=>s+billAmount(b),0);
     $('mPaidInfo').textContent = `${paidCount} no ${draft.bills.length} samaksāti · ${fmt(paidSum)}`;
   }
 
@@ -478,7 +508,7 @@ function openArchiveModal(key){
         <button class="echk" data-echk="${i}" title="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
         <input class="ename" value="${escapeHtml(b.name||'')}" data-ei="${i}" data-ef="name" placeholder="Nosaukums">
         <span class="pay-badge ${b.paid?'yes':'no'}">${b.paid?'Samaksāts':'Nav samaksāts'}</span>
-        <div class="eamt-wrap"><span class="e-eur">€</span><input class="eamt" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-ei="${i}" data-ef="amount"></div>
+        <div class="eamt-wrap"><span class="e-eur">€</span>${b.type==='summing' ? `<span class="eamt" style="display:inline-block;" title="Kopsumma no ${(b.entries||[]).length} epizodēm">${billAmount(b).toFixed(2)}</span>` : `<input class="eamt" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-ei="${i}" data-ef="amount">`}</div>
         <div style="display:flex;gap:4px;align-items:center;">
           <select class="ecat" data-ei="${i}" data-ef="cat">${catOpts(b.cat||'cits')}</select>
           <button class="edel" data-edel="${i}" title="Dzēst">×</button>
@@ -588,7 +618,9 @@ function openArchiveModal(key){
     const payload = {
       name: nameVal,
       income: draft.income,
-      bills: draft.bills.map(b=>({ name:b.name||'', amount:Number(b.amount)||0, cat:b.cat||'cits', paid:!!b.paid })),
+      bills: draft.bills.map(b=> b.type==='summing'
+        ? ({ name:b.name||'', type:'summing', entries:(b.entries||[]).map(e=>({amount:Number(e.amount)||0, note:e.note||'', date:e.date||''})), cat:b.cat||'cits', paid:!!b.paid })
+        : ({ name:b.name||'', amount:Number(b.amount)||0, cat:b.cat||'cits', paid:!!b.paid })),
       credits: draft.credits.map(c=>({ name:c.name||'', amount:Number(c.amount)||0 })),
       archivedAt: a.archivedAt || Date.now()
     };
@@ -619,14 +651,62 @@ $('billsList').addEventListener('input', e=>{
   if(f==='amount') updateTotals(); scheduleSave();
 });
 $('billsList').addEventListener('change', e=>{
-  if(e.target.dataset.f==='cat'){ const i=e.target.dataset.i; state.bills[i].cat=e.target.value; const rowEl=e.target.closest('.bill'); rowEl.dataset.cat=e.target.value; const h=rowEl.querySelector('.drag-handle'); if(h) h.style.borderLeftColor=catColor(e.target.value); renderCategories(state.bills.reduce((s,b)=>s+(Number(b.amount)||0),0)); scheduleSave(); }
+  if(e.target.dataset.f==='cat'){ const i=e.target.dataset.i; state.bills[i].cat=e.target.value; const rowEl=e.target.closest('.bill'); rowEl.dataset.cat=e.target.value; const h=rowEl.querySelector('.drag-handle'); if(h) h.style.borderLeftColor=catColor(e.target.value); renderCategories(state.bills.reduce((s,b)=>s+billAmount(b),0)); scheduleSave(); }
 });
 $('billsList').addEventListener('click', e=>{
   const delBtn = e.target.closest('[data-del]');
   const payBtn = e.target.closest('[data-pay]');
+  const addEntryBtn = e.target.closest('[data-addentry]');
+  const entryDelBtn = e.target.closest('[data-entrydel]');
   if(delBtn){ const i=+delBtn.dataset.del; const nm=(state.bills[i].name||'').trim(); if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){ state.bills.splice(i,1); render(); scheduleSave(); } return; }
-  if(payBtn){ const i=+payBtn.dataset.pay; state.bills[i].paid = !state.bills[i].paid; render(); updateTotals(); scheduleSave(); }
+  if(payBtn){ const i=+payBtn.dataset.pay; state.bills[i].paid = !state.bills[i].paid; render(); updateTotals(); scheduleSave(); return; }
+  if(addEntryBtn){ openAddEntry(+addEntryBtn.dataset.addentry); return; }
+  if(entryDelBtn){
+    const bi=+entryDelBtn.dataset.entrydel, ei=+entryDelBtn.dataset.entryidx;
+    const ent = state.bills[bi].entries[ei];
+    if(confirm(`Dzēst epizodi ${fmt(ent.amount)}${ent.date?' ('+ent.date+')':''}?`)){
+      state.bills[bi].entries.splice(ei,1); render(); scheduleSave();
+    }
+    return;
+  }
 });
+
+function openAddEntry(bi){
+  const b = state.bills[bi];
+  const root = $('modalRoot');
+  root.innerHTML = `
+    <div class="modal-back" id="aeBack">
+      <div class="modal" style="max-width:420px;">
+        <button class="modal-close" id="aeClose">×</button>
+        <h3>Pievienot epizodi</h3>
+        <div class="msub">${escapeHtml(b.name||'Rēķins')} — pašreiz ${fmt(billAmount(b))}</div>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Summa €</label>
+        <input id="aeAmount" type="number" step="0.01" inputmode="decimal" placeholder="0.00" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Piezīme (nav obligāta)</label>
+        <input id="aeNote" type="text" placeholder="piem. degvielas uzpilde" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Datums</label>
+        <input id="aeDate" type="date" value="${todayStr()}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn ghost sm" id="aeCancel">Atcelt</button>
+          <button class="btn" id="aeSave">Pievienot</button>
+        </div>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('aeBack').addEventListener('click', e=>{ if(e.target.id==='aeBack') close(); });
+  $('aeClose').addEventListener('click', close);
+  $('aeCancel').addEventListener('click', close);
+  setTimeout(()=>$('aeAmount')?.focus(), 50);
+  const doSave = ()=>{
+    const amt = parseFloat($('aeAmount').value);
+    if(!amt || amt<=0){ alert('Ievadi summu, kas lielāka par 0.'); return; }
+    if(!state.bills[bi].entries) state.bills[bi].entries = [];
+    state.bills[bi].entries.push({ amount: amt, note: $('aeNote').value.trim(), date: $('aeDate').value || todayStr() });
+    close(); render(); scheduleSave();
+  };
+  $('aeSave').addEventListener('click', doSave);
+  $('aeAmount').addEventListener('keydown', e=>{ if(e.key==='Enter') doSave(); });
+}
 
 // ---- Drag to reorder bills ----
 let dragFrom = null, dragRow = null;
@@ -702,7 +782,36 @@ $('creditsList').addEventListener('pointerup', e=>{
 });
 $('creditsList').addEventListener('pointercancel', ()=>{ clearCreditMarks(); cDragFrom=null; cDragRow=null; });
 
-$('addBill').addEventListener('click', ()=>{ state.bills.push({name:'',amount:0,cat:'cits'}); render(); scheduleSave(); const n=document.querySelectorAll('#billsList .name'); n[n.length-1]?.focus(); });
+$('addBill').addEventListener('click', ()=>{
+  const root = $('modalRoot');
+  root.innerHTML = `
+    <div class="modal-back" id="nbBack">
+      <div class="modal" style="max-width:440px;">
+        <button class="modal-close" id="nbClose">×</button>
+        <h3>Jauns rēķins</h3>
+        <div class="msub">Izvēlies rēķina veidu</div>
+        <button class="btn ghost" id="nbNormal" style="width:100%;text-align:left;padding:14px;margin-top:8px;display:block;">
+          <strong style="display:block;color:var(--ink);">Parasts rēķins</strong>
+          <span style="font-size:13px;color:var(--muted);">Fiksēta summa mēnesī (piem. īre, komunālie)</span>
+        </button>
+        <button class="btn ghost" id="nbSumming" style="width:100%;text-align:left;padding:14px;margin-top:10px;display:block;">
+          <strong style="display:block;color:var(--ink);">Summējošs rēķins</strong>
+          <span style="font-size:13px;color:var(--muted);">Krājas visu mēnesi, pievieno epizodes ar "+" (piem. degviela)</span>
+        </button>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('nbBack').addEventListener('click', e=>{ if(e.target.id==='nbBack') close(); });
+  $('nbClose').addEventListener('click', close);
+  $('nbNormal').addEventListener('click', ()=>{
+    close(); state.bills.push({name:'',amount:0,cat:'cits'}); render(); scheduleSave();
+    const n=document.querySelectorAll('#billsList .name'); n[n.length-1]?.focus();
+  });
+  $('nbSumming').addEventListener('click', ()=>{
+    close(); state.bills.push({name:'',type:'summing',entries:[],cat:'cits'}); render(); scheduleSave();
+    const n=document.querySelectorAll('#billsList .name'); n[n.length-1]?.focus();
+  });
+});
 $('resetPaidBtn').addEventListener('click', ()=>{ if(confirm('Notīrīt visus samaksāts ķeksīšus? (parasti jauna mēneša sākumā)')){ state.bills.forEach(b=>b.paid=false); render(); scheduleSave(); }});
 $('addCredit').addEventListener('click', ()=>{ state.credits.push({name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });
 $('exportBtn').addEventListener('click', ()=>{
@@ -712,7 +821,7 @@ $('exportBtn').addEventListener('click', ()=>{
 });
 $('exportCsvBtn')?.addEventListener('click', ()=>{
   const rows = [['Tips','Nosaukums','Summa','Kategorija','Samaksāts']];
-  state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', (Number(b.amount)||0).toFixed(2), catName(b.cat||'cits'), b.paid?'Jā':'Nē']));
+  state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', billAmount(b).toFixed(2), catName(b.cat||'cits'), b.paid?'Jā':'Nē']));
   state.credits.forEach(c=>rows.push(['Kredīts', c.name||'', (Number(c.amount)||0).toFixed(2), '', '']));
   const esc = v => /[";\n]/.test(v) ? '"'+String(v).replace(/"/g,'""')+'"' : v;
   const csv = '\uFEFF' + rows.map(r=>r.map(esc).join(';')).join('\r\n');

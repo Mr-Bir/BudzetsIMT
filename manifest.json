@@ -1,13 +1,17 @@
 {
+  "id": "./",
   "name": "Finanšu pārvaldnieks",
   "short_name": "Finanses",
   "description": "Personīgais budžeta un tēriņu pārvaldnieks ar sinhronizāciju starp ierīcēm.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#f7f5f0",
   "theme_color": "#2d5f4f",
   "lang": "lv",
+  "dir": "ltr",
+  "categories": ["finance", "productivity"],
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -32,6 +36,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/mobile-1.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Finanšu pārvaldnieks — mobilajā skatā"
+    },
+    {
+      "src": "screenshots/desktop-1.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Finanšu pārvaldnieks — datora skatā"
     }
   ]
 }

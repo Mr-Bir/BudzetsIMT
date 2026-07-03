@@ -2,8 +2,12 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ---- Version & changelog ----
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const CHANGELOG = [
+  { v:'1.6.0', date:'2026-07-02', notes:[
+    'Summējošiem rēķiniem pievienots neobligāts mēneša limits (plānotais maksimums)',
+    '"Kopā rēķini" rēķina no limita; pievienota "iztērēts" info un progresa josla pie pozīcijas',
+  ]},
   { v:'1.5.0', date:'2026-07-02', notes:[
     'Pievienots summējošs rēķina veids (piem. degviela) — krājas visu mēnesi ar "+" epizodēm',
     'Katra epizode saglabājas ar summu, piezīmi un datumu; atsevišķas epizodes var dzēst',
@@ -58,9 +62,18 @@ const CHANGELOG = [
 ];
 
 const fmt = n => '€ ' + (Number(n)||0).toLocaleString('lv-LV',{minimumFractionDigits:2,maximumFractionDigits:2});
-// Effective amount: normal bill uses its amount; summing bill uses the sum of its entries
-function billAmount(b){
+// Actual spent for a summing bill = sum of entries; for normal bill = its amount
+function billSpent(b){
   if(b && b.type==='summing') return (b.entries||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
+  return Number(b.amount)||0;
+}
+// Budget amount used in "Kopā rēķini" etc: summing bill with a limit uses the limit; otherwise the spent amount
+function billAmount(b){
+  if(b && b.type==='summing'){
+    const lim = Number(b.limit);
+    if(lim>0) return lim;
+    return billSpent(b);
+  }
   return Number(b.amount)||0;
 }
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -213,10 +226,12 @@ function render(){
     const amt = billAmount(b);
     const pct = income>0 ? (amt/income*100) : 0;
     const isSum = b.type==='summing';
+    const spent = isSum ? billSpent(b) : 0;
+    const lim = isSum ? (Number(b.limit)||0) : 0;
     const row = document.createElement('div');
     row.className='bill' + (b.paid?' paid':'') + (isSum?' summing':''); row.dataset.cat=b.cat||'cits'; row.dataset.idx=i;
     const amountCell = isSum
-      ? `<div class="amount-wrap"><span class="eur">€</span><span class="amount amount-ro" title="Kopsumma no epizodēm">${amt.toFixed(2)}</span><button class="add-entry" data-addentry="${i}" title="Pievienot epizodi">+</button></div>`
+      ? `<div class="amount-wrap"><span class="eur">€</span><span class="amount amount-ro" title="${lim>0?'Plānotais limits':'Kopsumma no epizodēm'}">${amt.toFixed(2)}</span><button class="add-entry" data-addentry="${i}" title="Pievienot epizodi">+</button></div>`
       : `<div class="amount-wrap"><span class="eur">€</span><input class="amount" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-i="${i}" data-f="amount"></div>`;
     row.innerHTML = `
       <div class="drag-handle" data-drag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot" style="border-left-color:${catColor(b.cat||'cits')}">
@@ -229,17 +244,32 @@ function render(){
       <select data-i="${i}" data-f="cat">${catOptions(b.cat||'cits')}</select>
       <button class="del" data-del="${i}" title="Dzēst">×</button>`;
     list.appendChild(row);
-    // Entries sub-list for summing bills
-    if(isSum && (b.entries||[]).length){
+    // Summing bill detail block: limit progress + entries
+    if(isSum){
       const sub = document.createElement('div');
       sub.className = 'entries';
-      sub.innerHTML = (b.entries||[]).map((e,ei)=>`
-        <div class="entry-row">
-          <span class="entry-date">${escapeHtml(e.date||'')}</span>
-          <span class="entry-note">${escapeHtml(e.note||'')}</span>
-          <span class="entry-amt">${fmt(e.amount)}</span>
-          <button class="entry-del" data-entrydel="${i}" data-entryidx="${ei}" title="Dzēst epizodi">×</button>
-        </div>`).join('');
+      const over = lim>0 && spent>lim;
+      const ratio = lim>0 ? Math.min(spent/lim,1) : 0;
+      const limitLine = lim>0
+        ? `<div class="limit-row">
+             <span class="limit-label">Iztērēts <strong>${fmt(spent)}</strong> no ${fmt(lim)}${over?` · <span class="over">pārtērēts ${fmt(spent-lim)}</span>`:''}</span>
+             <button class="limit-edit" data-limit="${i}" title="Mainīt limitu">${lim>0?'Mainīt limitu':'Uzlikt limitu'}</button>
+           </div>
+           <div class="limit-track"><div class="limit-fill" style="width:${ratio*100}%;background:${over?'var(--red)':'var(--green)'}"></div></div>`
+        : `<div class="limit-row">
+             <span class="limit-label">Iztērēts <strong>${fmt(spent)}</strong> · bez limita</span>
+             <button class="limit-edit" data-limit="${i}" title="Uzlikt limitu">Uzlikt limitu</button>
+           </div>`;
+      const entriesHtml = (b.entries||[]).length
+        ? (b.entries||[]).map((e,ei)=>`
+          <div class="entry-row">
+            <span class="entry-date">${escapeHtml(e.date||'')}</span>
+            <span class="entry-note">${escapeHtml(e.note||'')}</span>
+            <span class="entry-amt">${fmt(e.amount)}</span>
+            <button class="entry-del" data-entrydel="${i}" data-entryidx="${ei}" title="Dzēst epizodi">×</button>
+          </div>`).join('')
+        : `<div class="entry-empty">Vēl nav epizožu — pievieno ar "+"</div>`;
+      sub.innerHTML = limitLine + entriesHtml;
       list.appendChild(sub);
     }
   });
@@ -266,6 +296,10 @@ function updateTotals(){
   const paidCount = bills.filter(b=>b.paid).length;
   $('sumTotal').textContent = fmt(total);
   $('sumPct').textContent = (income>0?(total/income*100).toFixed(1):'0')+' % no ieņēmumiem';
+  // Show "iztērēts" only when it differs from the planned total (i.e. summing bills with limits exist)
+  const spentTotal = bills.reduce((s,b)=>s+billSpent(b),0);
+  const hasLimits = bills.some(b=>b.type==='summing' && (Number(b.limit)||0)>0);
+  $('sumSpent').textContent = hasLimits ? `iztērēts: ${fmt(spentTotal)}` : '';
   $('billsFootTotal').textContent = fmt(total);
   $('creditsFootTotal').textContent = fmt(ctotal);
   $('toPay').textContent = fmt(toPay);
@@ -619,7 +653,7 @@ function openArchiveModal(key){
       name: nameVal,
       income: draft.income,
       bills: draft.bills.map(b=> b.type==='summing'
-        ? ({ name:b.name||'', type:'summing', entries:(b.entries||[]).map(e=>({amount:Number(e.amount)||0, note:e.note||'', date:e.date||''})), cat:b.cat||'cits', paid:!!b.paid })
+        ? ({ name:b.name||'', type:'summing', limit:Number(b.limit)||0, entries:(b.entries||[]).map(e=>({amount:Number(e.amount)||0, note:e.note||'', date:e.date||''})), cat:b.cat||'cits', paid:!!b.paid })
         : ({ name:b.name||'', amount:Number(b.amount)||0, cat:b.cat||'cits', paid:!!b.paid })),
       credits: draft.credits.map(c=>({ name:c.name||'', amount:Number(c.amount)||0 })),
       archivedAt: a.archivedAt || Date.now()
@@ -658,9 +692,11 @@ $('billsList').addEventListener('click', e=>{
   const payBtn = e.target.closest('[data-pay]');
   const addEntryBtn = e.target.closest('[data-addentry]');
   const entryDelBtn = e.target.closest('[data-entrydel]');
+  const limitBtn = e.target.closest('[data-limit]');
   if(delBtn){ const i=+delBtn.dataset.del; const nm=(state.bills[i].name||'').trim(); if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){ state.bills.splice(i,1); render(); scheduleSave(); } return; }
   if(payBtn){ const i=+payBtn.dataset.pay; state.bills[i].paid = !state.bills[i].paid; render(); updateTotals(); scheduleSave(); return; }
   if(addEntryBtn){ openAddEntry(+addEntryBtn.dataset.addentry); return; }
+  if(limitBtn){ openSetLimit(+limitBtn.dataset.limit); return; }
   if(entryDelBtn){
     const bi=+entryDelBtn.dataset.entrydel, ei=+entryDelBtn.dataset.entryidx;
     const ent = state.bills[bi].entries[ei];
@@ -706,6 +742,40 @@ function openAddEntry(bi){
   };
   $('aeSave').addEventListener('click', doSave);
   $('aeAmount').addEventListener('keydown', e=>{ if(e.key==='Enter') doSave(); });
+}
+
+function openSetLimit(bi){
+  const b = state.bills[bi];
+  const cur = Number(b.limit)||0;
+  const root = $('modalRoot');
+  root.innerHTML = `
+    <div class="modal-back" id="slBack">
+      <div class="modal" style="max-width:420px;">
+        <button class="modal-close" id="slClose">×</button>
+        <h3>Mēneša limits</h3>
+        <div class="msub">${escapeHtml(b.name||'Rēķins')} — plānotais maksimums mēnesī</div>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Limits € (atstāj tukšu, lai noņemtu)</label>
+        <input id="slAmount" type="number" step="0.01" inputmode="decimal" value="${cur>0?cur:''}" placeholder="piem. 100" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">Ja uzliec limitu, "Kopā rēķini" izmantos šo summu (plānoto), nevis reāli iztērēto.</div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn ghost sm" id="slCancel">Atcelt</button>
+          <button class="btn" id="slSave">Saglabāt</button>
+        </div>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('slBack').addEventListener('click', e=>{ if(e.target.id==='slBack') close(); });
+  $('slClose').addEventListener('click', close);
+  $('slCancel').addEventListener('click', close);
+  setTimeout(()=>$('slAmount')?.focus(), 50);
+  const doSave = ()=>{
+    const val = $('slAmount').value.trim();
+    if(val===''){ delete state.bills[bi].limit; }
+    else { const n=parseFloat(val); if(isNaN(n)||n<0){ alert('Ievadi derīgu summu.'); return; } state.bills[bi].limit = n; }
+    close(); render(); scheduleSave();
+  };
+  $('slSave').addEventListener('click', doSave);
+  $('slAmount').addEventListener('keydown', e=>{ if(e.key==='Enter') doSave(); });
 }
 
 // ---- Drag to reorder bills ----

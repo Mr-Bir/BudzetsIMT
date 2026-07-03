@@ -115,6 +115,15 @@
   .entry-amt { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
   .entry-del { border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 5px; border-radius: 5px; }
   .entry-del:hover { background: var(--red-soft); color: var(--red); }
+  .entry-empty { font-size: 12px; color: var(--muted); padding: 4px 0; font-style: italic; }
+  .limit-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 2px 0 6px; }
+  .limit-label { font-size: 12.5px; color: var(--muted); }
+  .limit-label strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .limit-label .over { color: var(--red); font-weight: 600; }
+  .limit-edit { border: none; background: transparent; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; white-space: nowrap; }
+  .limit-edit:hover { opacity: .75; }
+  .limit-track { height: 6px; background: var(--line); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+  .limit-fill { height: 100%; border-radius: 4px; transition: width .3s; }
   .bill .pct { font-size: 13px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
   .bill select { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 7px; padding: 5px 6px; background: var(--card); color: var(--muted); cursor: pointer; }
   .bill select:focus { outline: none; border-color: var(--accent); }

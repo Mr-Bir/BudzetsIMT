@@ -11,8 +11,6 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
-
 <!-- ============ SETUP GATE ============ -->
 <div class="wrap">
   <div class="gate" id="gate">
@@ -40,6 +38,7 @@
       <div>
         <div class="eyebrow">Personīgais budžets · sinhronizēts</div>
         <h1>Finanšu pārvaldnieks</h1>
+        <div class="version-line"><span id="versionText"></span> · <button class="changelog-link" id="changelogBtn">Kas jauns</button></div>
       </div>
       <div style="display:flex;align-items:center;gap:12px;">
         <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
@@ -85,7 +84,7 @@
     </div>
 
     <section>
-      <div class="sec-head"><h2>Sadalījums pa kategorijām</h2></div>
+      <div class="sec-head"><h2>Sadalījums pa kategorijām</h2><button class="btn ghost sm" id="manageCatBtn">Pārvaldīt kategorijas</button></div>
       <div class="cat-wrap">
         <div class="donut">
           <svg viewBox="0 0 100 100" width="200" height="200" id="donut"></svg>
@@ -106,8 +105,10 @@
     <div class="toolbar">
       <button class="btn ghost sm" id="exportBtn">↓ Eksportēt (JSON)</button>
       <button class="btn ghost sm" id="exportCsvBtn">↓ Eksportēt (CSV)</button>
+      <button class="btn ghost sm" id="importBtn">↑ Importēt</button>
       <button class="btn ghost sm" id="resetBtn">Sākt no jauna</button>
       <button class="btn ghost sm" id="disconnectBtn">Atvienot ierīci</button>
+      <input type="file" id="fileIn" accept="application/json" hidden>
       <span class="saved-note" id="savedNote"></span>
     </div>
   </div>

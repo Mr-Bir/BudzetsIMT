@@ -1,45 +1,87 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
+// ---- Version & changelog ----
+const VERSION = '1.4.0';
+const CHANGELOG = [
+  { v:'1.4.0', date:'2026-07-02', notes:[
+    'Dzēšot rēķinu, kredīta atlikumu vai kategoriju, tagad tiek prasīts apstiprinājums',
+  ]},
+  { v:'1.3.0', date:'2026-07-02', notes:[
+    'Pievienota "Importēt" poga — eksportēto JSON rezerves kopiju var ielādēt atpakaļ',
+  ]},
+  { v:'1.2.0', date:'2026-07-02', notes:[
+    'Pievienota versijas numura rādīšana zem virsraksta un "Kas jauns" (changelog) logs',
+  ]},
+  { v:'1.1.2', date:'2026-07-02', notes:[
+    'Atjauninātas noklusētās paraugvērtības jauniem lietotājiem (neitrāli dati)',
+    'Pievienotas "Pārtika" un "Īre" noklusētās kategorijas',
+  ]},
+  { v:'1.1.1', date:'2026-07-02', notes:[
+    'Kredītu atlikumiem pievienota pārkārtošana (drag & drop) un vienots dzēšanas dizains',
+  ]},
+  { v:'1.1.0', date:'2026-07-02', notes:[
+    'Kategorijas tagad pilnībā pārvaldāmas: pievienot, pārsaukt, mainīt krāsu, dzēst',
+    'Kategorijas glabājas Firebase un sinhronizējas starp ierīcēm',
+  ]},
+  { v:'1.0.6', date:'2026-07-02', notes:[
+    'Novērsta problēma, kad ātri rakstot kursors izlēca no lauka (sinhronizācija vairs netraucē rakstīšanai)',
+  ]},
+  { v:'1.0.5', date:'2026-07-02', notes:[
+    'Arhīva rediģētājs: pievienota "Labot" poga — lauki sākotnēji tikai skatāmi, atbloķējas pēc nospiešanas',
+    'Atgriezta samaksas statusa atzīme ("Samaksāts" / "Nav samaksāts") un € zīme summām',
+  ]},
+  { v:'1.0.4', date:'2026-07-02', notes:[
+    'Arhīva ieraksts kļuvis pilnībā rediģējams (alga, rēķini, kredīti, secība) ar melnraksta aizsardzību',
+    'Pievienota arhīva ierakstu dublēšana un pārsaucams nosaukums',
+  ]},
+  { v:'1.0.3', date:'2026-07-02', notes:[
+    'Rēķiniem pievienota pārkārtošana ar drag & drop',
+    'Pievienota maksājumu izsekošana ar ķeksīšiem ("Vēl jāmaksā")',
+  ]},
+  { v:'1.0.2', date:'2026-07-02', notes:[
+    'Pievienots mēnešu arhīvs ("Aizvērt mēnesi" → momentuzņēmums)',
+    'Pievienoti grafiki (sadalījums pa kategorijām) ar riņķa diagrammu',
+  ]},
+  { v:'1.0.1', date:'2026-07-02', notes:[
+    'Vairāki izkārtojuma labojumi (dzēšanas × pozīcija, viena kolonna datorā)',
+  ]},
+  { v:'1.0.0', date:'2026-07-02', notes:[
+    'Pirmā versija: rēķini, kredītu atlikumi, alga, "Paliek" aprēķins',
+    'Datu sinhronizācija starp ierīcēm caur Firebase',
+  ]},
+];
+
 const fmt = n => '€ ' + (Number(n)||0).toLocaleString('lv-LV',{minimumFractionDigits:2,maximumFractionDigits:2});
-const cats = { komunalie:'Komunālie', kredits:'Kredīts', transports:'Transports', abonementi:'Abonementi', cits:'Cits' };
-const catColors = { komunalie:'#4a7c59', kredits:'#8d6e8f', transports:'#c8923a', abonementi:'#5b7a99', cits:'#8a8576' };
+// Default categories — now editable and stored in Firebase. 'cits' is protected (fallback).
+const DEFAULT_CATEGORIES = [
+  { key:'partika', name:'Pārtika', color:'#c76b5a' },
+  { key:'ire', name:'Īre', color:'#5a8ca8' },
+  { key:'komunalie', name:'Komunālie', color:'#4a7c59' },
+  { key:'kredits', name:'Kredīts', color:'#8d6e8f' },
+  { key:'transports', name:'Transports', color:'#c8923a' },
+  { key:'abonementi', name:'Abonementi', color:'#5b7a99' },
+  { key:'cits', name:'Cits', color:'#8a8576' },
+];
+// Live lookups derived from state.categories
+function catList(){ return (state.categories && state.categories.length) ? state.categories : DEFAULT_CATEGORIES; }
+function catName(key){ const c = catList().find(x=>x.key===key); return c ? c.name : 'Cits'; }
+function catColor(key){ const c = catList().find(x=>x.key===key); return c ? c.color : '#8a8576'; }
 
 const DEFAULT = {
-  income: 1150.50,
+  income: 1850,
   bills: [
-    {name:'Komunālie', amount:230, cat:'komunalie'},
-    {name:'Paika', amount:356.63, cat:'cits'},
-    {name:'In Credit - Zāles pļāvējam', amount:106.02, cat:'kredits'},
-    {name:'LMT telefona rēķins + tv', amount:69.85, cat:'abonementi'},
-    {name:'In Credit - patēriņa kredīts', amount:68.93, cat:'kredits'},
-    {name:'Saimniecības lietas + garāža', amount:113.08, cat:'cits'},
-    {name:'Garāžas īre', amount:60, cat:'cits'},
-    {name:'Swedbank patēriņa kredīts v2', amount:45, cat:'kredits'},
-    {name:'Noras un Kurta dāvana', amount:32, cat:'cits'},
-    {name:'Mopēds Yinxiang', amount:30.70, cat:'transports'},
-    {name:'Degviela', amount:30.23, cat:'transports'},
-    {name:'In Credit - TV', amount:29.08, cat:'kredits'},
-    {name:'Tet', amount:26.76, cat:'abonementi'},
-    {name:'Alibaba Yinxiangam', amount:25.52, cat:'cits'},
-    {name:'Mēneša stāvieta C zonā', amount:25, cat:'transports'},
-    {name:'Claude AI Pro', amount:21.78, cat:'abonementi'},
-    {name:'Swedbank patēriņa kredīts', amount:21.15, cat:'kredits'},
-    {name:'Zemes nodoklis', amount:18.79, cat:'cits'},
-    {name:'Moika', amount:17.50, cat:'transports'},
-    {name:'Aptieka - Nagam', amount:16.49, cat:'cits'},
-    {name:'Baibas internets', amount:14.55, cat:'abonementi'},
-    {name:'In Credit - Pc Elitebook', amount:13.81, cat:'kredits'},
-    {name:'Dropbox', amount:11.99, cat:'abonementi'},
-    {name:'Geka', amount:8.65, cat:'cits'},
-    {name:'Bolts', amount:7.33, cat:'transports'},
-    {name:'Latvenergo', amount:3, cat:'komunalie'},
+    {name:'Pārtika', amount:380, cat:'partika'},
+    {name:'Īre', amount:650, cat:'ire'},
+    {name:'Komunālie pakalpojumi', amount:150, cat:'komunalie'},
+    {name:'Transports', amount:250, cat:'transports'},
   ],
   credits: [
-    {name:'In Credit - patēriņa kredīts', amount:1677.85},
-    {name:'In Credit - Pc Elitebook (Palics)', amount:372.85},
-    {name:'In Credit - TV (Palics)', amount:203.60},
-  ]
+    {name:'In Credit', amount:550},
+    {name:'Swedbank patēriņa kredīts', amount:2500},
+    {name:'Privātpersonas A. Bērziņa aizdevums', amount:1585},
+  ],
+  categories: structuredClone(DEFAULT_CATEGORIES)
 };
 
 let state = structuredClone(DEFAULT);
@@ -85,8 +127,8 @@ function connect(cfg, room){
   onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
-      const incoming = { income: d.income ?? DEFAULT.income, bills: d.bills ?? [], credits: d.credits ?? [] };
-      const incomingJSON = JSON.stringify(incoming);
+      const incoming = { income: d.income ?? DEFAULT.income, bills: d.bills ?? [], credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES) };
+      const incomingJSON = JSON.stringify({ income: incoming.income, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories });
       // Ignore the echo of our own write — nothing changed on our side
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
       // If the user is actively typing/editing a field, defer applying until they finish
@@ -140,8 +182,8 @@ function scheduleSave(){
 }
 async function pushNow(){
   try {
-    lastSentJSON = JSON.stringify({ income: state.income, bills: state.bills, credits: state.credits });
-    await setDoc(docRef, { income: state.income, bills: state.bills, credits: state.credits, updated: Date.now() });
+    lastSentJSON = JSON.stringify({ income: state.income, bills: state.bills, credits: state.credits, categories: state.categories });
+    await setDoc(docRef, { income: state.income, bills: state.bills, credits: state.credits, categories: state.categories, updated: Date.now() });
     setSync('ok','Sinhronizēts');
   } catch(e){
     setSync('err','Saglabāšana neizdevās');
@@ -149,7 +191,7 @@ async function pushNow(){
 }
 
 // ---- Rendering ----
-function catOptions(sel){ return Object.entries(cats).map(([k,v])=>`<option value="${k}"${k===sel?' selected':''}>${v}</option>`).join(''); }
+function catOptions(sel){ return catList().map(c=>`<option value="${c.key}"${c.key===sel?' selected':''}>${escapeHtml(c.name)}</option>`).join(''); }
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function render(){
@@ -161,7 +203,7 @@ function render(){
     const row = document.createElement('div');
     row.className='bill' + (b.paid?' paid':''); row.dataset.cat=b.cat||'cits'; row.dataset.idx=i;
     row.innerHTML = `
-      <div class="drag-handle" data-drag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot">
+      <div class="drag-handle" data-drag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot" style="border-left-color:${catColor(b.cat||'cits')}">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
       </div>
       <button class="pay-check" data-pay="${i}" title="Atzīmēt kā samaksātu" aria-label="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
@@ -174,8 +216,9 @@ function render(){
   });
   const cl = $('creditsList'); cl.innerHTML='';
   (state.credits||[]).forEach((c,i)=>{
-    const row = document.createElement('div'); row.className='credit';
+    const row = document.createElement('div'); row.className='credit'; row.dataset.idx=i;
     row.innerHTML = `
+      <div class="cdrag" data-cdrag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
       <input class="cname" value="${escapeHtml(c.name)}" data-ci="${i}" data-f="name" placeholder="Kredīta nosaukums">
       <div class="camount-wrap"><span class="eur">€</span><input class="camount" type="number" step="0.01" inputmode="decimal" value="${c.amount}" data-ci="${i}" data-f="amount"></div>
       <button class="del" data-cdel="${i}" title="Dzēst">×</button>`;
@@ -214,7 +257,7 @@ function updateTotals(){
 
 function renderCategories(total){
   const sums = {};
-  Object.keys(cats).forEach(k=>sums[k]=0);
+  catList().forEach(c=>sums[c.key]=0);
   (state.bills||[]).forEach(b=>{ const c=b.cat||'cits'; sums[c]=(sums[c]||0)+(Number(b.amount)||0); });
   const entries = Object.entries(sums).filter(([k,v])=>v>0).sort((a,b)=>b[1]-a[1]);
 
@@ -230,7 +273,7 @@ function renderCategories(total){
       const frac = v/total;
       const seg = document.createElementNS('http://www.w3.org/2000/svg','circle');
       seg.setAttribute('cx','50'); seg.setAttribute('cy','50'); seg.setAttribute('r',r);
-      seg.setAttribute('fill','none'); seg.setAttribute('stroke',catColors[k]);
+      seg.setAttribute('fill','none'); seg.setAttribute('stroke',catColor(k));
       seg.setAttribute('stroke-width','14');
       seg.setAttribute('stroke-dasharray',`${frac*c} ${c}`);
       seg.setAttribute('stroke-dashoffset',`${-offset*c}`);
@@ -249,8 +292,8 @@ function renderCategories(total){
     const div = document.createElement('div');
     div.className = 'cat-row';
     div.innerHTML = `
-      <span class="cat-swatch" style="background:${catColors[k]}"></span>
-      <span class="cat-name">${cats[k]}</span>
+      <span class="cat-swatch" style="background:${catColor(k)}"></span>
+      <span class="cat-name">${escapeHtml(catName(k))}</span>
       <span class="cat-amount">${fmt(v)}</span>
       <span class="cat-pct">${pct.toFixed(1)} %</span>`;
     legend.appendChild(div);
@@ -408,7 +451,7 @@ function openArchiveModal(key){
       </div>
     </div>`;
 
-  const catOpts = sel => Object.entries(cats).map(([k,v])=>`<option value="${k}"${k===sel?' selected':''}>${v}</option>`).join('');
+  const catOpts = sel => { let opts = catList().map(c=>`<option value="${c.key}"${c.key===sel?' selected':''}>${escapeHtml(c.name)}</option>`).join(''); if(sel && !catList().some(c=>c.key===sel)) opts = `<option value="${sel}" selected>${escapeHtml(sel)}</option>` + opts; return opts; };
 
   function markDirty(){ dirty = true; $('mStatus').textContent = 'Ir nesaglabātas izmaiņas'; $('mStatus').style.color = 'var(--amber)'; }
 
@@ -431,7 +474,7 @@ function openArchiveModal(key){
       const row = document.createElement('div');
       row.className = 'ebill' + (b.paid?' paid':''); row.dataset.cat = b.cat||'cits'; row.dataset.idx = i;
       row.innerHTML = `
-        <div class="ehandle" data-edrag="${i}" title="Vilkt"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
+        <div class="ehandle" data-edrag="${i}" title="Vilkt" style="border-left-color:${catColor(b.cat||'cits')}"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
         <button class="echk" data-echk="${i}" title="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
         <input class="ename" value="${escapeHtml(b.name||'')}" data-ei="${i}" data-ef="name" placeholder="Nosaukums">
         <span class="pay-badge ${b.paid?'yes':'no'}">${b.paid?'Samaksāts':'Nav samaksāts'}</span>
@@ -476,11 +519,11 @@ function openArchiveModal(key){
     if(f==='amount') renderMini(); markDirty();
   });
   $('mBills').addEventListener('change', e=>{
-    if(e.target.dataset.ef==='cat'){ const i=e.target.dataset.ei; draft.bills[i].cat=e.target.value; e.target.closest('.ebill').dataset.cat=e.target.value; markDirty(); }
+    if(e.target.dataset.ef==='cat'){ const i=e.target.dataset.ei; draft.bills[i].cat=e.target.value; const rowEl=e.target.closest('.ebill'); rowEl.dataset.cat=e.target.value; const h=rowEl.querySelector('.ehandle'); if(h) h.style.borderLeftColor=catColor(e.target.value); markDirty(); }
   });
   $('mBills').addEventListener('click', e=>{
     const del=e.target.closest('[data-edel]'); const chk=e.target.closest('[data-echk]');
-    if(del){ draft.bills.splice(+del.dataset.edel,1); renderAll(); markDirty(); return; }
+    if(del){ const i=+del.dataset.edel; const nm=(draft.bills[i].name||'').trim(); if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){ draft.bills.splice(i,1); renderAll(); markDirty(); } return; }
     if(chk){ const i=+chk.dataset.echk; draft.bills[i].paid=!draft.bills[i].paid; renderAll(); markDirty(); }
   });
   $('mAddBill').addEventListener('click', ()=>{ draft.bills.push({name:'',amount:0,cat:'cits'}); renderAll(); markDirty(); });
@@ -493,7 +536,7 @@ function openArchiveModal(key){
   });
   $('mCredits').addEventListener('click', e=>{
     const del=e.target.closest('[data-cdel]');
-    if(del){ draft.credits.splice(+del.dataset.cdel,1); renderCredits(); markDirty(); }
+    if(del){ const i=+del.dataset.cdel; const nm=(draft.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ draft.credits.splice(i,1); renderCredits(); markDirty(); } }
   });
   $('mAddCredit').addEventListener('click', ()=>{ draft.credits.push({name:'',amount:0}); renderCredits(); markDirty(); });
 
@@ -576,12 +619,12 @@ $('billsList').addEventListener('input', e=>{
   if(f==='amount') updateTotals(); scheduleSave();
 });
 $('billsList').addEventListener('change', e=>{
-  if(e.target.dataset.f==='cat'){ const i=e.target.dataset.i; state.bills[i].cat=e.target.value; e.target.closest('.bill').dataset.cat=e.target.value; scheduleSave(); }
+  if(e.target.dataset.f==='cat'){ const i=e.target.dataset.i; state.bills[i].cat=e.target.value; const rowEl=e.target.closest('.bill'); rowEl.dataset.cat=e.target.value; const h=rowEl.querySelector('.drag-handle'); if(h) h.style.borderLeftColor=catColor(e.target.value); renderCategories(state.bills.reduce((s,b)=>s+(Number(b.amount)||0),0)); scheduleSave(); }
 });
 $('billsList').addEventListener('click', e=>{
   const delBtn = e.target.closest('[data-del]');
   const payBtn = e.target.closest('[data-pay]');
-  if(delBtn){ state.bills.splice(+delBtn.dataset.del,1); render(); scheduleSave(); return; }
+  if(delBtn){ const i=+delBtn.dataset.del; const nm=(state.bills[i].name||'').trim(); if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){ state.bills.splice(i,1); render(); scheduleSave(); } return; }
   if(payBtn){ const i=+payBtn.dataset.pay; state.bills[i].paid = !state.bills[i].paid; render(); updateTotals(); scheduleSave(); }
 });
 
@@ -626,7 +669,39 @@ $('creditsList').addEventListener('input', e=>{
   if(f==='amount') state.credits[i][f]=parseFloat(e.target.value)||0; else state.credits[i][f]=e.target.value;
   if(f==='amount') updateTotals(); scheduleSave();
 });
-$('creditsList').addEventListener('click', e=>{ if(e.target.dataset.cdel!==undefined){ state.credits.splice(+e.target.dataset.cdel,1); render(); scheduleSave(); }});
+$('creditsList').addEventListener('click', e=>{ const del=e.target.closest('[data-cdel]'); if(del){ const i=+del.dataset.cdel; const nm=(state.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ state.credits.splice(i,1); render(); scheduleSave(); } }});
+
+// ---- Drag to reorder credits ----
+let cDragFrom = null, cDragRow = null;
+function clearCreditMarks(){ document.querySelectorAll('#creditsList .credit').forEach(r=>r.classList.remove('drag-over','dragging')); }
+$('creditsList').addEventListener('pointerdown', e=>{
+  const handle = e.target.closest('.cdrag'); if(!handle) return;
+  e.preventDefault();
+  cDragRow = handle.closest('.credit');
+  cDragFrom = +cDragRow.dataset.idx;
+  cDragRow.classList.add('dragging');
+  cDragRow.setPointerCapture?.(e.pointerId);
+});
+$('creditsList').addEventListener('pointermove', e=>{
+  if(cDragFrom===null) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('#creditsList .credit');
+  document.querySelectorAll('#creditsList .credit').forEach(r=>{ if(r!==cDragRow) r.classList.remove('drag-over'); });
+  if(target && target!==cDragRow) target.classList.add('drag-over');
+});
+$('creditsList').addEventListener('pointerup', e=>{
+  if(cDragFrom===null) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('#creditsList .credit');
+  if(target && target!==cDragRow){
+    const to = +target.dataset.idx;
+    const [moved] = state.credits.splice(cDragFrom,1);
+    state.credits.splice(to,0,moved);
+    render(); scheduleSave();
+  }
+  clearCreditMarks();
+  cDragFrom = null; cDragRow = null;
+});
+$('creditsList').addEventListener('pointercancel', ()=>{ clearCreditMarks(); cDragFrom=null; cDragRow=null; });
+
 $('addBill').addEventListener('click', ()=>{ state.bills.push({name:'',amount:0,cat:'cits'}); render(); scheduleSave(); const n=document.querySelectorAll('#billsList .name'); n[n.length-1]?.focus(); });
 $('resetPaidBtn').addEventListener('click', ()=>{ if(confirm('Notīrīt visus samaksāts ķeksīšus? (parasti jauna mēneša sākumā)')){ state.bills.forEach(b=>b.paid=false); render(); scheduleSave(); }});
 $('addCredit').addEventListener('click', ()=>{ state.credits.push({name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });
@@ -637,7 +712,7 @@ $('exportBtn').addEventListener('click', ()=>{
 });
 $('exportCsvBtn')?.addEventListener('click', ()=>{
   const rows = [['Tips','Nosaukums','Summa','Kategorija','Samaksāts']];
-  state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', (Number(b.amount)||0).toFixed(2), cats[b.cat]||b.cat||'', b.paid?'Jā':'Nē']));
+  state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', (Number(b.amount)||0).toFixed(2), catName(b.cat||'cits'), b.paid?'Jā':'Nē']));
   state.credits.forEach(c=>rows.push(['Kredīts', c.name||'', (Number(c.amount)||0).toFixed(2), '', '']));
   const esc = v => /[";\n]/.test(v) ? '"'+String(v).replace(/"/g,'""')+'"' : v;
   const csv = '\uFEFF' + rows.map(r=>r.map(esc).join(';')).join('\r\n');
@@ -645,8 +720,159 @@ $('exportCsvBtn')?.addEventListener('click', ()=>{
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'finanses-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
 });
+$('importBtn').addEventListener('click', ()=>$('fileIn').click());
+$('fileIn').addEventListener('change', e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    let data;
+    try { data = JSON.parse(r.result); }
+    catch(err){ alert('Nederīgs fails — neizdevās nolasīt JSON.'); $('fileIn').value=''; return; }
+    if(typeof data !== 'object' || data===null || !Array.isArray(data.bills)){
+      alert('Šis neizskatās pēc derīga finanšu faila (trūkst rēķinu).'); $('fileIn').value=''; return;
+    }
+    if(!confirm('Importēt šos datus? Tas pārrakstīs pašreizējos rēķinus, kredītus un kategorijas — arī mākonī un citās ierīcēs. (Arhīvs netiek skarts.)')){ $('fileIn').value=''; return; }
+    state = {
+      income: Number(data.income)||0,
+      bills: Array.isArray(data.bills)?data.bills:[],
+      credits: Array.isArray(data.credits)?data.credits:[],
+      categories: (Array.isArray(data.categories)&&data.categories.length)?data.categories:structuredClone(DEFAULT_CATEGORIES)
+    };
+    // Ensure 'cits' fallback category always exists
+    if(!state.categories.some(c=>c.key==='cits')) state.categories.push({key:'cits',name:'Cits',color:'#8a8576'});
+    render(); pushNow();
+    $('fileIn').value='';
+    alert('Dati importēti ✓');
+  };
+  r.readAsText(file);
+});
 $('resetBtn').addEventListener('click', ()=>{ if(confirm('Atjaunot sākotnējos datus? Tas pārrakstīs arī mākonī.')){ state=structuredClone(DEFAULT); render(); pushNow(); }});
 $('disconnectBtn').addEventListener('click', ()=>{ if(confirm('Atvienot šo ierīci? Dati paliks mākonī, bet būs atkal jāievada config un telpas ID.')){ localStorage.removeItem('fb_settings'); location.reload(); }});
+
+// ---- Category manager ----
+function slugify(s){
+  const base = (s||'').toLowerCase()
+    .replace(/[āĀ]/g,'a').replace(/[čČ]/g,'c').replace(/[ēĒ]/g,'e').replace(/[ģĢ]/g,'g')
+    .replace(/[īĪ]/g,'i').replace(/[ķĶ]/g,'k').replace(/[ļĻ]/g,'l').replace(/[ņŅ]/g,'n')
+    .replace(/[šŠ]/g,'s').replace(/[ūŪ]/g,'u').replace(/[žŽ]/g,'z')
+    .replace(/[^a-z0-9]+/g,'').slice(0,20);
+  return base || 'kat';
+}
+
+$('manageCatBtn').addEventListener('click', openCategoryManager);
+
+function openCategoryManager(){
+  // Work on a draft of categories
+  let draft = structuredClone(catList());
+  const root = $('modalRoot');
+
+  function usageCount(key){ return (state.bills||[]).filter(b=>(b.cat||'cits')===key).length; }
+
+  function rowsHtml(){
+    return draft.map((c,i)=>{
+      const used = usageCount(c.key);
+      const isCits = c.key==='cits';
+      return `
+        <div class="cat-mgr-row" data-i="${i}">
+          <input type="color" value="${c.color}" data-cmcolor="${i}" ${isCits?'':''}>
+          <input class="cm-name" value="${escapeHtml(c.name)}" data-cmname="${i}" placeholder="Kategorijas nosaukums">
+          <span class="cm-count">${used} rēķini</span>
+          <button class="cm-del" data-cmdel="${i}" ${isCits?'disabled title="Pamatkategoriju nevar dzēst"':'title="Dzēst"'}>×</button>
+        </div>`;
+    }).join('');
+  }
+
+  root.innerHTML = `
+    <div class="modal-back" id="catBack">
+      <div class="modal">
+        <button class="modal-close" id="catClose">×</button>
+        <h3>Kategorijas</h3>
+        <div class="msub">Pievieno, pārsauc, maini krāsu vai dzēs. "Cits" ir pamatkategorija — dzēšot citu, tās rēķini pāriet uz to.</div>
+        <div id="catRows">${rowsHtml()}</div>
+        <button class="btn ghost sm add-line" id="catAdd">+ Pievienot kategoriju</button>
+        <div class="m-savebar">
+          <span class="status" id="catStatus">Nesaglabātas izmaiņas netiek pielietotas</span>
+          <span class="spacer"></span>
+          <button class="btn ghost sm" id="catCancel">Aizvērt</button>
+          <button class="btn" id="catSave">Saglabāt</button>
+        </div>
+      </div>
+    </div>`;
+
+  let dirty = false;
+  const mark = ()=>{ dirty=true; $('catStatus').textContent='Ir nesaglabātas izmaiņas'; $('catStatus').style.color='var(--amber)'; };
+  function rerender(){ $('catRows').innerHTML = rowsHtml(); }
+
+  $('catRows').addEventListener('input', e=>{
+    const ci=e.target.dataset.cmcolor, ni=e.target.dataset.cmname;
+    if(ci!==undefined){ draft[ci].color = e.target.value; mark(); }
+    if(ni!==undefined){ draft[ni].name = e.target.value; mark(); }
+  });
+  $('catRows').addEventListener('click', e=>{
+    const del = e.target.closest('[data-cmdel]');
+    if(del && !del.disabled){
+      const i = +del.dataset.cmdel;
+      const used = usageCount(draft[i].key);
+      const msg = used>0
+        ? `Dzēst "${draft[i].name}"? ${used} rēķini pāries uz "Cits".`
+        : `Dzēst "${draft[i].name}"?`;
+      if(confirm(msg)){ draft.splice(i,1); rerender(); mark(); }
+    }
+  });
+  $('catAdd').addEventListener('click', ()=>{
+    draft.push({ key: 'kat-'+Date.now(), name: '', color: '#7a9bb0' });
+    rerender(); mark();
+    const inputs = $('catRows').querySelectorAll('.cm-name');
+    inputs[inputs.length-1]?.focus();
+  });
+
+  function tryClose(){ if(dirty && !confirm('Ir nesaglabātas izmaiņas. Aizvērt bez saglabāšanas?')) return; root.innerHTML=''; }
+  $('catBack').addEventListener('click', e=>{ if(e.target.id==='catBack') tryClose(); });
+  $('catClose').addEventListener('click', tryClose);
+  $('catCancel').addEventListener('click', tryClose);
+
+  $('catSave').addEventListener('click', ()=>{
+    // Validate: names non-empty, ensure 'cits' still present
+    const cleaned = draft
+      .map(c=>({ key:c.key, name:(c.name||'').trim(), color:c.color }))
+      .filter(c=>c.name.length>0);
+    if(!cleaned.some(c=>c.key==='cits')){
+      cleaned.push({ key:'cits', name:'Cits', color:'#8a8576' });
+    }
+    if(cleaned.length===0){ alert('Vismaz vienai kategorijai jābūt.'); return; }
+    // Reassign bills whose category was removed → 'cits'
+    const validKeys = new Set(cleaned.map(c=>c.key));
+    (state.bills||[]).forEach(b=>{ if(!validKeys.has(b.cat||'cits')) b.cat='cits'; });
+    state.categories = cleaned;
+    render(); scheduleSave();
+    dirty=false;
+    $('catStatus').textContent='Saglabāts ✓'; $('catStatus').style.color='var(--green)';
+    setTimeout(()=>{ root.innerHTML=''; }, 500);
+  });
+}
+
+// ---- Version display & changelog ----
+document.title = 'Finanšu pārvaldnieks v' + VERSION;
+$('versionText').textContent = 'v' + VERSION;
+$('changelogBtn').addEventListener('click', ()=>{
+  const root = $('modalRoot');
+  const entries = CHANGELOG.map(c=>`
+    <div class="cl-entry">
+      <div><span class="cl-ver">v${c.v}</span><span class="cl-date">${c.date||''}</span></div>
+      <ul class="cl-list">${c.notes.map(n=>`<li>${escapeHtml(n)}</li>`).join('')}</ul>
+    </div>`).join('');
+  root.innerHTML = `
+    <div class="modal-back" id="clBack">
+      <div class="modal">
+        <button class="modal-close" id="clClose">×</button>
+        <h3>Kas jauns</h3>
+        <div class="msub">Izmaiņu vēsture · pašreizējā versija v${VERSION}</div>
+        ${entries}
+      </div>
+    </div>`;
+  $('clBack').addEventListener('click', e=>{ if(e.target.id==='clBack') root.innerHTML=''; });
+  $('clClose').addEventListener('click', ()=>{ root.innerHTML=''; });
+});
 
 // ---- Boot ----
 const saved = loadSettings();

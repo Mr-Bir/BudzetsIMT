@@ -11,24 +11,17 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
 </head>
-<!-- ============ SETUP GATE ============ -->
+<!-- ============ SIGN-IN GATE ============ -->
 <div class="wrap">
   <div class="gate" id="gate">
-    <h2>Pievienojies savai sinhronizācijai</h2>
-    <p>Ievadi savu Firebase konfigurāciju un slepeno telpas ID. Tas tiek atcerēts uz šīs ierīces. Ievadi to pašu ID uz citām ierīcēm, lai dati sinhronizētos.</p>
-
-    <label>Firebase config (JSON)</label>
-    <input id="fbConfig" placeholder='{"apiKey":"...","projectId":"...", ...}'>
-    <div class="hint">Atrodams Firebase konsolē → Project settings → Your apps → SDK setup → Config. Ielīmē visu objektu kā vienu rindu.</div>
-
-    <label>Slepenais telpas ID</label>
-    <div class="row">
-      <input id="roomId" placeholder="piem. budzets-x9f3k2m8q1">
-      <button class="btn ghost" id="genRoom" type="button">Ģenerēt</button>
-    </div>
-    <div class="hint">Ilga, grūti uzminama virkne. Tikai tas, kam ir šis ID, piekļūst datiem. Pieraksti to drošā vietā.</div>
-
-    <button class="btn full" id="connectBtn">Savienoties</button>
+    <h2>Finanšu pārvaldnieks</h2>
+    <p>Piesakies ar savu Google kontu, lai piekļūtu savam budžetam. Tavi dati ir privāti un pieejami tikai tev.</p>
+    <button class="btn full" id="signInBtn">
+      <span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.6l-6.6-5.6C29.6 34.5 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.6l6.6 5.6C41.4 36.7 44 31 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
+        Pieteikties ar Google
+      </span>
+    </button>
     <div class="hint" id="gateErr" style="color:var(--red);margin-top:14px;"></div>
   </div>
 
@@ -40,9 +33,9 @@
         <h1>Finanšu pārvaldnieks</h1>
         <div class="version-line"><span id="versionText"></span> · <button class="changelog-link" id="changelogBtn">Kas jauns</button></div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
-        <div class="sync-badge"><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span></div>
+        <div class="sync-badge"><span class="user-name" id="userName"></span><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span><button class="signout-btn" id="signOutBtn">Izrakstīties</button></div>
       </div>
     </header>
 
@@ -108,7 +101,7 @@
       <button class="btn ghost sm" id="exportCsvBtn">↓ Eksportēt (CSV)</button>
       <button class="btn ghost sm" id="importBtn">↑ Importēt</button>
       <button class="btn ghost sm" id="resetBtn">Sākt no jauna</button>
-      <button class="btn ghost sm" id="disconnectBtn">Atvienot ierīci</button>
+      <button class="btn ghost sm" id="importOldBtn">Importēt vecos datus</button>
       <input type="file" id="fileIn" accept="application/json" hidden>
       <span class="saved-note" id="savedNote"></span>
     </div>

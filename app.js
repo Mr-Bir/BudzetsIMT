@@ -1,9 +1,25 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+// ---- Firebase config (embedded) ----
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDNHrObS8v_US22wzuqKnAI_PuI7P1JVlw",
+  authDomain: "budzets-c5d39.firebaseapp.com",
+  projectId: "budzets-c5d39",
+  storageBucket: "budzets-c5d39.firebasestorage.app",
+  messagingSenderId: "862378422626",
+  appId: "1:862378422626:web:6f7da765c63f158fd43c3b"
+};
 
 // ---- Version & changelog ----
-const VERSION = '1.6.1';
+const VERSION = '1.7.0';
 const CHANGELOG = [
+  { v:'1.7.0', date:'2026-07-03', notes:[
+    'Pieteikšanās ar Google kontu — katram lietotājam savs privāts budžets',
+    'Aizvietota vecā telpas ID sistēma; dati aizsargāti ar īstiem drošības noteikumiem',
+    'Pievienota "Importēt vecos datus" poga migrācijai no vecās versijas',
+  ]},
   { v:'1.6.1', date:'2026-07-03', notes:[
     'Arhīva rediģētāja rinda vertikālā telefonā vairs nav saspiesta — paliek vienā līmenī',
   ]},
@@ -112,57 +128,65 @@ const DEFAULT = {
 };
 
 let state = structuredClone(DEFAULT);
-let db, docRef, roomId, applyingRemote=false, saveTimer=null;
+let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null;
 let lastSentJSON = null, pendingSnapshot = null;
+let currentUser = null, snapshotUnsub = null;
 
-// ---- Setup gate ----
 const $ = id => document.getElementById(id);
-$('genRoom').addEventListener('click', ()=>{
-  $('roomId').value = 'budzets-' + Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b=>b.toString(36)).join('').slice(0,16);
+
+// ---- Firebase init + Google auth ----
+const fbApp = initializeApp(FIREBASE_CONFIG);
+db = getFirestore(fbApp);
+auth = getAuth(fbApp);
+const provider = new GoogleAuthProvider();
+
+$('signInBtn').addEventListener('click', ()=>{
+  $('gateErr').textContent = '';
+  signInWithRedirect(auth, provider).catch(e=>{
+    $('gateErr').textContent = 'Neizdevās pieteikties: ' + e.message;
+  });
 });
 
-function loadSettings(){
-  try { return JSON.parse(localStorage.getItem('fb_settings')||'null'); } catch(e){ return null; }
-}
-$('connectBtn').addEventListener('click', ()=>{
-  const raw = $('fbConfig').value.trim();
-  const room = $('roomId').value.trim();
-  $('gateErr').textContent='';
-  let cfg;
-  try { cfg = JSON.parse(raw); } catch(e){ $('gateErr').textContent='Firebase config nav derīgs JSON.'; return; }
-  if(!cfg.projectId || !cfg.apiKey){ $('gateErr').textContent='Config trūkst apiKey vai projectId.'; return; }
-  if(room.length < 8){ $('gateErr').textContent='Telpas ID jābūt vismaz 8 simboli (drošībai garāks).'; return; }
-  localStorage.setItem('fb_settings', JSON.stringify({cfg, room}));
-  connect(cfg, room);
+// Handle the redirect result (after returning from Google)
+getRedirectResult(auth).catch(e=>{
+  if(e && e.code !== 'auth/no-auth-event'){ $('gateErr').textContent = 'Pieteikšanās kļūda: ' + e.message; }
 });
 
-function connect(cfg, room){
-  try {
-    const fbApp = initializeApp(cfg);
-    db = getFirestore(fbApp);
-    docRef = doc(db, 'budgets', room);
-    roomId = room;
-  } catch(e){
-    $('gateErr').textContent = 'Neizdevās savienoties: ' + e.message;
-    return;
+// React to auth state changes
+onAuthStateChanged(auth, user=>{
+  if(user){
+    currentUser = user;
+    connectForUser(user.uid);
+  } else {
+    currentUser = null;
+    if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
+    $('app').classList.add('hidden');
+    $('gate').classList.remove('hidden');
   }
+});
+
+function connectForUser(uid){
+  roomId = uid;
+  docRef = doc(db, 'budgets', uid);
   $('gate').classList.add('hidden');
   $('app').classList.remove('hidden');
+  const nameEl = $('userName'); if(nameEl) nameEl.textContent = currentUser?.displayName || currentUser?.email || '';
   setSync('saving','Savienojas…');
   loadArchive();
 
-  onSnapshot(docRef, snap=>{
+  if(snapshotUnsub){ snapshotUnsub(); }
+  snapshotUnsub = onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
       const incoming = { income: d.income ?? DEFAULT.income, bills: d.bills ?? [], credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES) };
       const incomingJSON = JSON.stringify({ income: incoming.income, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories });
-      // Ignore the echo of our own write — nothing changed on our side
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
-      // If the user is actively typing/editing a field, defer applying until they finish
       if(isEditingActive()){ pendingSnapshot = incoming; setSync('ok','Sinhronizēts'); return; }
       applyRemote(incoming);
     } else {
-      pushNow();
+      // New user: start with empty-ish defaults (no personal data)
+      state = { income: 0, bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES) };
+      render(); pushNow();
     }
   }, err=>{
     setSync('err','Kļūda: ' + err.code);
@@ -929,7 +953,49 @@ $('fileIn').addEventListener('change', e=>{
   r.readAsText(file);
 });
 $('resetBtn').addEventListener('click', ()=>{ if(confirm('Atjaunot sākotnējos datus? Tas pārrakstīs arī mākonī.')){ state=structuredClone(DEFAULT); render(); pushNow(); }});
-$('disconnectBtn').addEventListener('click', ()=>{ if(confirm('Atvienot šo ierīci? Dati paliks mākonī, bet būs atkal jāievada config un telpas ID.')){ localStorage.removeItem('fb_settings'); location.reload(); }});
+
+$('signOutBtn').addEventListener('click', ()=>{
+  if(confirm('Izrakstīties? Nākamreiz atkal būs jāpiesakās ar Google.')){
+    signOut(auth).catch(e=>alert('Neizdevās izrakstīties: '+e.message));
+  }
+});
+
+// One-time migration: import data from an old room-ID document into this UID
+$('importOldBtn').addEventListener('click', async ()=>{
+  const oldId = prompt('Ievadi savu veco telpas ID (no iepriekšējās versijas), lai importētu datus. Tas pārrakstīs pašreizējos datus.');
+  if(!oldId) return;
+  const room = oldId.trim();
+  if(room.length < 4){ alert('Telpas ID izskatās pārāk īss.'); return; }
+  try {
+    const oldRef = doc(db, 'budgets', room);
+    const snap = await getDoc(oldRef);
+    if(!snap.exists()){ alert('Neatradu datus ar šo telpas ID. Pārbaudi, vai tas ir pareizs.'); return; }
+    const d = snap.data();
+    if(!confirm('Atrasti dati. Importēt tos? Tas pārrakstīs tavus pašreizējos rēķinus, kredītus un kategorijas (arhīvu neietekmē).')) return;
+    // Copy main budget
+    state = {
+      income: d.income ?? 0,
+      bills: Array.isArray(d.bills)?d.bills:[],
+      credits: Array.isArray(d.credits)?d.credits:[],
+      categories: (Array.isArray(d.categories)&&d.categories.length)?d.categories:structuredClone(DEFAULT_CATEGORIES)
+    };
+    if(!state.categories.some(c=>c.key==='cits')) state.categories.push({key:'cits',name:'Cits',color:'#8a8576'});
+    render(); await pushNow();
+    // Also migrate archive subcollection
+    let migrated = 0;
+    try {
+      const oldArch = await getDocs(collection(db, 'budgets', room, 'archive'));
+      for(const a of oldArch.docs){
+        await setDoc(doc(db, 'budgets', roomId, 'archive', a.id), a.data());
+        migrated++;
+      }
+    } catch(archErr){ /* archive migration best-effort */ }
+    await loadArchive();
+    alert(`Dati importēti ✓${migrated?` (arī ${migrated} arhīva mēneši)`:''}`);
+  } catch(e){
+    alert('Neizdevās importēt: ' + e.message);
+  }
+});
 
 // ---- Category manager ----
 function slugify(s){
@@ -1057,8 +1123,8 @@ $('changelogBtn').addEventListener('click', ()=>{
 });
 
 // ---- Boot ----
-const saved = loadSettings();
-if(saved && saved.cfg && saved.room){ connect(saved.cfg, saved.room); }
+// onAuthStateChanged (above) handles showing the app once the user is signed in.
+// Nothing else needed here — the sign-in gate is visible by default.
 
 // ---- PWA: install prompt + service worker ----
 let deferredInstall = null;

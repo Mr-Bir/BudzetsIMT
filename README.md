@@ -1,13 +1,14 @@
 # Finanšu pārvaldnieks
 
-Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķiniem, kredītu atlikumiem un tēriņu sadalījumam pa kategorijām. Dati sinhronizējas starp ierīcēm, un lietotni var instalēt telefonā kā parastu aplikāciju.
+Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķiniem, kredītu atlikumiem un tēriņu sadalījumam pa kategorijām. Piesakies ar Google kontu, un dati sinhronizējas starp visām tavām ierīcēm automātiski.
 
 ![Finanšu pārvaldnieks — lietotnes skats](screenshots/desktop-1.png)
 
 ## Ko lietotne dara
 
+- **Pieteikšanās ar Google kontu** — katram lietotājam savs privāts budžets, bez telpas ID
 - **Rēķinu un ienākumu pārskats** — redzi uzreiz, cik paliek pāri pēc visiem rēķiniem
-- **Divi rēķinu veidi** — parasti (fiksēta summa) un summējošie (piem. degviela — pievieno epizodes visa mēneša garumā, summa saskaitās automātiski)
+- **Divi rēķinu veidi** — parasti (fiksēta summa) un summējošie (piem. degviela — pievieno epizodes visa mēneša garumā, summa saskaitās automātiski, var iestatīt mēneša limitu)
 - **Kredītu atlikumu izsekošana**
 - **Kategorijas ar krāsu kodējumu** un vizuālu sadalījumu (donut diagramma)
 - **Mēnešu arhīvs** — aizver mēnesi un saglabā to vēsturē

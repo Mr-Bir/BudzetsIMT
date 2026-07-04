@@ -2,6 +2,8 @@
 
 Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķiniem, kredītu atlikumiem un tēriņu sadalījumam pa kategorijām. Dati sinhronizējas starp ierīcēm, un lietotni var instalēt telefonā kā parastu aplikāciju.
 
+![Finanšu pārvaldnieks — lietotnes skats](screenshots/desktop-1.png)
+
 ## Ko lietotne dara
 
 - **Rēķinu un ienākumu pārskats** — redzi uzreiz, cik paliek pāri pēc visiem rēķiniem

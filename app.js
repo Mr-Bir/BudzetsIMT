@@ -2,8 +2,11 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ---- Version & changelog ----
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 const CHANGELOG = [
+  { v:'1.6.1', date:'2026-07-03', notes:[
+    'Arhīva rediģētāja rinda vertikālā telefonā vairs nav saspiesta — paliek vienā līmenī',
+  ]},
   { v:'1.6.0', date:'2026-07-02', notes:[
     'Summējošiem rēķiniem pievienots neobligāts mēneša limits (plānotais maksimums)',
     '"Kopā rēķini" rēķina no limita; pievienota "iztērēts" info un progresa josla pie pozīcijas',

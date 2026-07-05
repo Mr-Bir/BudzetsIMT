@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 // ---- Firebase config (embedded) ----
 const FIREBASE_CONFIG = {
@@ -142,14 +142,11 @@ const provider = new GoogleAuthProvider();
 
 $('signInBtn').addEventListener('click', ()=>{
   $('gateErr').textContent = '';
-  signInWithRedirect(auth, provider).catch(e=>{
-    $('gateErr').textContent = 'Neizdevās pieteikties: ' + e.message;
+  signInWithPopup(auth, provider).catch(e=>{
+    if(e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request'){
+      $('gateErr').textContent = 'Neizdevās pieteikties: ' + e.message;
+    }
   });
-});
-
-// Handle the redirect result (after returning from Google)
-getRedirectResult(auth).catch(e=>{
-  if(e && e.code !== 'auth/no-auth-event'){ $('gateErr').textContent = 'Pieteikšanās kļūda: ' + e.message; }
 });
 
 // React to auth state changes

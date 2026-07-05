@@ -13,8 +13,12 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.7.2';
+const VERSION = '1.8.0';
 const CHANGELOG = [
+  { v:'1.8.0', date:'2026-07-03', notes:[
+    'Kredītu atlikumiem pievienoti neobligāti sākuma/beigu datumi',
+    'Rāda nomaksas progresu pēc laika: cik % nomaksāts un cik mēneši atlikuši',
+  ]},
   { v:'1.7.2', date:'2026-07-03', notes:[
     'Noņemta "Importēt vecos datus" poga (migrācija pabeigta)',
   ]},
@@ -102,6 +106,21 @@ function billAmount(b){
   return Number(b.amount)||0;
 }
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+// Time-based credit progress from start/end dates. Returns null if dates missing/invalid.
+function creditProgress(c){
+  if(!c || !c.start || !c.end) return null;
+  const s = new Date(c.start+'T00:00:00'), e = new Date(c.end+'T00:00:00'), now = new Date();
+  if(isNaN(s) || isNaN(e) || e<=s) return null;
+  const totalMs = e - s;
+  const elapsedMs = Math.min(Math.max(now - s, 0), totalMs);
+  const pct = totalMs>0 ? (elapsedMs/totalMs*100) : 0;
+  // Months remaining (rounded up), 0 if past end
+  const msRemaining = Math.max(e - now, 0);
+  const monthsRemaining = Math.ceil(msRemaining / (1000*60*60*24*30.44));
+  const totalMonths = Math.round(totalMs / (1000*60*60*24*30.44));
+  const done = now >= e;
+  return { pct: Math.min(pct,100), monthsRemaining, totalMonths, done };
+}
 // Default categories — now editable and stored in Firebase. 'cits' is protected (fallback).
 const DEFAULT_CATEGORIES = [
   { key:'partika', name:'Pārtika', color:'#c76b5a' },
@@ -321,12 +340,34 @@ function render(){
   const cl = $('creditsList'); cl.innerHTML='';
   (state.credits||[]).forEach((c,i)=>{
     const row = document.createElement('div'); row.className='credit'; row.dataset.idx=i;
+    const hasDates = c.start && c.end;
     row.innerHTML = `
       <div class="cdrag" data-cdrag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
       <input class="cname" value="${escapeHtml(c.name)}" data-ci="${i}" data-f="name" placeholder="Kredīta nosaukums">
       <div class="camount-wrap"><span class="eur">€</span><input class="camount" type="number" step="0.01" inputmode="decimal" value="${c.amount}" data-ci="${i}" data-f="amount"></div>
       <button class="del" data-cdel="${i}" title="Dzēst">×</button>`;
     cl.appendChild(row);
+    // Progress block (time-based) when dates are set; otherwise a small "set dates" link
+    const prog = creditProgress(c);
+    const sub = document.createElement('div');
+    sub.className = 'credit-detail';
+    if(prog){
+      const pctTxt = prog.pct.toFixed(0);
+      const remTxt = prog.done ? 'nomaksāts' : `atlikuši ${prog.monthsRemaining} mēn.`;
+      sub.innerHTML = `
+        <div class="cd-row">
+          <span class="cd-label"><strong>${pctTxt}%</strong> nomaksāts · ${remTxt}</span>
+          <button class="cd-edit" data-cdate="${i}">Mainīt datumus</button>
+        </div>
+        <div class="cd-track"><div class="cd-fill" style="width:${prog.pct}%"></div></div>`;
+    } else {
+      sub.innerHTML = `
+        <div class="cd-row">
+          <span class="cd-label cd-muted">Bez termiņa</span>
+          <button class="cd-edit" data-cdate="${i}">Uzlikt datumus</button>
+        </div>`;
+    }
+    cl.appendChild(sub);
   });
   updateTotals();
 }
@@ -864,7 +905,45 @@ $('creditsList').addEventListener('input', e=>{
   if(f==='amount') state.credits[i][f]=parseFloat(e.target.value)||0; else state.credits[i][f]=e.target.value;
   if(f==='amount') updateTotals(); scheduleSave();
 });
-$('creditsList').addEventListener('click', e=>{ const del=e.target.closest('[data-cdel]'); if(del){ const i=+del.dataset.cdel; const nm=(state.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ state.credits.splice(i,1); render(); scheduleSave(); } }});
+$('creditsList').addEventListener('click', e=>{
+  const del=e.target.closest('[data-cdel]');
+  const dateBtn=e.target.closest('[data-cdate]');
+  if(del){ const i=+del.dataset.cdel; const nm=(state.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ state.credits.splice(i,1); render(); scheduleSave(); } return; }
+  if(dateBtn){ openCreditDates(+dateBtn.dataset.cdate); return; }
+});
+
+function openCreditDates(ci){
+  const c = state.credits[ci];
+  const root = $('modalRoot');
+  root.innerHTML = `
+    <div class="modal-back" id="cdBack">
+      <div class="modal" style="max-width:420px;">
+        <button class="modal-close" id="cdClose">×</button>
+        <h3>Kredīta termiņš</h3>
+        <div class="msub">${escapeHtml(c.name||'Kredīts')} — sākuma un beigu datums parāda nomaksas progresu</div>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Sākuma datums</label>
+        <input id="cdStart" type="date" value="${c.start||''}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Beigu datums</label>
+        <input id="cdEnd" type="date" value="${c.end||''}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">Progress tiek rēķināts pēc laika (cik no termiņa pagājis). Atstāj tukšu, lai noņemtu termiņu.</div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn ghost sm" id="cdCancel">Atcelt</button>
+          <button class="btn" id="cdSave">Saglabāt</button>
+        </div>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('cdBack').addEventListener('click', e=>{ if(e.target.id==='cdBack') close(); });
+  $('cdClose').addEventListener('click', close);
+  $('cdCancel').addEventListener('click', close);
+  $('cdSave').addEventListener('click', ()=>{
+    const s = $('cdStart').value, e = $('cdEnd').value;
+    if(s && e && new Date(e) <= new Date(s)){ alert('Beigu datumam jābūt pēc sākuma datuma.'); return; }
+    if(s){ state.credits[ci].start = s; } else { delete state.credits[ci].start; }
+    if(e){ state.credits[ci].end = e; } else { delete state.credits[ci].end; }
+    close(); render(); scheduleSave();
+  });
+}
 
 // ---- Drag to reorder credits ----
 let cDragFrom = null, cDragRow = null;

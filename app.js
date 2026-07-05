@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 // ---- Firebase config (embedded) ----
 const FIREBASE_CONFIG = {
@@ -13,8 +13,14 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.7.0';
+const VERSION = '1.7.2';
 const CHANGELOG = [
+  { v:'1.7.2', date:'2026-07-03', notes:[
+    'Noņemta "Importēt vecos datus" poga (migrācija pabeigta)',
+  ]},
+  { v:'1.7.1', date:'2026-07-03', notes:[
+    'Novērsta pieteikšanās problēma — pāreja uz uznirstošo logu (popup), jo pārlūki bloķēja iepriekšējo metodi',
+  ]},
   { v:'1.7.0', date:'2026-07-03', notes:[
     'Pieteikšanās ar Google kontu — katram lietotājam savs privāts budžets',
     'Aizvietota vecā telpas ID sistēma; dati aizsargāti ar īstiem drošības noteikumiem',
@@ -140,13 +146,28 @@ db = getFirestore(fbApp);
 auth = getAuth(fbApp);
 const provider = new GoogleAuthProvider();
 
-$('signInBtn').addEventListener('click', ()=>{
+$('signInBtn').addEventListener('click', async ()=>{
   $('gateErr').textContent = '';
-  signInWithPopup(auth, provider).catch(e=>{
-    if(e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request'){
-      $('gateErr').textContent = 'Neizdevās pieteikties: ' + e.message;
+  try {
+    // Popup is Firebase's recommended flow — avoids the third-party storage
+    // partitioning that breaks signInWithRedirect in Chrome M115+/Brave.
+    await signInWithPopup(auth, provider);
+  } catch(e){
+    // Popup blocked or unsupported (e.g. some mobile PWAs) → fall back to redirect
+    if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/cancelled-popup-request')){
+      try { await signInWithRedirect(auth, provider); }
+      catch(e2){ $('gateErr').textContent = 'Neizdevās pieteikties: ' + e2.message; }
+    } else if(e && e.code === 'auth/popup-closed-by-user'){
+      // User closed the popup — no error message needed
+    } else {
+      $('gateErr').textContent = 'Neizdevās pieteikties: ' + (e?.message || e);
     }
-  });
+  }
+});
+
+// Still handle redirect result, in case the fallback redirect flow was used
+getRedirectResult(auth).catch(e=>{
+  if(e && e.code !== 'auth/no-auth-event'){ $('gateErr').textContent = 'Pieteikšanās kļūda: ' + e.message; }
 });
 
 // React to auth state changes
@@ -954,43 +975,6 @@ $('resetBtn').addEventListener('click', ()=>{ if(confirm('Atjaunot sākotnējos 
 $('signOutBtn').addEventListener('click', ()=>{
   if(confirm('Izrakstīties? Nākamreiz atkal būs jāpiesakās ar Google.')){
     signOut(auth).catch(e=>alert('Neizdevās izrakstīties: '+e.message));
-  }
-});
-
-// One-time migration: import data from an old room-ID document into this UID
-$('importOldBtn').addEventListener('click', async ()=>{
-  const oldId = prompt('Ievadi savu veco telpas ID (no iepriekšējās versijas), lai importētu datus. Tas pārrakstīs pašreizējos datus.');
-  if(!oldId) return;
-  const room = oldId.trim();
-  if(room.length < 4){ alert('Telpas ID izskatās pārāk īss.'); return; }
-  try {
-    const oldRef = doc(db, 'budgets', room);
-    const snap = await getDoc(oldRef);
-    if(!snap.exists()){ alert('Neatradu datus ar šo telpas ID. Pārbaudi, vai tas ir pareizs.'); return; }
-    const d = snap.data();
-    if(!confirm('Atrasti dati. Importēt tos? Tas pārrakstīs tavus pašreizējos rēķinus, kredītus un kategorijas (arhīvu neietekmē).')) return;
-    // Copy main budget
-    state = {
-      income: d.income ?? 0,
-      bills: Array.isArray(d.bills)?d.bills:[],
-      credits: Array.isArray(d.credits)?d.credits:[],
-      categories: (Array.isArray(d.categories)&&d.categories.length)?d.categories:structuredClone(DEFAULT_CATEGORIES)
-    };
-    if(!state.categories.some(c=>c.key==='cits')) state.categories.push({key:'cits',name:'Cits',color:'#8a8576'});
-    render(); await pushNow();
-    // Also migrate archive subcollection
-    let migrated = 0;
-    try {
-      const oldArch = await getDocs(collection(db, 'budgets', room, 'archive'));
-      for(const a of oldArch.docs){
-        await setDoc(doc(db, 'budgets', roomId, 'archive', a.id), a.data());
-        migrated++;
-      }
-    } catch(archErr){ /* archive migration best-effort */ }
-    await loadArchive();
-    alert(`Dati importēti ✓${migrated?` (arī ${migrated} arhīva mēneši)`:''}`);
-  } catch(e){
-    alert('Neizdevās importēt: ' + e.message);
   }
 });
 

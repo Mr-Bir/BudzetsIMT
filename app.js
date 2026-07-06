@@ -13,8 +13,12 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.8.1';
+const VERSION = '1.9.0';
 const CHANGELOG = [
+  { v:'1.9.0', date:'2026-07-03', notes:[
+    'Pievienota tumšā tēma (Dark Theme) — pārslēdz ar ikonu augšā pie versijas',
+    'Tēmas izvēle tiek saglabāta lokāli katrā ierīcē',
+  ]},
   { v:'1.8.1', date:'2026-07-03', notes:[
     'Arhīva skatā pievienota kredītu "Atlikums kopā" summa',
   ]},
@@ -1172,6 +1176,45 @@ function openCategoryManager(){
 // ---- Version display & changelog ----
 document.title = 'Finanšu pārvaldnieks v' + VERSION;
 $('versionText').textContent = 'v' + VERSION;
+
+// ---- Theme (light/dark), saved locally per device ----
+function applyTheme(theme){
+  if(theme==='dark'){ document.documentElement.setAttribute('data-theme','dark'); $('themeToggle').textContent='☀️'; $('themeToggle').title='Gaišā tēma'; }
+  else { document.documentElement.removeAttribute('data-theme'); $('themeToggle').textContent='🌙'; $('themeToggle').title='Tumšā tēma'; }
+}
+(function initTheme(){
+  let saved='light';
+  try { saved = localStorage.getItem('theme') || 'light'; } catch(e){}
+  applyTheme(saved);
+})();
+$('themeToggle').addEventListener('click', ()=>{
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  const next = isDark ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem('theme', next); } catch(e){}
+});
+
+// ---- PWA: install prompt + service worker ----
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  deferredInstall = e;
+  $('installBtn')?.classList.remove('hidden');
+});
+$('installBtn')?.addEventListener('click', async ()=>{
+  if(!deferredInstall) return;
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+  $('installBtn')?.classList.add('hidden');
+});
+window.addEventListener('appinstalled', ()=>{ $('installBtn')?.classList.add('hidden'); });
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
 $('changelogBtn').addEventListener('click', ()=>{
   const root = $('modalRoot');
   const entries = CHANGELOG.map(c=>`
@@ -1195,25 +1238,3 @@ $('changelogBtn').addEventListener('click', ()=>{
 // ---- Boot ----
 // onAuthStateChanged (above) handles showing the app once the user is signed in.
 // Nothing else needed here — the sign-in gate is visible by default.
-
-// ---- PWA: install prompt + service worker ----
-let deferredInstall = null;
-window.addEventListener('beforeinstallprompt', e=>{
-  e.preventDefault();
-  deferredInstall = e;
-  $('installBtn')?.classList.remove('hidden');
-});
-$('installBtn')?.addEventListener('click', async ()=>{
-  if(!deferredInstall) return;
-  deferredInstall.prompt();
-  await deferredInstall.userChoice;
-  deferredInstall = null;
-  $('installBtn')?.classList.add('hidden');
-});
-window.addEventListener('appinstalled', ()=>{ $('installBtn')?.classList.add('hidden'); });
-
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  });
-}

@@ -13,8 +13,11 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.8.0';
+const VERSION = '1.8.1';
 const CHANGELOG = [
+  { v:'1.8.1', date:'2026-07-03', notes:[
+    'Arhīva skatā pievienota kredītu "Atlikums kopā" summa',
+  ]},
   { v:'1.8.0', date:'2026-07-03', notes:[
     'Kredītu atlikumiem pievienoti neobligāti sākuma/beigu datumi',
     'Rāda nomaksas progresu pēc laika: cik % nomaksāts un cik mēneši atlikuši',
@@ -648,6 +651,13 @@ function openArchiveModal(key){
         <button class="edel" data-cdel="${i}" title="Dzēst">×</button>`;
       c.appendChild(row);
     });
+    if(draft.credits.length){
+      const ctotal = draft.credits.reduce((s,cr)=>s+(Number(cr.amount)||0),0);
+      const foot = document.createElement('div');
+      foot.className = 'ecredit-foot';
+      foot.innerHTML = `<span>Atlikums kopā</span><span class="ec-total">${fmt(ctotal)}</span>`;
+      c.appendChild(foot);
+    }
   }
 
   function renderAll(){ renderMini(); renderBills(); renderCredits(); applyLock(); }

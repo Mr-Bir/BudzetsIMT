@@ -13,8 +13,14 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.10.0';
+const VERSION = '1.11.0';
 const CHANGELOG = [
+  { v:'1.11.0', date:'2026-07-03', notes:[
+    'Pievienota poga "Sakārtot" — kārto rēķinus pēc samaksāts statusa, tad pēc summas (lielākā augšā)',
+  ]},
+  { v:'1.10.1', date:'2026-07-03', notes:[
+    'Salabots: kredīta atlikums pēc "−"/"+" tagad noapaļojas uz 2 cipariem aiz komata',
+  ]},
   { v:'1.10.0', date:'2026-07-03', notes:[
     'Kredītiem pievienots mēneša maksājuma lauks ar "−"/"+" pogām atlikuma samazināšanai',
     'Zem kredītiem pievienota mēneša maksājumu kopsumma blakus "Atlikums kopā"',
@@ -358,7 +364,7 @@ function render(){
     row.innerHTML = `
       <div class="cdrag" data-cdrag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
       <input class="cname" value="${escapeHtml(c.name)}" data-ci="${i}" data-f="name" placeholder="Kredīta nosaukums">
-      <div class="camount-wrap"><span class="eur">€</span><input class="camount" type="number" step="0.01" inputmode="decimal" value="${c.amount}" data-ci="${i}" data-f="amount"></div>
+      <div class="camount-wrap"><span class="eur">€</span><input class="camount" type="number" step="0.01" inputmode="decimal" value="${(Number(c.amount)||0).toFixed(2)}" data-ci="${i}" data-f="amount"></div>
       <button class="del" data-cdel="${i}" title="Dzēst">×</button>`;
     cl.appendChild(row);
     // Progress block (time-based) when dates are set; otherwise a small "set dates" link
@@ -953,7 +959,7 @@ $('creditsList').addEventListener('input', e=>{
     return;
   }
   const i=e.target.dataset.ci, f=e.target.dataset.f; if(i===undefined) return;
-  if(f==='amount') state.credits[i][f]=parseFloat(e.target.value)||0; else state.credits[i][f]=e.target.value;
+  if(f==='amount') state.credits[i][f]=Math.round((parseFloat(e.target.value)||0)*100)/100; else state.credits[i][f]=e.target.value;
   if(f==='amount') updateTotals(); scheduleSave();
 });
 $('creditsList').addEventListener('click', e=>{
@@ -963,8 +969,8 @@ $('creditsList').addEventListener('click', e=>{
   const plusBtn=e.target.closest('[data-cpay-plus]');
   if(del){ const i=+del.dataset.cdel; const nm=(state.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ state.credits.splice(i,1); render(); scheduleSave(); } return; }
   if(dateBtn){ openCreditDates(+dateBtn.dataset.cdate); return; }
-  if(minusBtn){ const i=+minusBtn.dataset.cpayMinus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=Math.max((Number(state.credits[i].amount)||0)-pay,0); render(); scheduleSave(); } return; }
-  if(plusBtn){ const i=+plusBtn.dataset.cpayPlus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=(Number(state.credits[i].amount)||0)+pay; render(); scheduleSave(); } return; }
+  if(minusBtn){ const i=+minusBtn.dataset.cpayMinus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=Math.round(Math.max((Number(state.credits[i].amount)||0)-pay,0)*100)/100; render(); scheduleSave(); } return; }
+  if(plusBtn){ const i=+plusBtn.dataset.cpayPlus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=Math.round(((Number(state.credits[i].amount)||0)+pay)*100)/100; render(); scheduleSave(); } return; }
 });
 
 function openCreditDates(ci){
@@ -1060,6 +1066,16 @@ $('addBill').addEventListener('click', ()=>{
     close(); state.bills.push({name:'',type:'summing',entries:[],cat:'cits'}); render(); scheduleSave();
     const n=document.querySelectorAll('#billsList .name'); n[n.length-1]?.focus();
   });
+});
+$('sortBillsBtn').addEventListener('click', ()=>{
+  state.bills.sort((a,b)=>{
+    // Primary: paid first (paid=true before paid=false)
+    const pa = a.paid?1:0, pb = b.paid?1:0;
+    if(pa!==pb) return pb-pa;
+    // Secondary: larger amount first
+    return billAmount(b) - billAmount(a);
+  });
+  render(); scheduleSave();
 });
 $('resetPaidBtn').addEventListener('click', ()=>{ if(confirm('Notīrīt visus samaksāts ķeksīšus? (parasti jauna mēneša sākumā)')){ state.bills.forEach(b=>b.paid=false); render(); scheduleSave(); }});
 $('addCredit').addEventListener('click', ()=>{ state.credits.push({name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });

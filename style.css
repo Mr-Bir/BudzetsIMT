@@ -243,6 +243,9 @@
 
   .modal-back { position: fixed; inset: 0; background: rgba(26,29,41,.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
   .modal { background: var(--paper); border-radius: 16px; padding: 28px; max-width: 640px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  .modal input[type=text], .modal input[type=number], .modal input[type=date], .modal input:not([type]) { color: var(--ink); background: var(--card) !important; border-color: var(--line) !important; }
+  .modal input::placeholder { color: var(--muted); }
+  [data-theme="dark"] .modal input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.6); }
   .modal h3 { font-family: Georgia, serif; font-size: 22px; margin-bottom: 4px; }
   .arch-name-edit { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
   .arch-name-edit input { flex: 1; font-family: Georgia, serif; font-size: 22px; font-weight: 700; border: none; border-bottom: 2px dashed var(--line); background: transparent; color: var(--ink); padding: 2px 0; }

@@ -13,8 +13,11 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.9.0';
+const VERSION = '1.9.1';
 const CHANGELOG = [
+  { v:'1.9.1', date:'2026-07-03', notes:[
+    'Salabots: ievadlauku teksts modālajos logos tagad redzams arī tumšajā tēmā',
+  ]},
   { v:'1.9.0', date:'2026-07-03', notes:[
     'Pievienota tumšā tēma (Dark Theme) — pārslēdz ar ikonu augšā pie versijas',
     'Tēmas izvēle tiek saglabāta lokāli katrā ierīcē',

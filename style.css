@@ -197,11 +197,23 @@
   .cd-edit:hover { opacity: .75; }
   .cd-track { height: 6px; background: var(--cd-track); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
   .cd-fill { height: 100%; border-radius: 4px; background: var(--plum); transition: width .3s; }
+  .cd-pay-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0 2px; margin-top: 4px; border-top: 1px dashed var(--plum-border); }
+  .cd-pay-label { font-size: 12.5px; color: var(--plum-ink); font-weight: 600; }
+  .cd-pay-controls { display: flex; align-items: center; gap: 6px; }
+  .cd-pay-btn { width: 26px; height: 26px; border-radius: 7px; border: 1.5px solid var(--plum); background: transparent; color: var(--plum); font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .cd-pay-btn:hover:not(:disabled) { background: var(--plum); color: var(--btn-ink); }
+  .cd-pay-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .cd-pay-amt-wrap { display: flex; align-items: center; gap: 2px; }
+  .cd-pay-eur { color: var(--plum-eur); font-size: 13px; }
+  .cd-pay-amt { width: 68px; text-align: right; border: none; background: transparent; font: inherit; font-size: 14px; font-weight: 700; color: var(--plum-ink); border-bottom: 1px dashed var(--plum-border); font-variant-numeric: tabular-nums; }
+  .cd-pay-amt:focus { outline: none; border-bottom-color: var(--plum); }
   .credit .eur { color: var(--plum-eur); }
   .credit .del { border: none; background: transparent; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
   .credit .del:hover { background: var(--plum-soft); color: var(--red); }
   .credits-foot { display: flex; justify-content: space-between; padding: 12px 14px 0; margin-top: 4px; border-top: 2px solid #e0d2e1; font-weight: 700; }
   .credits-foot .total { color: var(--plum-ink); font-variant-numeric: tabular-nums; }
+  .credits-foot-sub { border-top: none; padding-top: 4px; font-weight: 600; font-size: 13px; color: var(--muted); }
+  .credits-foot-sub .total { color: var(--muted); }
 
   .grid2 { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: start; }
   section { margin-top: 36px; }

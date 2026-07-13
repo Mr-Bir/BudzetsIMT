@@ -13,8 +13,12 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.9.1';
+const VERSION = '1.10.0';
 const CHANGELOG = [
+  { v:'1.10.0', date:'2026-07-03', notes:[
+    'Kredītiem pievienots mēneša maksājuma lauks ar "−"/"+" pogām atlikuma samazināšanai',
+    'Zem kredītiem pievienota mēneša maksājumu kopsumma blakus "Atlikums kopā"',
+  ]},
   { v:'1.9.1', date:'2026-07-03', notes:[
     'Salabots: ievadlauku teksts modālajos logos tagad redzams arī tumšajā tēmā',
   ]},
@@ -361,22 +365,35 @@ function render(){
     const prog = creditProgress(c);
     const sub = document.createElement('div');
     sub.className = 'credit-detail';
+    let datesHtml;
     if(prog){
       const pctTxt = prog.pct.toFixed(0);
       const remTxt = prog.done ? 'nomaksāts' : `atlikuši ${prog.monthsRemaining} mēn.`;
-      sub.innerHTML = `
+      datesHtml = `
         <div class="cd-row">
           <span class="cd-label"><strong>${pctTxt}%</strong> nomaksāts · ${remTxt}</span>
           <button class="cd-edit" data-cdate="${i}">Mainīt datumus</button>
         </div>
         <div class="cd-track"><div class="cd-fill" style="width:${prog.pct}%"></div></div>`;
     } else {
-      sub.innerHTML = `
+      datesHtml = `
         <div class="cd-row">
           <span class="cd-label cd-muted">Bez termiņa</span>
           <button class="cd-edit" data-cdate="${i}">Uzlikt datumus</button>
         </div>`;
     }
+    // Monthly payment control: [-] [amount] [+]
+    const pay = Number(c.monthly)||0;
+    const payHtml = `
+      <div class="cd-pay-row">
+        <span class="cd-pay-label">Mēneša maksājums</span>
+        <div class="cd-pay-controls">
+          <button class="cd-pay-btn minus" data-cpay-minus="${i}" title="Atņemt no atlikuma" ${pay>0?'':'disabled'}>−</button>
+          <div class="cd-pay-amt-wrap"><span class="cd-pay-eur">€</span><input class="cd-pay-amt" type="number" step="0.01" inputmode="decimal" value="${c.monthly!=null?c.monthly:''}" data-cpay="${i}" placeholder="0.00"></div>
+          <button class="cd-pay-btn plus" data-cpay-plus="${i}" title="Pieskaitīt atlikumam (atsaukt)" ${pay>0?'':'disabled'}>+</button>
+        </div>
+      </div>`;
+    sub.innerHTML = datesHtml + payHtml;
     cl.appendChild(sub);
   });
   updateTotals();
@@ -398,6 +415,12 @@ function updateTotals(){
   $('sumSpent').textContent = hasLimits ? `iztērēts: ${fmt(spentTotal)}` : '';
   $('billsFootTotal').textContent = fmt(total);
   $('creditsFootTotal').textContent = fmt(ctotal);
+  const monthlyTotal = (state.credits||[]).reduce((s,c)=>s+(Number(c.monthly)||0),0);
+  const monthlyFoot = $('creditsMonthlyFoot');
+  if(monthlyFoot){
+    if(monthlyTotal>0){ monthlyFoot.style.display=''; $('creditsMonthlyTotal').textContent = fmt(monthlyTotal); }
+    else { monthlyFoot.style.display='none'; }
+  }
   $('toPay').textContent = fmt(toPay);
   $('paidHint').textContent = `${paidCount} no ${bills.length} samaksāti · ${fmt(paidSum)}`;
   const remaining = income-total;
@@ -918,6 +941,17 @@ $('billsList').addEventListener('pointerup', e=>{
 $('billsList').addEventListener('pointercancel', ()=>{ clearDragMarks(); dragFrom=null; dragRow=null; });
 
 $('creditsList').addEventListener('input', e=>{
+  if(e.target.dataset.cpay!==undefined){
+    const i=+e.target.dataset.cpay;
+    const v=e.target.value.trim();
+    if(v==='') delete state.credits[i].monthly; else state.credits[i].monthly=parseFloat(v)||0;
+    const pay=Number(state.credits[i].monthly)||0;
+    const row=e.target.closest('.credit-detail');
+    row.querySelectorAll('.cd-pay-btn').forEach(b=>b.disabled = !(pay>0));
+    updateTotals();
+    scheduleSave();
+    return;
+  }
   const i=e.target.dataset.ci, f=e.target.dataset.f; if(i===undefined) return;
   if(f==='amount') state.credits[i][f]=parseFloat(e.target.value)||0; else state.credits[i][f]=e.target.value;
   if(f==='amount') updateTotals(); scheduleSave();
@@ -925,8 +959,12 @@ $('creditsList').addEventListener('input', e=>{
 $('creditsList').addEventListener('click', e=>{
   const del=e.target.closest('[data-cdel]');
   const dateBtn=e.target.closest('[data-cdate]');
+  const minusBtn=e.target.closest('[data-cpay-minus]');
+  const plusBtn=e.target.closest('[data-cpay-plus]');
   if(del){ const i=+del.dataset.cdel; const nm=(state.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ state.credits.splice(i,1); render(); scheduleSave(); } return; }
   if(dateBtn){ openCreditDates(+dateBtn.dataset.cdate); return; }
+  if(minusBtn){ const i=+minusBtn.dataset.cpayMinus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=Math.max((Number(state.credits[i].amount)||0)-pay,0); render(); scheduleSave(); } return; }
+  if(plusBtn){ const i=+plusBtn.dataset.cpayPlus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=(Number(state.credits[i].amount)||0)+pay; render(); scheduleSave(); } return; }
 });
 
 function openCreditDates(ci){

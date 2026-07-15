@@ -29,9 +29,23 @@
 
   <!-- ============ APP ============ -->
   <div id="app" class="hidden">
+    <nav class="section-nav" id="sectionNav" aria-label="Sadaļas">
+      <button class="nav-item active" data-section="budget" type="button" title="Budžets">
+        <img src="icons/icon-192.png" alt="" width="56" height="56">
+        <span>Budžets</span>
+      </button>
+      <button class="nav-item" data-section="credits" type="button" title="Kredītu atlikumi">
+        <img src="icons/icon2-192.png" alt="" width="56" height="56">
+        <span>Kredīti</span>
+      </button>
+      <button class="nav-item" data-section="reminders" type="button" title="Atgādinājumi">
+        <img src="icons/icon3-192.png" alt="" width="56" height="56">
+        <span>Atgādinājumi</span>
+      </button>
+    </nav>
+
     <header>
       <div class="brand">
-        <img class="brand-icon" src="icons/icon-192.png" alt="" width="56" height="56">
         <div>
           <div class="eyebrow">Personīgais budžets · sinhronizēts</div>
           <h1>Finanšu pārvaldnieks</h1>
@@ -44,6 +58,8 @@
       </div>
     </header>
 
+    <!-- ============ PANEL: BUDGET ============ -->
+    <div class="panel" id="panel-budget">
     <div class="summary">
       <div class="stat">
         <div class="label">Prognozējamā alga</div>
@@ -75,12 +91,6 @@
         <div class="bills" id="billsList"></div>
         <div class="bills-foot"><span class="lbl">Kopā</span><span class="total" id="billsFootTotal">€ 0.00</span></div>
       </section>
-      <section>
-        <div class="sec-head"><h2>Kredītu atlikumi</h2><button class="btn ghost sm" id="addCredit">+ Kredīts</button></div>
-        <div class="credits" id="creditsList"></div>
-        <div class="credits-foot"><span>Atlikums kopā</span><span class="total" id="creditsFootTotal">€ 0.00</span></div>
-        <div class="credits-foot credits-foot-sub" id="creditsMonthlyFoot"><span>Mēneša maksājumi kopā</span><span class="total" id="creditsMonthlyTotal">€ 0.00</span></div>
-      </section>
     </div>
 
     <section>
@@ -110,6 +120,25 @@
       <input type="file" id="fileIn" accept="application/json" hidden>
       <span class="saved-note" id="savedNote"></span>
     </div>
+    </div><!-- /panel-budget -->
+
+    <!-- ============ PANEL: CREDITS ============ -->
+    <div class="panel hidden" id="panel-credits">
+      <section>
+        <div class="sec-head"><h2>Kredītu atlikumi</h2><button class="btn ghost sm" id="addCredit">+ Kredīts</button></div>
+        <div class="credits" id="creditsList"></div>
+        <div class="credits-foot"><span>Atlikums kopā</span><span class="total" id="creditsFootTotal">€ 0.00</span></div>
+        <div class="credits-foot credits-foot-sub" id="creditsMonthlyFoot"><span>Mēneša maksājumi kopā</span><span class="total" id="creditsMonthlyTotal">€ 0.00</span></div>
+      </section>
+    </div><!-- /panel-credits -->
+
+    <!-- ============ PANEL: REMINDERS ============ -->
+    <div class="panel hidden" id="panel-reminders">
+      <section>
+        <div class="sec-head"><h2>Atgādinājumi</h2></div>
+        <div class="empty-note">Šī sadaļa vēl top. Drīzumā šeit varēsi sekot līdzi maksājumu termiņiem.</div>
+      </section>
+    </div><!-- /panel-reminders -->
   </div>
 </div>
 

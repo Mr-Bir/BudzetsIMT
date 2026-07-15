@@ -13,8 +13,13 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.11.2';
+const VERSION = '1.12.0';
 const CHANGELOG = [
+  { v:'1.12.0', date:'2026-07-15', notes:[
+    'Lietotne sadalīta trīs sadaļās ar ikonu navigāciju augšā',
+    'Kredītu atlikumi pārcelti uz atsevišķu sadaļu, lai budžeta skats būtu pārskatāmāks',
+    'Pievienota sadaļa "Atgādinājumi" (vēl top)',
+  ]},
   { v:'1.11.2', date:'2026-07-15', notes:[
     'Lietotnes krāsa (theme color) saskaņota ar jauno ikonu',
   ]},
@@ -1255,6 +1260,21 @@ $('themeToggle').addEventListener('click', ()=>{
   const next = isDark ? 'light' : 'dark';
   applyTheme(next);
   try { localStorage.setItem('theme', next); } catch(e){}
+});
+
+// ---- Section navigation ----
+function showSection(name){
+  document.querySelectorAll('.panel').forEach(p=>{
+    p.classList.toggle('hidden', p.id !== 'panel-' + name);
+  });
+  document.querySelectorAll('.nav-item').forEach(b=>{
+    b.classList.toggle('active', b.dataset.section === name);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('sectionNav').addEventListener('click', e=>{
+  const btn = e.target.closest('.nav-item');
+  if(btn) showSection(btn.dataset.section);
 });
 
 // ---- PWA: install prompt + service worker ----

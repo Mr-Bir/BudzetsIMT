@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Finanšu pārvaldnieks</title>
 <meta name="description" content="Personīgais budžeta un tēriņu pārvaldnieks ar sinhronizāciju starp ierīcēm.">
-<meta name="theme-color" content="#2d5f4f">
+<meta name="theme-color" content="#6d5c2e">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -30,10 +30,13 @@
   <!-- ============ APP ============ -->
   <div id="app" class="hidden">
     <header>
-      <div>
-        <div class="eyebrow">Personīgais budžets · sinhronizēts</div>
-        <h1>Finanšu pārvaldnieks</h1>
-        <div class="version-line"><span id="versionText"></span> · <button class="changelog-link" id="changelogBtn">Kas jauns</button> · <button class="theme-toggle" id="themeToggle" title="Mainīt tēmu" aria-label="Mainīt tēmu"></button></div>
+      <div class="brand">
+        <img class="brand-icon" src="icons/icon-192.png" alt="" width="56" height="56">
+        <div>
+          <div class="eyebrow">Personīgais budžets · sinhronizēts</div>
+          <h1>Finanšu pārvaldnieks</h1>
+          <div class="version-line"><span id="versionText"></span> · <button class="changelog-link" id="changelogBtn">Kas jauns</button> · <button class="theme-toggle" id="themeToggle" title="Mainīt tēmu" aria-label="Mainīt tēmu"></button></div>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>

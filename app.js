@@ -13,8 +13,14 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.11.0';
+const VERSION = '1.11.2';
 const CHANGELOG = [
+  { v:'1.11.2', date:'2026-07-15', notes:[
+    'Lietotnes krāsa (theme color) saskaņota ar jauno ikonu',
+  ]},
+  { v:'1.11.1', date:'2026-07-15', notes:[
+    'Jauna lietotnes ikona; tā redzama arī virsraksta priekšā',
+  ]},
   { v:'1.11.0', date:'2026-07-03', notes:[
     'Pievienota poga "Sakārtot" — kārto rēķinus pēc samaksāts statusa, tad pēc summas (lielākā augšā)',
   ]},

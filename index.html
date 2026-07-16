@@ -29,6 +29,13 @@
 
   <!-- ============ APP ============ -->
   <div id="app" class="hidden">
+    <!-- Top utility bar -->
+    <div class="topbar">
+      <button class="btn ghost sm" id="settingsBtn" type="button">Iestatījumi</button>
+      <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
+      <div class="sync-badge"><span class="user-name" id="userName"></span><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span><button class="signout-btn" id="signOutBtn">Izrakstīties</button></div>
+    </div>
+
     <nav class="section-nav" id="sectionNav" aria-label="Sadaļas">
       <button class="nav-item active" data-section="budget" type="button" title="Budžets">
         <img src="icons/icon-192.png" alt="" width="56" height="56">
@@ -44,19 +51,7 @@
       </button>
     </nav>
 
-    <header>
-      <div class="brand">
-        <div>
-          <div class="eyebrow">Personīgais budžets · sinhronizēts</div>
-          <h1>Finanšu pārvaldnieks</h1>
-          <div class="version-line"><span id="versionText"></span> · <button class="changelog-link" id="changelogBtn">Kas jauns</button> · <button class="theme-toggle" id="themeToggle" title="Mainīt tēmu" aria-label="Mainīt tēmu"></button></div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
-        <div class="sync-badge"><span class="user-name" id="userName"></span><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span><button class="signout-btn" id="signOutBtn">Izrakstīties</button></div>
-      </div>
-    </header>
+    <div class="section-title"><span class="eyebrow" id="sectionLabel">Personīgais budžets</span> · <span class="app-name">Finanšu pārvaldnieks</span></div>
 
     <!-- ============ PANEL: BUDGET ============ -->
     <div class="panel" id="panel-budget">

@@ -13,8 +13,13 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.12.0';
+const VERSION = '1.13.0';
 const CHANGELOG = [
+  { v:'1.13.0', date:'2026-07-15', notes:[
+    'Konta un lietotnes pogas pārceltas uz augšējo labo malu',
+    'Pievienota "Iestatījumi" sadaļa ar tēmas izvēli, versiju un "Kas jauns"',
+    'Virsraksts tagad rāda, kurā sadaļā atrodies',
+  ]},
   { v:'1.12.0', date:'2026-07-15', notes:[
     'Lietotne sadalīta trīs sadaļās ar ikonu navigāciju augšā',
     'Kredītu atlikumi pārcelti uz atsevišķu sadaļu, lai budžeta skats būtu pārskatāmāks',
@@ -1241,28 +1246,24 @@ function openCategoryManager(){
   });
 }
 
-// ---- Version display & changelog ----
+// ---- Version ----
 document.title = 'Finanšu pārvaldnieks v' + VERSION;
-$('versionText').textContent = 'v' + VERSION;
 
 // ---- Theme (light/dark), saved locally per device ----
+function currentTheme(){ return document.documentElement.getAttribute('data-theme')==='dark' ? 'dark' : 'light'; }
 function applyTheme(theme){
-  if(theme==='dark'){ document.documentElement.setAttribute('data-theme','dark'); $('themeToggle').textContent='☀️'; $('themeToggle').title='Gaišā tēma'; }
-  else { document.documentElement.removeAttribute('data-theme'); $('themeToggle').textContent='🌙'; $('themeToggle').title='Tumšā tēma'; }
+  if(theme==='dark') document.documentElement.setAttribute('data-theme','dark');
+  else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem('theme', theme); } catch(e){}
 }
 (function initTheme(){
   let saved='light';
   try { saved = localStorage.getItem('theme') || 'light'; } catch(e){}
-  applyTheme(saved);
+  if(saved==='dark') document.documentElement.setAttribute('data-theme','dark');
 })();
-$('themeToggle').addEventListener('click', ()=>{
-  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
-  const next = isDark ? 'light' : 'dark';
-  applyTheme(next);
-  try { localStorage.setItem('theme', next); } catch(e){}
-});
 
 // ---- Section navigation ----
+const SECTION_LABELS = { budget:'Personīgais budžets', credits:'Kredītu atlikumi', reminders:'Atgādinājumi' };
 function showSection(name){
   document.querySelectorAll('.panel').forEach(p=>{
     p.classList.toggle('hidden', p.id !== 'panel-' + name);
@@ -1270,6 +1271,8 @@ function showSection(name){
   document.querySelectorAll('.nav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.section === name);
   });
+  const lbl = $('sectionLabel');
+  if(lbl) lbl.textContent = SECTION_LABELS[name] || '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 $('sectionNav').addEventListener('click', e=>{
@@ -1298,7 +1301,8 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
 }
-$('changelogBtn').addEventListener('click', ()=>{
+// ---- Settings modal ----
+function openChangelog(){
   const root = $('modalRoot');
   const entries = CHANGELOG.map(c=>`
     <div class="cl-entry">
@@ -1316,6 +1320,50 @@ $('changelogBtn').addEventListener('click', ()=>{
     </div>`;
   $('clBack').addEventListener('click', e=>{ if(e.target.id==='clBack') root.innerHTML=''; });
   $('clClose').addEventListener('click', ()=>{ root.innerHTML=''; });
+}
+
+$('settingsBtn').addEventListener('click', ()=>{
+  const root = $('modalRoot');
+  const dark = currentTheme()==='dark';
+  root.innerHTML = `
+    <div class="modal-back" id="setBack">
+      <div class="modal" style="max-width:460px;">
+        <button class="modal-close" id="setClose">×</button>
+        <h3>Iestatījumi</h3>
+        <div class="msub">Lietotnes izskats un informācija</div>
+
+        <div class="set-row">
+          <div>
+            <div class="set-label">Krāsu tēma</div>
+            <div class="set-hint">Saglabājas šajā ierīcē</div>
+          </div>
+          <div class="theme-switch" id="themeSwitch">
+            <button class="ts-opt ${dark?'':'active'}" data-theme-opt="light" type="button">🌙 Gaišā</button>
+            <button class="ts-opt ${dark?'active':''}" data-theme-opt="dark" type="button">☀️ Tumšā</button>
+          </div>
+        </div>
+
+        <div class="set-row">
+          <div>
+            <div class="set-label">Versija</div>
+            <div class="set-hint">v${VERSION}</div>
+          </div>
+          <button class="btn ghost sm" id="setChangelog" type="button">Kas jauns</button>
+        </div>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('setBack').addEventListener('click', e=>{ if(e.target.id==='setBack') close(); });
+  $('setClose').addEventListener('click', close);
+  $('themeSwitch').addEventListener('click', e=>{
+    const opt = e.target.closest('[data-theme-opt]');
+    if(!opt) return;
+    applyTheme(opt.dataset.themeOpt);
+    $('themeSwitch').querySelectorAll('.ts-opt').forEach(b=>{
+      b.classList.toggle('active', b.dataset.themeOpt === opt.dataset.themeOpt);
+    });
+  });
+  $('setChangelog').addEventListener('click', openChangelog);
 });
 
 // ---- Boot ----

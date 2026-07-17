@@ -2,7 +2,11 @@
 
 Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķiniem, kredītu atlikumiem un tēriņu sadalījumam pa kategorijām. Piesakies ar Google kontu, un dati sinhronizējas starp visām tavām ierīcēm automātiski.
 
+**Lietotne pieejama šeit:** https://mr-bir.github.io/BudzetsIMT/
+
 ![Finanšu pārvaldnieks](screenshots/desktop-1.png)
+
+![Finanšu pārvaldnieks](screenshots/desktop-2.png)
 
 ## Ko lietotne dara
 

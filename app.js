@@ -1263,16 +1263,15 @@ function applyTheme(theme){
 })();
 
 // ---- Section navigation ----
-const SECTION_LABELS = { budget:'Personīgais budžets', credits:'Kredītu atlikumi', reminders:'Atgādinājumi' };
+const SECTIONS = ['budget','credits','reminders','savings'];
 function showSection(name){
+  if(!SECTIONS.includes(name)) return;
   document.querySelectorAll('.panel').forEach(p=>{
     p.classList.toggle('hidden', p.id !== 'panel-' + name);
   });
   document.querySelectorAll('.nav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.section === name);
   });
-  const lbl = $('sectionLabel');
-  if(lbl) lbl.textContent = SECTION_LABELS[name] || '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 $('sectionNav').addEventListener('click', e=>{

@@ -77,21 +77,20 @@
   .gate .row input { flex: 1; }
   .gate .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
 
-  /* Top utility bar */
-  .topbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; padding: 18px 0 0; }
-  /* Section title line under the nav */
-  .section-title { padding: 14px 0 18px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-  .section-title .app-name { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; letter-spacing: -.01em; text-transform: none; color: var(--ink); font-weight: 700; }
-  /* Section navigation */
-  .section-nav { display: flex; gap: 10px; align-items: flex-start; padding: 14px 0 16px; border-bottom: 2px dashed var(--line); }
-  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 5px; border: none; background: transparent; cursor: pointer; padding: 4px; border-radius: 16px; font: inherit; transition: opacity .15s, transform .08s; }
-  .nav-item img { width: 56px; height: 56px; border-radius: 14px; display: block; box-shadow: var(--shadow); transition: box-shadow .15s; }
-  .nav-item span { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--muted); }
-  .nav-item:not(.active) { opacity: .5; }
-  .nav-item:not(.active):hover { opacity: .8; }
+  /* Top utility bar: brand left · controls right, dashed rule below */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 18px 0 14px; border-bottom: 2px dashed var(--line); }
+  .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  /* Static brand line (does not change per section) */
+  .brand { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .brand .eyebrow { margin-bottom: 0; display: inline; }
+  .brand .app-name { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; letter-spacing: -.01em; text-transform: none; color: var(--ink); font-weight: 700; }
+  /* Section navigation: text only, encapsulated between two dashed rules */
+  .section-nav { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; padding: 12px 0; border-bottom: 2px dashed var(--line); margin-bottom: 18px; }
+  .nav-item { border: none; background: transparent; cursor: pointer; padding: 2px 0; font: inherit; font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--muted); transition: color .15s, opacity .15s, transform .08s; }
+  .nav-item:not(.active) { opacity: .55; }
+  .nav-item:not(.active):hover { opacity: .9; }
   .nav-item:active { transform: translateY(1px); }
-  .nav-item.active img { outline: 2px solid var(--accent); outline-offset: 3px; }
-  .nav-item.active span { color: var(--accent); }
+  .nav-item.active { color: var(--accent); opacity: 1; }
   .panel.hidden { display: none; }
   .eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
   h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 34px; font-weight: 700; letter-spacing: -.02em; }
@@ -357,12 +356,11 @@
   }
 
   @media (max-width: 760px) {
-    .section-title { font-size: 11px; padding: 12px 0 14px; }
-    .section-title .app-name { font-size: 15px; }
-    .topbar { padding: 12px 0 0; justify-content: flex-start; }
-    .nav-item img { width: 46px; height: 46px; border-radius: 12px; }
-    .nav-item span { font-size: 10px; }
-    .section-nav { gap: 6px; padding: 16px 0 12px; }
+    .topbar { padding: 12px 0 12px; justify-content: flex-start; gap: 10px; }
+    .brand { font-size: 11px; }
+    .brand .app-name { font-size: 15px; }
+    .nav-item { font-size: 12px; }
+    .section-nav { gap: 14px; padding: 10px 0; margin-bottom: 14px; }
     .summary { grid-template-columns: repeat(2, 1fr); }
     .grid2 { grid-template-columns: 1fr; gap: 28px; }
     .bill { grid-template-columns: 20px 28px 1fr auto auto; row-gap: 6px; column-gap: 10px; }

@@ -29,29 +29,22 @@
 
   <!-- ============ APP ============ -->
   <div id="app" class="hidden">
-    <!-- Top utility bar -->
+    <!-- Top utility bar: brand left · controls right -->
     <div class="topbar">
-      <button class="btn ghost sm" id="settingsBtn" type="button">Iestatījumi</button>
-      <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
-      <div class="sync-badge"><span class="user-name" id="userName"></span><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span><button class="signout-btn" id="signOutBtn">Izrakstīties</button></div>
+      <div class="brand"><span class="eyebrow">Personīgais budžets</span> · <span class="app-name">Finanšu pārvaldnieks</span></div>
+      <div class="topbar-actions">
+        <button class="btn ghost sm" id="settingsBtn" type="button">Iestatījumi</button>
+        <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
+        <div class="sync-badge"><span class="user-name" id="userName"></span><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span><button class="signout-btn" id="signOutBtn">Izrakstīties</button></div>
+      </div>
     </div>
 
     <nav class="section-nav" id="sectionNav" aria-label="Sadaļas">
-      <button class="nav-item active" data-section="budget" type="button" title="Budžets">
-        <img src="icons/icon-192.png" alt="" width="56" height="56">
-        <span>Budžets</span>
-      </button>
-      <button class="nav-item" data-section="credits" type="button" title="Kredītu atlikumi">
-        <img src="icons/icon2-192.png" alt="" width="56" height="56">
-        <span>Kredīti</span>
-      </button>
-      <button class="nav-item" data-section="reminders" type="button" title="Atgādinājumi">
-        <img src="icons/icon3-192.png" alt="" width="56" height="56">
-        <span>Atgādinājumi</span>
-      </button>
+      <button class="nav-item active" data-section="budget" type="button">Budžets</button>
+      <button class="nav-item" data-section="credits" type="button">Kredīti</button>
+      <button class="nav-item" data-section="reminders" type="button">Atgādinājumi</button>
+      <button class="nav-item" data-section="savings" type="button">Uzkrājuma mērķi</button>
     </nav>
-
-    <div class="section-title"><span class="eyebrow" id="sectionLabel">Personīgais budžets</span> · <span class="app-name">Finanšu pārvaldnieks</span></div>
 
     <!-- ============ PANEL: BUDGET ============ -->
     <div class="panel" id="panel-budget">
@@ -134,6 +127,14 @@
         <div class="empty-note">Šī sadaļa vēl top. Drīzumā šeit varēsi sekot līdzi maksājumu termiņiem.</div>
       </section>
     </div><!-- /panel-reminders -->
+
+    <!-- ============ PANEL: SAVINGS ============ -->
+    <div class="panel hidden" id="panel-savings">
+      <section>
+        <div class="sec-head"><h2>Uzkrājuma mērķi</h2></div>
+        <div class="empty-note">Šī sadaļa vēl top. Drīzumā šeit varēsi izvirzīt un sekot līdzi saviem uzkrājuma mērķiem.</div>
+      </section>
+    </div><!-- /panel-savings -->
   </div>
 </div>
 

@@ -1,6 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 
 // ---- Firebase config (embedded) ----
 const FIREBASE_CONFIG = {
@@ -12,9 +13,17 @@ const FIREBASE_CONFIG = {
   appId: "1:862378422626:web:6f7da765c63f158fd43c3b"
 };
 
+// ---- App Check (reCAPTCHA Enterprise) ----
+// Šī atslēga ir publiska pēc dizaina — aizsardzība balstās uz domēna
+// pārbaudi Google pusē, ne uz atslēgas slēpšanu.
+const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
+
 // ---- Version & changelog ----
-const VERSION = '1.14.1';
+const VERSION = '1.15.0';
 const CHANGELOG = [
+  { v:'1.15.0', date:'2026-07-18', notes:[
+    'Pievienota papildu aizsardzība pret automatizētu ļaunprātīgu piekļuvi (App Check)',
+  ]},
   { v:'1.14.1', date:'2026-07-17', notes:[
     'Novērsta lapas nobīde, pārslēdzoties uz tukšajām sadaļām',
   ]},
@@ -206,6 +215,23 @@ const $ = id => document.getElementById(id);
 
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
+
+// App Check jāinicializē PIRMS Firestore/Auth lietošanas.
+// Lokālā izstrādē (localhost) lieto debug token — konsolē parādīsies
+// UUID, kas jāreģistrē Firebase Console → App Check → Manage debug tokens.
+try {
+  if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+  initializeAppCheck(fbApp, {
+    provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
+    isTokenAutoRefreshEnabled: true
+  });
+} catch(e){
+  // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
+  console.warn('App Check inicializācija neizdevās:', e);
+}
+
 db = getFirestore(fbApp);
 auth = getAuth(fbApp);
 const provider = new GoogleAuthProvider();

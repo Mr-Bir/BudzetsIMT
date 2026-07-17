@@ -13,8 +13,11 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.14.0';
+const VERSION = '1.14.1';
 const CHANGELOG = [
+  { v:'1.14.1', date:'2026-07-17', notes:[
+    'Novērsta lapas nobīde, pārslēdzoties uz tukšajām sadaļām',
+  ]},
   { v:'1.14.0', date:'2026-07-17', notes:[
     'Navigācijas ikonas noņemtas — palikuši tikai teksta nosaukumi',
     'Lietotnes nosaukums pārcelts uz augšējo joslu un vairs nemainās pa sadaļām',

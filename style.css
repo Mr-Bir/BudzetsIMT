@@ -52,12 +52,19 @@
     --btn-ink: #16181d;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { -webkit-text-size-adjust: 100%; }
+  /* Vieta ritjoslai rezervēta vienmēr — citādi lapa lec, pārslēdzoties
+     starp garām (Budžets, Kredīti) un īsām (Atgādinājumi, Uzkrājuma mērķi) sadaļām */
+  html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     background: var(--paper); color: var(--ink); line-height: 1.5; padding: 0 0 80px;
   }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+  /* Rezerves variants pārlūkiem bez scrollbar-gutter atbalsta:
+     tukšās sadaļas tiek pastieptas, lai ritjosla nepazustu */
+  @supports not (scrollbar-gutter: stable) {
+    .panel { min-height: calc(100vh - 120px); }
+  }
 
   /* Setup gate */
   .gate {

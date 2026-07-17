@@ -13,8 +13,14 @@ const FIREBASE_CONFIG = {
 };
 
 // ---- Version & changelog ----
-const VERSION = '1.13.0';
+const VERSION = '1.14.0';
 const CHANGELOG = [
+  { v:'1.14.0', date:'2026-07-17', notes:[
+    'Navigācijas ikonas noņemtas — palikuši tikai teksta nosaukumi',
+    'Lietotnes nosaukums pārcelts uz augšējo joslu un vairs nemainās pa sadaļām',
+    'Navigācija atdalīta ar punktētajām līnijām augšā un apakšā',
+    'Pievienota sadaļa "Uzkrājuma mērķi" (vēl top)',
+  ]},
   { v:'1.13.0', date:'2026-07-15', notes:[
     'Konta un lietotnes pogas pārceltas uz augšējo labo malu',
     'Pievienota "Iestatījumi" sadaļa ar tēmas izvēli, versiju un "Kas jauns"',

@@ -3,6 +3,12 @@ import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, coll
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 
+/* ═══════════════════════════════════════════════════════════════
+   1. KONFIGURĀCIJA — Firebase, App Check, versija, changelog
+   Faila augšā glabājas visas galvenās konstantes.
+   VERSION un CHANGELOG jāatjaunina KATRĀ izmaiņā.
+   ═══════════════════════════════════════════════════════════════ */
+
 // ---- Firebase config (embedded) ----
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDNHrObS8v_US22wzuqKnAI_PuI7P1JVlw",
@@ -19,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.15.0';
+const VERSION = '1.15.1';
 const CHANGELOG = [
+  { v:'1.15.1', date:'2026-07-18', notes:[
+    'Iekšēji koda uzlabojumi (sadaļu komentāri) — lietotnes darbība nemainās',
+  ]},
   { v:'1.15.0', date:'2026-07-18', notes:[
     'Pievienota papildu aizsardzība pret automatizētu ļaunprātīgu piekļuvi (App Check)',
   ]},
@@ -144,6 +153,12 @@ const CHANGELOG = [
   ]},
 ];
 
+/* ═══════════════════════════════════════════════════════════════
+   2. PALĪGFUNKCIJAS UN STĀVOKLIS (state)
+   Formatēšana (€), rēķinu/kredītu aprēķini, kategorijas,
+   noklusējuma dati un mainīgais `state`, kas tur visu lietotnes info.
+   ═══════════════════════════════════════════════════════════════ */
+
 const fmt = n => '€ ' + (Number(n)||0).toLocaleString('lv-LV',{minimumFractionDigits:2,maximumFractionDigits:2});
 // Actual spent for a summing bill = sum of entries; for normal bill = its amount
 function billSpent(b){
@@ -212,6 +227,12 @@ let lastSentJSON = null, pendingSnapshot = null;
 let currentUser = null, snapshotUnsub = null;
 
 const $ = id => document.getElementById(id);
+
+/* ═══════════════════════════════════════════════════════════════
+   3. FIREBASE — inicializācija, App Check, pieteikšanās/izrakstīšanās
+   Šeit startē Firebase, notiek Google Sign-In, un tiek izveidots
+   savienojums ar lietotāja datiem mākonī (Firestore sinhronizācija).
+   ═══════════════════════════════════════════════════════════════ */
 
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
@@ -348,6 +369,12 @@ async function pushNow(){
     setSync('err','Saglabāšana neizdevās');
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   4. ATTĒLOŠANA (rendering) — Budžeta sadaļa
+   Zīmē rēķinu sarakstu, kopsummas (alga/paliek/jāmaksā),
+   progresa joslu un kategoriju donut diagrammu.
+   ═══════════════════════════════════════════════════════════════ */
 
 // ---- Rendering ----
 function catOptions(sel){ return catList().map(c=>`<option value="${c.key}"${c.key===sel?' selected':''}>${escapeHtml(c.name)}</option>`).join(''); }
@@ -539,6 +566,12 @@ function renderCategories(total){
     legend.appendChild(div);
   });
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   5. MĒNEŠU ARHĪVS
+   Mēneša aizvēršana → momentuzņēmums Firestore apakškolekcijā.
+   Arhīva ielāde, attēlošana, rediģēšana, dublēšana, dzēšana.
+   ═══════════════════════════════════════════════════════════════ */
 
 // ---- Archive ----
 let archiveCache = [];
@@ -860,6 +893,12 @@ function openArchiveModal(key){
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   6. RĒĶINI — notikumi un logi
+   Algas ievade, rēķinu rediģēšana galvenajā skatā, summējošo
+   rēķinu epizožu pievienošana un limita iestatīšana.
+   ═══════════════════════════════════════════════════════════════ */
+
 // ---- Events ----
 $('income').addEventListener('input', e=>{ state.income=parseFloat(e.target.value)||0; updateTotals(); scheduleSave(); });
 $('billsList').addEventListener('input', e=>{
@@ -960,6 +999,12 @@ function openSetLimit(bi){
   $('slSave').addEventListener('click', doSave);
   $('slAmount').addEventListener('keydown', e=>{ if(e.key==='Enter') doSave(); });
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   7. KĀRTOŠANA AR VILKŠANU (drag & drop) + KREDĪTI
+   Rēķinu un kredītu pārkārtošana ar pirkstu/peli, kredītu
+   rediģēšana un kredīta termiņu (sākums/beigas) logs.
+   ═══════════════════════════════════════════════════════════════ */
 
 // ---- Drag to reorder bills ----
 let dragFrom = null, dragRow = null;
@@ -1088,6 +1133,12 @@ $('creditsList').addEventListener('pointerup', e=>{
 });
 $('creditsList').addEventListener('pointercancel', ()=>{ clearCreditMarks(); cDragFrom=null; cDragRow=null; });
 
+/* ═══════════════════════════════════════════════════════════════
+   8. POGAS UN RĪKJOSLA
+   Pievienot rēķinu/kredītu, sakārtot, notīrīt ķeksīšus,
+   eksports (JSON/CSV), imports, sākt no jauna, izrakstīties.
+   ═══════════════════════════════════════════════════════════════ */
+
 $('addBill').addEventListener('click', ()=>{
   const root = $('modalRoot');
   root.innerHTML = `
@@ -1178,6 +1229,11 @@ $('signOutBtn').addEventListener('click', ()=>{
     signOut(auth).catch(e=>alert('Neizdevās izrakstīties: '+e.message));
   }
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   9. KATEGORIJU PĀRVALDNIEKS
+   Logs, kur pievienot/rediģēt/dzēst kategorijas un to krāsas.
+   ═══════════════════════════════════════════════════════════════ */
 
 // ---- Category manager ----
 function slugify(s){
@@ -1280,6 +1336,12 @@ function openCategoryManager(){
     setTimeout(()=>{ root.innerHTML=''; }, 500);
   });
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   10. TĒMA, NAVIGĀCIJA, PWA, IESTATĪJUMI
+   Gaišā/tumšā tēma, sadaļu pārslēgšana (Budžets/Kredīti/...),
+   lietotnes instalēšana + service worker, iestatījumu modālis.
+   ═══════════════════════════════════════════════════════════════ */
 
 // ---- Version ----
 document.title = 'Finanšu pārvaldnieks v' + VERSION;

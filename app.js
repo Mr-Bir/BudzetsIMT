@@ -25,8 +25,12 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.15.1';
+const VERSION = '1.16.0';
 const CHANGELOG = [
+  { v:'1.16.0', date:'2026-07-19', notes:[
+    'Sadaļu nosaukumi (Budžets, Kredīti u.c.) padarīti lielāki un labāk salasāmi',
+    'Sadaļu josla tagad paliek redzama (pielīp augšā), ritinot lapu uz leju',
+  ]},
   { v:'1.15.1', date:'2026-07-18', notes:[
     'Iekšēji koda uzlabojumi (sadaļu komentāri) — lietotnes darbība nemainās',
   ]},

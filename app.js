@@ -25,8 +25,12 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.16.0';
+const VERSION = '1.17.0';
 const CHANGELOG = [
+  { v:'1.17.0', date:'2026-07-19', notes:[
+    'Pievienots ielādes ekrāns (splash) autentificētiem lietotājiem',
+    'Uzlabots UX: vairs nav nejaušā Google Sign-In loga blinks',
+  ]},
   { v:'1.16.0', date:'2026-07-19', notes:[
     'Sadaļu nosaukumi (Budžets, Kredīti u.c.) padarīti lielāki un labāk salasāmi',
     'Sadaļu josla tagad paliek redzama (pielīp augšā), ritinot lapu uz leju',
@@ -303,6 +307,7 @@ function connectForUser(uid){
   docRef = doc(db, 'budgets', uid);
   $('gate').classList.add('hidden');
   $('app').classList.remove('hidden');
+  const splashEl = $('splash'); if(splashEl) splashEl.classList.add('hidden');
   const nameEl = $('userName'); if(nameEl) nameEl.textContent = currentUser?.displayName || currentUser?.email || '';
   setSync('saving','Savienojas…');
   loadArchive();

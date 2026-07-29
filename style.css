@@ -88,14 +88,16 @@
   .splash {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: var(--paper); opacity: 1; transition: opacity .4s ease-out;
+    background: var(--paper) url('splash/splash.png') center / cover no-repeat;
+    opacity: 1; transition: opacity .4s ease-out;
   }
   .splash.hidden { opacity: 0; pointer-events: none; }
-  .splash-img { max-width: 280px; max-height: 60%; object-fit: contain; margin-bottom: 24px; }
+  .splash-img { display: none; }
   .spinner {
     width: 48px; height: 48px; border: 4px solid var(--line);
     border-top-color: var(--accent); border-radius: 50%;
     animation: spin .8s linear infinite;
+    position: relative; z-index: 10;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 

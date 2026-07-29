@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanses-shell-v11';
+const CACHE_NAME = 'finanses-shell-v12';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -16,9 +16,23 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys
+          .filter(k => k !== CACHE_NAME)
+          .map(k => {
+            console.log('SW: Deleting old cache:', k);
+            return caches.delete(k);
+          })
+      ).then(() => {
+        // Notify all clients about the update
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'CACHE_UPDATED' });
+          });
+        });
+      });
+    })
   );
   self.clients.claim();
 });

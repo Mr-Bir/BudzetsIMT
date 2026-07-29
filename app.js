@@ -25,9 +25,10 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.17.0';
+const VERSION = '1.17.1';
 const CHANGELOG = [
-  { v:'1.17.0', date:'2026-07-19', notes:[
+  { v:'1.17.1', date:'2026-07-19', notes:[
+    'Service worker automātiski atjaunina kešatmiņu un pārlādē lapu',
     'Pievienots ielādes ekrāns (splash) autentificētiem lietotājiem',
     'Uzlabots UX: vairs nav nejaušā Google Sign-In loga blinks',
   ]},
@@ -1404,6 +1405,13 @@ window.addEventListener('appinstalled', ()=>{ $('installBtn')?.classList.add('hi
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+  // Listen for cache updates from service worker
+  navigator.serviceWorker.addEventListener('message', event => {
+    if(event.data.type === 'CACHE_UPDATED'){
+      console.log('SW: Cache updated — reloading page');
+      setTimeout(() => window.location.reload(), 500);
+    }
   });
 }
 // ---- Settings modal ----

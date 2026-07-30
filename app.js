@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.18.1';
+const VERSION = '1.19.0';
 const CHANGELOG = [
+  { v:'1.19.0', date:'2026-07-19', notes:[
+    'Pievienota poga kopsavilkuma piespraušanai — piespiests, tas paliek redzams (mazākā izmērā) ritinot lapu',
+  ]},
   { v:'1.18.1', date:'2026-07-19', notes:[
     'Summējošiem rēķiniem (piem. Degviela) noņemta "Samaksāts" ķeksīša poga — tie automātiski skaitās apmaksāti, jo katra epizode jau ir apmaksāts darījums',
   ]},
@@ -1401,6 +1404,36 @@ function applyTheme(theme){
   let saved='light';
   try { saved = localStorage.getItem('theme') || 'light'; } catch(e){}
   if(saved==='dark') document.documentElement.setAttribute('data-theme','dark');
+})();
+
+// ---- Summary pin (sticky compact overview below the section nav) ----
+(function initSummaryPin(){
+  const wrap = document.querySelector('.summary-wrap');
+  const summaryEl = document.querySelector('.summary');
+  const btn = $('summaryPinBtn');
+  const nav = $('sectionNav');
+  if(!wrap || !summaryEl || !btn) return;
+
+  function updateNavHeightVar(){
+    if(nav) document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+  }
+  function setPinned(pinned){
+    summaryEl.classList.toggle('pinned', pinned);
+    wrap.classList.toggle('pinned', pinned);
+    btn.classList.toggle('active', pinned);
+    btn.setAttribute('aria-pressed', String(pinned));
+    btn.title = pinned ? 'Atspraust kopsavilkumu' : 'Piespraust kopsavilkumu';
+    try { localStorage.setItem('summaryPinned', pinned ? '1' : '0'); } catch(e){}
+  }
+
+  updateNavHeightVar();
+  window.addEventListener('resize', updateNavHeightVar);
+
+  btn.addEventListener('click', ()=> setPinned(!summaryEl.classList.contains('pinned')));
+
+  let savedPinned = false;
+  try { savedPinned = localStorage.getItem('summaryPinned') === '1'; } catch(e){}
+  setPinned(savedPinned);
 })();
 
 // ---- Section navigation ----

@@ -54,26 +54,31 @@
 
     <!-- ============ PANEL: BUDGET ============ -->
     <div class="panel" id="panel-budget">
-    <div class="summary">
-      <div class="stat">
-        <div class="label">Prognozējamā alga</div>
-        <div class="value input-val">€ <input id="income" type="number" step="0.01" inputmode="decimal"></div>
-      </div>
-      <div class="stat">
-        <div class="label">Kopā rēķini</div>
-        <div class="value" id="sumTotal">€ 0.00</div>
-        <div class="sub" id="sumPct">0 % no ieņēmumiem</div>
-        <div class="sub" id="sumSpent"></div>
-      </div>
-      <div class="stat">
-        <div class="label">Paliek <span class="over-badge hidden" id="remOverBadge" title="">⚠</span></div>
-        <div class="value" id="remaining">€ 0.00</div>
-        <div class="sub" id="remHint"></div>
-      </div>
-      <div class="stat">
-        <div class="label">Vēl jāmaksā <span class="over-badge hidden" id="payOverBadge" title="">⚠</span></div>
-        <div class="value" id="toPay">€ 0.00</div>
-        <div class="sub" id="paidHint">0 no 0 samaksāti</div>
+    <div class="summary-wrap">
+      <button class="summary-pin" id="summaryPinBtn" title="Piespraust kopsavilkumu" aria-pressed="false" aria-label="Piespraust kopsavilkumu">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l1 6 2 2v2H6v-2l2-2 1-6z"/></svg>
+      </button>
+      <div class="summary">
+        <div class="stat">
+          <div class="label">Prognozējamā alga</div>
+          <div class="value input-val">€ <input id="income" type="number" step="0.01" inputmode="decimal"></div>
+        </div>
+        <div class="stat">
+          <div class="label">Kopā rēķini</div>
+          <div class="value" id="sumTotal">€ 0.00</div>
+          <div class="sub" id="sumPct">0 % no ieņēmumiem</div>
+          <div class="sub" id="sumSpent"></div>
+        </div>
+        <div class="stat">
+          <div class="label">Paliek <span class="over-badge hidden" id="remOverBadge" title="">⚠</span></div>
+          <div class="value" id="remaining">€ 0.00</div>
+          <div class="sub" id="remHint"></div>
+        </div>
+        <div class="stat">
+          <div class="label">Vēl jāmaksā <span class="over-badge hidden" id="payOverBadge" title="">⚠</span></div>
+          <div class="value" id="toPay">€ 0.00</div>
+          <div class="sub" id="paidHint">0 no 0 samaksāti</div>
+        </div>
       </div>
     </div>
 

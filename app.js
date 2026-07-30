@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.19.0';
+const VERSION = '1.19.1';
 const CHANGELOG = [
+  { v:'1.19.1', date:'2026-07-19', notes:[
+    'Salabota kopsavilkuma piespraušana — poga vairs nepazūd un karte tagad tiešām paliek pielipusi, ritinot lapu',
+  ]},
   { v:'1.19.0', date:'2026-07-19', notes:[
     'Pievienota poga kopsavilkuma piespraušanai — piespiests, tas paliek redzams (mazākā izmērā) ritinot lapu',
   ]},

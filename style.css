@@ -102,7 +102,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Top utility bar: brand left · controls right, dashed rule below */
-  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 18px 0 14px; border-bottom: 2px dashed var(--line); }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 18px 0 14px; }
   .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   /* Static brand line (does not change per section) */
   .brand { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }

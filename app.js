@@ -25,9 +25,10 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.17.1';
+const VERSION = '1.17.2';
 const CHANGELOG = [
-  { v:'1.17.1', date:'2026-07-19', notes:[
+  { v:'1.17.2', date:'2026-07-19', notes:[
+    'Noņemta poga "Sākt no jauna" (nebija vajadzīga, riskants dzēst funkcionalitāte)',
     'Service worker automātiski atjaunina kešatmiņu un pārlādē lapu',
     'Pievienots ielādes ekrāns (splash) autentificētiem lietotājiem',
     'Uzlabots UX: vairs nav nejaušā Google Sign-In loga blinks',
@@ -1232,7 +1233,6 @@ $('fileIn').addEventListener('change', e=>{
   };
   r.readAsText(file);
 });
-$('resetBtn').addEventListener('click', ()=>{ if(confirm('Atjaunot sākotnējos datus? Tas pārrakstīs arī mākonī.')){ state=structuredClone(DEFAULT); render(); pushNow(); }});
 
 $('signOutBtn').addEventListener('click', ()=>{
   if(confirm('Izrakstīties? Nākamreiz atkal būs jāpiesakās ar Google.')){

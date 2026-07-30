@@ -25,15 +25,26 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.18.0';
+const VERSION = '1.18.1';
 const CHANGELOG = [
+  { v:'1.18.1', date:'2026-07-19', notes:[
+    'Summējošiem rēķiniem (piem. Degviela) noņemta "Samaksāts" ķeksīša poga — tie automātiski skaitās apmaksāti, jo katra epizode jau ir apmaksāts darījums',
+  ]},
   { v:'1.18.0', date:'2026-07-19', notes:[
     'Pārtēriņš summējošos rēķinos ar limitu tagad atspoguļojas arī "Paliek" un "Vēl jāmaksā"',
     'Pievienota brīdinājuma ikona pie "Paliek"/"Vēl jāmaksā", ja kāds limits pārtērēts',
+  ]},
+  { v:'1.17.3', date:'2026-07-19', notes:[
     'Poga "Aizvērt mēnesi" pārsaukta par "Saglabāt aktuālo mēnesi → arhīvā"',
     'Noņemta poga "Notīrīt ķeksīšus"',
+  ]},
+  { v:'1.17.2', date:'2026-07-19', notes:[
     'Noņemta poga "Sākt no jauna" (nebija vajadzīga, riskants dzēst funkcionalitāte)',
+  ]},
+  { v:'1.17.1', date:'2026-07-19', notes:[
     'Service worker automātiski atjaunina kešatmiņu un pārlādē lapu',
+  ]},
+  { v:'1.17.0', date:'2026-07-19', notes:[
     'Pievienots ielādes ekrāns (splash) autentificētiem lietotājiem',
     'Uzlabots UX: vairs nav nejaušā Google Sign-In loga blinks',
   ]},
@@ -190,6 +201,9 @@ function billAmount(b){
   }
   return Number(b.amount)||0;
 }
+// Summing bills (fuel etc.) have no single deferred payment — each entry is money already
+// spent at the time it was logged, so they're always treated as "paid" for totals/sorting.
+function isBillPaid(b){ return b && b.type==='summing' ? true : !!b.paid; }
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 // Time-based credit progress from start/end dates. Returns null if dates missing/invalid.
 function creditProgress(c){
@@ -416,7 +430,9 @@ function render(){
       <div class="drag-handle" data-drag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot" style="border-left-color:${catColor(b.cat||'cits')}">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
       </div>
-      <button class="pay-check" data-pay="${i}" title="Atzīmēt kā samaksātu" aria-label="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+      ${isSum
+        ? `<div class="pay-check pay-check-auto" title="Summējošs rēķins — katra epizode jau ir apmaksāta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+        : `<button class="pay-check" data-pay="${i}" title="Atzīmēt kā samaksātu" aria-label="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
       <input class="name" value="${escapeHtml(b.name)}" data-i="${i}" data-f="name" placeholder="Nosaukums">
       ${amountCell}
       <div class="pct">${pct.toFixed(2)} %</div>
@@ -505,9 +521,9 @@ function updateTotals(){
   const bills = state.bills||[];
   const total = bills.reduce((s,b)=>s+billAmount(b),0);
   const ctotal = (state.credits||[]).reduce((s,c)=>s+(Number(c.amount)||0),0);
-  const paidSum = bills.filter(b=>b.paid).reduce((s,b)=>s+billAmount(b),0);
+  const paidSum = bills.filter(isBillPaid).reduce((s,b)=>s+billAmount(b),0);
   const toPay = total - paidSum;
-  const paidCount = bills.filter(b=>b.paid).length;
+  const paidCount = bills.filter(isBillPaid).length;
   $('sumTotal').textContent = fmt(total);
   $('sumPct').textContent = (income>0?(total/income*100).toFixed(1):'0')+' % no ieņēmumiem';
   // Show "iztērēts" only when it differs from the planned total (i.e. summing bills with limits exist)
@@ -763,8 +779,8 @@ function openArchiveModal(key){
       <div class="ms"><div class="l">Alga</div><div class="v">${fmt(income)}</div></div>
       <div class="ms"><div class="l">Rēķini</div><div class="v">${fmt(total)}</div></div>
       <div class="ms"><div class="l">Paliek</div><div class="v" style="color:${remaining>=0?'var(--green)':'var(--red)'}">${fmt(remaining)}</div></div>`;
-    const paidCount = draft.bills.filter(b=>b.paid).length;
-    const paidSum = draft.bills.filter(b=>b.paid).reduce((s,b)=>s+billAmount(b),0);
+    const paidCount = draft.bills.filter(isBillPaid).length;
+    const paidSum = draft.bills.filter(isBillPaid).reduce((s,b)=>s+billAmount(b),0);
     $('mPaidInfo').textContent = `${paidCount} no ${draft.bills.length} samaksāti · ${fmt(paidSum)}`;
   }
 
@@ -772,12 +788,15 @@ function openArchiveModal(key){
     const c = $('mBills'); c.innerHTML = '';
     draft.bills.forEach((b,i)=>{
       const row = document.createElement('div');
+      const isSumB = b.type==='summing';
       row.className = 'ebill' + (b.paid?' paid':''); row.dataset.cat = b.cat||'cits'; row.dataset.idx = i;
       row.innerHTML = `
         <div class="ehandle" data-edrag="${i}" title="Vilkt" style="border-left-color:${catColor(b.cat||'cits')}"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
-        <button class="echk" data-echk="${i}" title="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+        ${isSumB
+          ? `<div class="echk echk-auto" title="Summējošs rēķins — katra epizode jau ir apmaksāta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+          : `<button class="echk" data-echk="${i}" title="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
         <input class="ename" value="${escapeHtml(b.name||'')}" data-ei="${i}" data-ef="name" placeholder="Nosaukums">
-        <span class="pay-badge ${b.paid?'yes':'no'}">${b.paid?'Samaksāts':'Nav samaksāts'}</span>
+        <span class="pay-badge ${isBillPaid(b)?'yes':'no'}">${isSumB?'Apmaksāts (automātiski)':(b.paid?'Samaksāts':'Nav samaksāts')}</span>
         <div class="eamt-wrap"><span class="e-eur">€</span>${b.type==='summing' ? `<span class="eamt" style="display:inline-block;" title="Kopsumma no ${(b.entries||[]).length} epizodēm">${billAmount(b).toFixed(2)}</span>` : `<input class="eamt" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-ei="${i}" data-ef="amount">`}</div>
         <div style="display:flex;gap:4px;align-items:center;">
           <select class="ecat" data-ei="${i}" data-ef="cat">${catOpts(b.cat||'cits')}</select>
@@ -1199,7 +1218,7 @@ $('addBill').addEventListener('click', ()=>{
 $('sortBillsBtn').addEventListener('click', ()=>{
   state.bills.sort((a,b)=>{
     // Primary: paid first (paid=true before paid=false)
-    const pa = a.paid?1:0, pb = b.paid?1:0;
+    const pa = isBillPaid(a)?1:0, pb = isBillPaid(b)?1:0;
     if(pa!==pb) return pb-pa;
     // Secondary: larger amount first
     return billAmount(b) - billAmount(a);
@@ -1214,7 +1233,7 @@ $('exportBtn').addEventListener('click', ()=>{
 });
 $('exportCsvBtn')?.addEventListener('click', ()=>{
   const rows = [['Tips','Nosaukums','Summa','Kategorija','Samaksāts']];
-  state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', billAmount(b).toFixed(2), catName(b.cat||'cits'), b.paid?'Jā':'Nē']));
+  state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', billAmount(b).toFixed(2), catName(b.cat||'cits'), isBillPaid(b)?'Jā':'Nē']));
   state.credits.forEach(c=>rows.push(['Kredīts', c.name||'', (Number(c.amount)||0).toFixed(2), '', '']));
   const esc = v => /[";\n]/.test(v) ? '"'+String(v).replace(/"/g,'""')+'"' : v;
   const csv = '\uFEFF' + rows.map(r=>r.map(esc).join(';')).join('\r\n');

@@ -25,9 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.17.2';
+const VERSION = '1.17.3';
 const CHANGELOG = [
-  { v:'1.17.2', date:'2026-07-19', notes:[
+  { v:'1.17.3', date:'2026-07-19', notes:[
+    'Poga "Aizvērt mēnesi" pārsaukta par "Saglabāt aktuālo mēnesi → arhīvā"',
+    'Noņemta poga "Notīrīt ķeksīšus"',
     'Noņemta poga "Sākt no jauna" (nebija vajadzīga, riskants dzēst funkcionalitāte)',
     'Service worker automātiski atjaunina kešatmiņu un pārlādē lapu',
     'Pievienots ielādes ekrāns (splash) autentificētiem lietotājiem',
@@ -1190,7 +1192,6 @@ $('sortBillsBtn').addEventListener('click', ()=>{
   });
   render(); scheduleSave();
 });
-$('resetPaidBtn').addEventListener('click', ()=>{ if(confirm('Notīrīt visus samaksāts ķeksīšus? (parasti jauna mēneša sākumā)')){ state.bills.forEach(b=>b.paid=false); render(); scheduleSave(); }});
 $('addCredit').addEventListener('click', ()=>{ state.credits.push({name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });
 $('exportBtn').addEventListener('click', ()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});

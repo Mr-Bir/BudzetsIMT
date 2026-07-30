@@ -25,9 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.17.3';
+const VERSION = '1.18.0';
 const CHANGELOG = [
-  { v:'1.17.3', date:'2026-07-19', notes:[
+  { v:'1.18.0', date:'2026-07-19', notes:[
+    'Pārtēriņš summējošos rēķinos ar limitu tagad atspoguļojas arī "Paliek" un "Vēl jāmaksā"',
+    'Pievienota brīdinājuma ikona pie "Paliek"/"Vēl jāmaksā", ja kāds limits pārtērēts',
     'Poga "Aizvērt mēnesi" pārsaukta par "Saglabāt aktuālo mēnesi → arhīvā"',
     'Noņemta poga "Notīrīt ķeksīšus"',
     'Noņemta poga "Sākt no jauna" (nebija vajadzīga, riskants dzēst funkcionalitāte)',
@@ -177,12 +179,14 @@ function billSpent(b){
   if(b && b.type==='summing') return (b.entries||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
   return Number(b.amount)||0;
 }
-// Budget amount used in "Kopā rēķini" etc: summing bill with a limit uses the limit; otherwise the spent amount
+// Budget amount used in "Kopā rēķini" etc: summing bill with a limit uses the limit,
+// unless actual spending has exceeded it — then the real spent amount is used instead.
 function billAmount(b){
   if(b && b.type==='summing'){
     const lim = Number(b.limit);
-    if(lim>0) return lim;
-    return billSpent(b);
+    const spent = billSpent(b);
+    if(lim>0) return Math.max(lim, spent);
+    return spent;
   }
   return Number(b.amount)||0;
 }
@@ -524,6 +528,16 @@ function updateTotals(){
   const rem = $('remaining');
   rem.textContent = fmt(remaining); rem.className='value '+(remaining>=0?'pos':'neg');
   $('remHint').textContent = remaining>=0?'pāri pēc rēķiniem':'iztrūkums';
+  // Overspend warning: summing bills where actual spending exceeds the set limit
+  const overBills = bills.filter(b=>b.type==='summing' && (Number(b.limit)||0)>0 && billSpent(b)>Number(b.limit));
+  const overTitle = overBills.length
+    ? 'Pārtērēts: ' + overBills.map(b=>`${b.name||'Rēķins'} (+${fmt(billSpent(b)-Number(b.limit))})`).join(', ')
+    : '';
+  [$('remOverBadge'), $('payOverBadge')].forEach(badge=>{
+    if(!badge) return;
+    badge.classList.toggle('hidden', overBills.length===0);
+    badge.title = overTitle;
+  });
   document.querySelectorAll('#billsList .bill').forEach((row,idx)=>{
     const bi = +row.dataset.idx;
     const pct = income>0?(billAmount(state.bills[bi])/income*100):0;

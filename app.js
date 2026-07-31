@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.19.4';
+const VERSION = '1.19.5';
 const CHANGELOG = [
+  { v:'1.19.5', date:'2026-08-01', notes:[
+    'Salabota kopsavilkuma piespraušana — pēc pieteikšanās navigācijas augstums tagad tiek pareizi izmērīts, tāpēc piespraustais kopsavilkums vairs nepaslīd zem navigācijas joslas',
+  ]},
   { v:'1.19.4', date:'2026-08-01', notes:[
     'Sadaļu nosaukumu fonts samazināts, mobilajā skatā automātiski pielāgojas platumam, lai visi nosaukumi paliktu vienā rindā',
     'Rēķinu saraksts padarīts kompaktāks — mazāks rindu augstums un atstarpe starp tām',
@@ -1440,7 +1443,11 @@ function applyTheme(theme){
   }
 
   updateNavHeightVar();
-  window.addEventListener('resize', updateNavHeightVar);
+  if('ResizeObserver' in window && nav){
+    new ResizeObserver(updateNavHeightVar).observe(nav);
+  } else {
+    window.addEventListener('resize', updateNavHeightVar);
+  }
 
   btn.addEventListener('click', ()=> setPinned(!summaryEl.classList.contains('pinned')));
 

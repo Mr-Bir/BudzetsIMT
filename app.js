@@ -25,8 +25,12 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.19.3';
+const VERSION = '1.19.4';
 const CHANGELOG = [
+  { v:'1.19.4', date:'2026-08-01', notes:[
+    'Sadaļu nosaukumu fonts samazināts, mobilajā skatā automātiski pielāgojas platumam, lai visi nosaukumi paliktu vienā rindā',
+    'Rēķinu saraksts padarīts kompaktāks — mazāks rindu augstums un atstarpe starp tām',
+  ]},
   { v:'1.19.3', date:'2026-08-01', notes:[
     'Sadaļu navigācijas joslas (Budžets/Kredīti/…) punktētās līnijas samazinātas no 2px uz 1px',
   ]},

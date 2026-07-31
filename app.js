@@ -25,8 +25,13 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.19.5';
+const VERSION = '1.20.0';
 const CHANGELOG = [
+  { v:'1.20.0', date:'2026-08-01', notes:[
+    'Sadaļu pogām (Budžets/Kredīti/...) pievienots slīdošs pasvītrojuma indikators, kas animēti seko aktīvajai sadaļai',
+    'Pārslēdzoties starp sadaļām, saturs tagad parādās ar mīkstu izbalēšanas un pacēluma animāciju',
+    'Rēķinu saraksts padarīts vēl kompaktāks — samazināts rindu iekšējais atkāpums',
+  ]},
   { v:'1.19.5', date:'2026-08-01', notes:[
     'Salabota kopsavilkuma piespraušana — pēc pieteikšanās navigācijas augstums tagad tiek pareizi izmērīts, tāpēc piespraustais kopsavilkums vairs nepaslīd zem navigācijas joslas',
   ]},
@@ -1458,6 +1463,15 @@ function applyTheme(theme){
 
 // ---- Section navigation ----
 const SECTIONS = ['budget','credits','reminders','savings'];
+const navIndicator = $('navIndicator');
+const sectionNavEl = $('sectionNav');
+function positionNavIndicator(){
+  if(!navIndicator || !sectionNavEl) return;
+  const activeBtn = sectionNavEl.querySelector('.nav-item.active');
+  if(!activeBtn) return;
+  navIndicator.style.left = activeBtn.offsetLeft + 'px';
+  navIndicator.style.width = activeBtn.offsetWidth + 'px';
+}
 function showSection(name){
   if(!SECTIONS.includes(name)) return;
   document.querySelectorAll('.panel').forEach(p=>{
@@ -1466,12 +1480,21 @@ function showSection(name){
   document.querySelectorAll('.nav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.section === name);
   });
+  positionNavIndicator();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 $('sectionNav').addEventListener('click', e=>{
   const btn = e.target.closest('.nav-item');
   if(btn) showSection(btn.dataset.section);
 });
+// Keep the sliding indicator aligned with the active tab, including right after
+// #app becomes visible post-login (offsetLeft/Width are 0 while display:none).
+if('ResizeObserver' in window && sectionNavEl){
+  new ResizeObserver(positionNavIndicator).observe(sectionNavEl);
+} else {
+  window.addEventListener('resize', positionNavIndicator);
+}
+positionNavIndicator();
 
 // ---- PWA: install prompt + service worker ----
 let deferredInstall = null;

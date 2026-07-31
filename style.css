@@ -402,6 +402,27 @@
     .ebill .ename { font-size: 13px; }
     .ebill .eamt { width: 66px; font-size: 13px; }
     .ebill .ecat { max-width: 84px; }
+
+    .arch-row {
+      grid-template-columns: 1fr auto auto;
+      row-gap: 10px;
+      padding: 12px 14px;
+    }
+    .arch-row > div:nth-child(1) { grid-column: 1; grid-row: 1; }
+    .arch-row > div:nth-child(2) { grid-column: 2; grid-row: 1; }
+    .arch-row > div:nth-child(3) { grid-column: 3; grid-row: 1; }
+    .arch-row > .arch-actions {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-content: flex-start;
+      padding-top: 10px;
+      border-top: 1px dashed var(--line);
+    }
+    .arch-month { font-size: 14px; }
+    .arch-sub { font-size: 11px; }
+    .arch-figure { font-size: 13px; }
+    .arch-figure .lbl { font-size: 9px; }
+    .arch-actions .btn { font-size: 12px; padding: 6px 10px; }
   }
 
   @media (max-width: 760px) {

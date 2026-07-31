@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.19.1';
+const VERSION = '1.19.2';
 const CHANGELOG = [
+  { v:'1.19.2', date:'2026-08-01', notes:[
+    'Mēnešu arhīva ieraksti mobilajā skatā vairs nav saspiesti — pogas (Skatīt/Dublēt/×) tagad pārnestas zem punktētas atdalītājlīnijas',
+  ]},
   { v:'1.19.1', date:'2026-07-19', notes:[
     'Salabota kopsavilkuma piespraušana — poga vairs nepazūd un karte tagad tiešām paliek pielipusi, ritinot lapu',
   ]},

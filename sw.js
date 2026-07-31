@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanses-shell-v19';
+const CACHE_NAME = 'finanses-shell-v20';
 const SHELL_FILES = [
   './',
   './index.html',

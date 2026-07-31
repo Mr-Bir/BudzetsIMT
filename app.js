@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.19.2';
+const VERSION = '1.19.3';
 const CHANGELOG = [
+  { v:'1.19.3', date:'2026-08-01', notes:[
+    'Sadaļu navigācijas joslas (Budžets/Kredīti/…) punktētās līnijas samazinātas no 2px uz 1px',
+  ]},
   { v:'1.19.2', date:'2026-08-01', notes:[
     'Mēnešu arhīva ieraksti mobilajā skatā vairs nav saspiesti — pogas (Skatīt/Dublēt/×) tagad pārnestas zem punktētas atdalītājlīnijas',
   ]},

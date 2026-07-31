@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.20.0';
+const VERSION = '1.21.0';
 const CHANGELOG = [
+  { v:'1.21.0', date:'2026-08-01', notes:[
+    'Summējošiem rēķiniem pievienota epizožu saraksta sakļaušana/atvēršana — klikšķinot uz "Iztērēts..." rindas, atsevišķās epizodes paslēpjas, limita informācija paliek redzama',
+  ]},
   { v:'1.20.0', date:'2026-08-01', notes:[
     'Sadaļu pogām (Budžets/Kredīti/...) pievienots slīdošs pasvītrojuma indikators, kas animēti seko aktīvajai sadaļai',
     'Pārslēdzoties starp sadaļām, saturs tagad parādās ar mīkstu izbalēšanas un pacēluma animāciju',
@@ -435,6 +438,10 @@ async function pushNow(){
 function catOptions(sel){ return catList().map(c=>`<option value="${c.key}"${c.key===sel?' selected':''}>${escapeHtml(c.name)}</option>`).join(''); }
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+// Which summing bills have their entries list collapsed. Index-based and
+// intentionally not persisted — resets on reload, same as any accordion UI.
+const collapsedBills = new Set();
+
 function render(){
   const income = Number(state.income)||0;
   $('income').value = state.income;
@@ -469,16 +476,19 @@ function render(){
       sub.className = 'entries';
       const over = lim>0 && spent>lim;
       const ratio = lim>0 ? Math.min(spent/lim,1) : 0;
-      const limitLine = lim>0
-        ? `<div class="limit-row">
-             <span class="limit-label">Iztērēts <strong>${fmt(spent)}</strong> no ${fmt(lim)}${over?` · <span class="over">pārtērēts ${fmt(spent-lim)}</span>`:''}</span>
-             <button class="limit-edit" data-limit="${i}" title="Mainīt limitu">${lim>0?'Mainīt limitu':'Uzlikt limitu'}</button>
-           </div>
-           <div class="limit-track"><div class="limit-fill" style="width:${ratio*100}%;background:${over?'var(--red)':'var(--green)'}"></div></div>`
-        : `<div class="limit-row">
-             <span class="limit-label">Iztērēts <strong>${fmt(spent)}</strong> · bez limita</span>
-             <button class="limit-edit" data-limit="${i}" title="Uzlikt limitu">Uzlikt limitu</button>
-           </div>`;
+      const collapsed = collapsedBills.has(i);
+      const labelHtml = lim>0
+        ? `Iztērēts <strong>${fmt(spent)}</strong> no ${fmt(lim)}${over?` · <span class="over">pārtērēts ${fmt(spent-lim)}</span>`:''}`
+        : `Iztērēts <strong>${fmt(spent)}</strong> · bez limita`;
+      const limitLine = `
+        <div class="limit-row">
+          <button class="entries-toggle" data-toggle="${i}" aria-expanded="${collapsed?'false':'true'}" title="${collapsed?'Rādīt epizodes':'Sakļaut epizodes'}">
+            <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <span class="limit-label">${labelHtml}</span>
+          </button>
+          <button class="limit-edit" data-limit="${i}" title="${lim>0?'Mainīt limitu':'Uzlikt limitu'}">${lim>0?'Mainīt limitu':'Uzlikt limitu'}</button>
+        </div>
+        ${lim>0 ? `<div class="limit-track"><div class="limit-fill" style="width:${ratio*100}%;background:${over?'var(--red)':'var(--green)'}"></div></div>` : ''}`;
       const entriesHtml = (b.entries||[]).length
         ? (b.entries||[]).map((e,ei)=>`
           <div class="entry-row">
@@ -488,7 +498,7 @@ function render(){
             <button class="entry-del" data-entrydel="${i}" data-entryidx="${ei}" title="Dzēst epizodi">×</button>
           </div>`).join('')
         : `<div class="entry-empty">Vēl nav epizožu — pievieno ar "+"</div>`;
-      sub.innerHTML = limitLine + entriesHtml;
+      sub.innerHTML = limitLine + `<div class="entries-list${collapsed?' collapsed':''}">${entriesHtml}</div>`;
       list.appendChild(sub);
     }
   });
@@ -985,10 +995,21 @@ $('billsList').addEventListener('click', e=>{
   const addEntryBtn = e.target.closest('[data-addentry]');
   const entryDelBtn = e.target.closest('[data-entrydel]');
   const limitBtn = e.target.closest('[data-limit]');
+  const toggleBtn = e.target.closest('[data-toggle]');
   if(delBtn){ const i=+delBtn.dataset.del; const nm=(state.bills[i].name||'').trim(); if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){ state.bills.splice(i,1); render(); scheduleSave(); } return; }
   if(payBtn){ const i=+payBtn.dataset.pay; state.bills[i].paid = !state.bills[i].paid; render(); updateTotals(); scheduleSave(); return; }
   if(addEntryBtn){ openAddEntry(+addEntryBtn.dataset.addentry); return; }
   if(limitBtn){ openSetLimit(+limitBtn.dataset.limit); return; }
+  if(toggleBtn){
+    const i = +toggleBtn.dataset.toggle;
+    const nowCollapsed = !collapsedBills.has(i);
+    if(nowCollapsed) collapsedBills.add(i); else collapsedBills.delete(i);
+    const entriesListEl = toggleBtn.closest('.entries').querySelector('.entries-list');
+    if(entriesListEl) entriesListEl.classList.toggle('collapsed', nowCollapsed);
+    toggleBtn.setAttribute('aria-expanded', String(!nowCollapsed));
+    toggleBtn.title = nowCollapsed ? 'Rādīt epizodes' : 'Sakļaut epizodes';
+    return;
+  }
   if(entryDelBtn){
     const bi=+entryDelBtn.dataset.entrydel, ei=+entryDelBtn.dataset.entryidx;
     const ent = state.bills[bi].entries[ei];

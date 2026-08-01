@@ -87,7 +87,7 @@
 
     <div class="grid2">
       <section>
-        <div class="sec-head"><h2>Rēķini</h2><div style="display:flex;gap:8px;"><button class="btn ghost sm" id="sortBillsBtn">Sakārtot</button><button class="btn ghost sm" id="newMonthBtn">🗓 Jauns mēnesis</button><button class="btn" id="addBill">+ Pievienot rēķinu</button></div></div>
+        <div class="sec-head"><h2>Rēķini <span class="period-label" id="periodLabel" tabindex="0" role="button" title="Klikšķini, lai mainītu mēneša nosaukumu"></span><input class="period-label-input hidden" id="periodLabelInput" maxlength="60"></h2><div style="display:flex;gap:8px;"><button class="btn ghost sm" id="sortBillsBtn">Sakārtot</button><button class="btn ghost sm" id="newMonthBtn">🗓 Jauns mēnesis</button><button class="btn" id="addBill">+ Pievienot rēķinu</button></div></div>
         <div class="bills" id="billsList"></div>
         <div class="bills-foot"><span class="lbl">Kopā</span><span class="total" id="billsFootTotal">€ 0.00</span></div>
       </section>

@@ -25,8 +25,13 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.22.0';
+const VERSION = '1.23.0';
 const CHANGELOG = [
+  { v:'1.23.0', date:'2026-08-01', notes:[
+    'Pievienots rediģējams darba perioda nosaukums pie "Rēķini" (piem. "Jūlijs 2026") — klikšķinot uz tā, var mainīt',
+    'Arhivēšana ("Saglabāt aktuālo mēnesi → arhīvā" un "Jauns mēnesis") tagad izmanto šo nosaukumu, nevis klikšķa datumu — vairs nesajauc, kuram mēnesim dati pieder',
+    'Nospiežot "Jauns mēnesis", perioda nosaukums automātiski atjaunojas uz jauno kalendāro mēnesi',
+  ]},
   { v:'1.22.0', date:'2026-08-01', notes:[
     'Pievienota poga "Jauns mēnesis" — ļauj izvēlēties, kurus rēķinus paturēt nākamajam mēnesim; summējošiem rēķiniem dzēš epizodes (limits paliek), pārējiem noņem "Samaksāts" ķeksīti, ar iespēju vispirms saglabāt aktuālo mēnesi arhīvā',
   ]},
@@ -267,6 +272,7 @@ function catColor(key){ const c = catList().find(x=>x.key===key); return c ? c.c
 
 const DEFAULT = {
   income: 1850,
+  periodName: '',
   bills: [
     {name:'Pārtika', amount:380, cat:'partika'},
     {name:'Īre', amount:650, cat:'ire'},
@@ -368,14 +374,14 @@ function connectForUser(uid){
   snapshotUnsub = onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
-      const incoming = { income: d.income ?? DEFAULT.income, bills: d.bills ?? [], credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES) };
-      const incomingJSON = JSON.stringify({ income: incoming.income, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories });
+      const incoming = { income: d.income ?? DEFAULT.income, periodName: d.periodName || '', bills: d.bills ?? [], credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES) };
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
       if(isEditingActive()){ pendingSnapshot = incoming; setSync('ok','Sinhronizēts'); return; }
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data)
-      state = { income: 0, bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES) };
+      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES) };
       render(); pushNow();
     }
   }, err=>{
@@ -423,8 +429,8 @@ function scheduleSave(){
 }
 async function pushNow(){
   try {
-    lastSentJSON = JSON.stringify({ income: state.income, bills: state.bills, credits: state.credits, categories: state.categories });
-    await setDoc(docRef, { income: state.income, bills: state.bills, credits: state.credits, categories: state.categories, updated: Date.now() });
+    lastSentJSON = JSON.stringify({ income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories });
+    await setDoc(docRef, { income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, updated: Date.now() });
     setSync('ok','Sinhronizēts');
   } catch(e){
     setSync('err','Saglabāšana neizdevās');
@@ -445,7 +451,38 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':
 // intentionally not persisted — resets on reload, same as any accordion UI.
 const collapsedBills = new Set();
 
+// ---- Working month label (shown next to "Rēķini", editable) ----
+function currentPeriodLabel(){ return (state.periodName||'').trim() || monthLabel(monthKey()); }
+function renderPeriodLabel(){ const el = $('periodLabel'); if(el) el.textContent = '· ' + currentPeriodLabel(); }
+function openPeriodLabelEdit(){
+  const span = $('periodLabel'), input = $('periodLabelInput');
+  if(!span || !input) return;
+  input.value = (state.periodName||'').trim() || currentPeriodLabel();
+  span.classList.add('hidden');
+  input.classList.remove('hidden');
+  input.focus(); input.select();
+}
+function closePeriodLabelEdit(save){
+  const span = $('periodLabel'), input = $('periodLabelInput');
+  if(!span || !input) return;
+  if(save){
+    const val = input.value.trim().slice(0,60);
+    if(val !== (state.periodName||'').trim()){ state.periodName = val; scheduleSave(); }
+  }
+  renderPeriodLabel();
+  input.classList.add('hidden');
+  span.classList.remove('hidden');
+}
+$('periodLabel').addEventListener('click', openPeriodLabelEdit);
+$('periodLabel').addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openPeriodLabelEdit(); } });
+$('periodLabelInput').addEventListener('blur', ()=>closePeriodLabelEdit(true));
+$('periodLabelInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); }
+  if(e.key==='Escape'){ e.preventDefault(); closePeriodLabelEdit(false); }
+});
+
 function render(){
+  renderPeriodLabel();
   const income = Number(state.income)||0;
   $('income').value = state.income;
   const list = $('billsList'); list.innerHTML='';
@@ -705,9 +742,11 @@ function renderArchive(){
 $('closeMonthBtn').addEventListener('click', async ()=>{
   const key = monthKey();
   const existing = archiveCache.find(a=>a.id===key);
+  const label = (state.periodName||'').trim();
+  const displayLabel = label || monthLabel(key);
   const msg = existing
-    ? `Mēnesis ${monthLabel(key)} jau ir arhīvā. Pārrakstīt to ar pašreizējiem datiem?`
-    : `Saglabāt ${monthLabel(key)} arhīvā? Pašreizējie dati paliks aktuālajā mēnesī, un arhīvā izveidosies momentuzņēmums.`;
+    ? `Mēnesis ${displayLabel} jau ir arhīvā. Pārrakstīt to ar pašreizējiem datiem?`
+    : `Saglabāt ${displayLabel} arhīvā? Pašreizējie dati paliks aktuālajā mēnesī, un arhīvā izveidosies momentuzņēmums.`;
   if(!confirm(msg)) return;
   try {
     const snapshot = {
@@ -716,10 +755,11 @@ $('closeMonthBtn').addEventListener('click', async ()=>{
       credits: structuredClone(state.credits),
       archivedAt: Date.now()
     };
-    if(existing && existing.name) snapshot.name = existing.name;
+    if(label) snapshot.name = label;
+    else if(existing && existing.name) snapshot.name = existing.name;
     await setDoc(doc(db, 'budgets', roomId, 'archive', key), snapshot);
     await loadArchive();
-    alert(`${monthLabel(key)} saglabāts arhīvā ✓`);
+    alert(`${displayLabel} saglabāts arhīvā ✓`);
   } catch(e){
     alert('Neizdevās saglabāt: ' + e.message);
   }
@@ -1108,7 +1148,7 @@ function openNewMonthModal(){
       <div class="modal" style="max-width:460px;">
         <button class="modal-close" id="nmClose">×</button>
         <h3>Jauns mēnesis</h3>
-        <div class="msub">Atzīmē rēķinus, kas atkārtojas katru mēnesi un jāpatur. Neatzīmētie tiks izdzēsti. Summējošiem rēķiniem tiks dzēstas epizodes (limits paliks nemainīgs), un visiem paturētajiem rēķiniem "Samaksāts" ķeksīši tiks noņemti.</div>
+        <div class="msub">Atzīmē rēķinus, kas atkārtojas katru mēnesi un jāpatur. Neatzīmētie tiks izdzēsti. Summējošiem rēķiniem tiks dzēstas epizodes (limits paliks nemainīgs), un visiem paturētajiem rēķiniem "Samaksāts" ķeksīši tiks noņemti.<br><br>Ja saglabāsi arhīvā, tas tiks nosaukts "<strong>${escapeHtml(currentPeriodLabel())}</strong>". Pēc atiestatīšanas darba perioda nosaukums tiks automātiski mainīts uz "<strong>${escapeHtml(monthLabel(monthKey()))}</strong>" — vēlāk to vari pārrakstīt, klikšķinot uz nosaukuma pie "Rēķini".</div>
         <div class="nm-list">${rowsHtml}</div>
         <label class="nm-archive-opt"><input type="checkbox" id="nmArchiveFirst" checked> Vispirms saglabāt šo mēnesi arhīvā</label>
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
@@ -1129,13 +1169,15 @@ function openNewMonthModal(){
       try {
         const key = monthKey();
         const existing = archiveCache.find(a=>a.id===key);
+        const label = (state.periodName||'').trim();
         const snapshot = {
           income: state.income,
           bills: structuredClone(state.bills),
           credits: structuredClone(state.credits),
           archivedAt: Date.now()
         };
-        if(existing && existing.name) snapshot.name = existing.name;
+        if(label) snapshot.name = label;
+        else if(existing && existing.name) snapshot.name = existing.name;
         await setDoc(doc(db, 'budgets', roomId, 'archive', key), snapshot);
         await loadArchive();
       } catch(e){
@@ -1146,6 +1188,7 @@ function openNewMonthModal(){
     state.bills = state.bills
       .filter((b,i)=>keepIdx.has(i))
       .map(b=> b.type==='summing' ? { ...b, entries: [] } : { ...b, paid: false });
+    state.periodName = monthLabel(monthKey());
     close(); render(); updateTotals(); scheduleSave();
     alert('Jauns mēnesis sagatavots ✓');
   });
@@ -1362,6 +1405,7 @@ $('fileIn').addEventListener('change', e=>{
     if(!confirm('Importēt šos datus? Tas pārrakstīs pašreizējos rēķinus, kredītus un kategorijas — arī mākonī un citās ierīcēs. (Arhīvs netiek skarts.)')){ $('fileIn').value=''; return; }
     state = {
       income: Number(data.income)||0,
+      periodName: (typeof data.periodName==='string') ? data.periodName : (state.periodName||''),
       bills: Array.isArray(data.bills)?data.bills:[],
       credits: Array.isArray(data.credits)?data.credits:[],
       categories: (Array.isArray(data.categories)&&data.categories.length)?data.categories:structuredClone(DEFAULT_CATEGORIES)

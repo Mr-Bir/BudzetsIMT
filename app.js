@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.23.0';
+const VERSION = '1.23.1';
 const CHANGELOG = [
+  { v:'1.23.1', date:'2026-08-01', notes:[
+    'Arhīva ierakstos noņemts dublējošais kalendārā mēneša nosaukums — tagad rādās tikai rēķinu skaits un alga',
+  ]},
   { v:'1.23.0', date:'2026-08-01', notes:[
     'Pievienots rediģējams darba perioda nosaukums pie "Rēķini" (piem. "Jūlijs 2026") — klikšķinot uz tā, var mainīt',
     'Arhivēšana ("Saglabāt aktuālo mēnesi → arhīvā" un "Jauns mēnesis") tagad izmanto šo nosaukumu, nevis klikšķa datumu — vairs nesajauc, kuram mēnesim dati pieder',
@@ -727,7 +730,7 @@ function renderArchive(){
     const row = document.createElement('div');
     row.className = 'arch-row';
     row.innerHTML = `
-      <div><div class="arch-month">${escapeHtml(archName(a))}</div><div class="arch-sub">${(a.name && a.name.trim() && /^\d{4}-\d{2}$/.test(a.id)) ? monthLabel(a.id)+' · ' : ''}${(a.bills||[]).length} rēķini · alga ${fmt(a.income)}</div></div>
+      <div><div class="arch-month">${escapeHtml(archName(a))}</div><div class="arch-sub">${(a.bills||[]).length} rēķini · alga ${fmt(a.income)}</div></div>
       <div class="arch-figure"><span class="lbl">Rēķini</span>${fmt(total)}</div>
       <div class="arch-figure ${remaining>=0?'rem-pos':'rem-neg'}"><span class="lbl">Paliek</span>${fmt(remaining)}</div>
       <div class="arch-actions">

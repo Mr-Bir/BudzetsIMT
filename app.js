@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.21.0';
+const VERSION = '1.22.0';
 const CHANGELOG = [
+  { v:'1.22.0', date:'2026-08-01', notes:[
+    'Pievienota poga "Jauns mēnesis" — ļauj izvēlēties, kurus rēķinus paturēt nākamajam mēnesim; summējošiem rēķiniem dzēš epizodes (limits paliek), pārējiem noņem "Samaksāts" ķeksīti, ar iespēju vispirms saglabāt aktuālo mēnesi arhīvā',
+  ]},
   { v:'1.21.0', date:'2026-08-01', notes:[
     'Summējošiem rēķiniem pievienota epizožu saraksta sakļaušana/atvēršana — klikšķinot uz "Iztērēts..." rindas, atsevišķās epizodes paslēpjas, limita informācija paliek redzama',
   ]},
@@ -1090,6 +1093,65 @@ function openSetLimit(bi){
   $('slSave').addEventListener('click', doSave);
   $('slAmount').addEventListener('keydown', e=>{ if(e.key==='Enter') doSave(); });
 }
+
+function openNewMonthModal(){
+  if(!state.bills.length){ alert('Nav neviena rēķina, ko atiestatīt.'); return; }
+  const root = $('modalRoot');
+  const rowsHtml = state.bills.map((b,i)=>`
+    <label class="nm-row">
+      <input type="checkbox" class="nm-keep" data-i="${i}" checked>
+      <span class="nm-name">${escapeHtml(b.name||'(bez nosaukuma)')}</span>
+      <span class="nm-amt">${fmt(billAmount(b))}</span>
+    </label>`).join('');
+  root.innerHTML = `
+    <div class="modal-back" id="nmBack">
+      <div class="modal" style="max-width:460px;">
+        <button class="modal-close" id="nmClose">×</button>
+        <h3>Jauns mēnesis</h3>
+        <div class="msub">Atzīmē rēķinus, kas atkārtojas katru mēnesi un jāpatur. Neatzīmētie tiks izdzēsti. Summējošiem rēķiniem tiks dzēstas epizodes (limits paliks nemainīgs), un visiem paturētajiem rēķiniem "Samaksāts" ķeksīši tiks noņemti.</div>
+        <div class="nm-list">${rowsHtml}</div>
+        <label class="nm-archive-opt"><input type="checkbox" id="nmArchiveFirst" checked> Vispirms saglabāt šo mēnesi arhīvā</label>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn ghost sm" id="nmCancel">Atcelt</button>
+          <button class="btn" id="nmConfirm">Sākt jaunu mēnesi</button>
+        </div>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('nmBack').addEventListener('click', e=>{ if(e.target.id==='nmBack') close(); });
+  $('nmClose').addEventListener('click', close);
+  $('nmCancel').addEventListener('click', close);
+  $('nmConfirm').addEventListener('click', async ()=>{
+    const keepIdx = new Set([...root.querySelectorAll('.nm-keep:checked')].map(el=>+el.dataset.i));
+    const removedCount = state.bills.length - keepIdx.size;
+    if(!confirm(`Sākt jaunu mēnesi? ${removedCount} rēķins(-i) tiks izdzēsts(-i) neatgriezeniski.`)) return;
+    if($('nmArchiveFirst').checked){
+      try {
+        const key = monthKey();
+        const existing = archiveCache.find(a=>a.id===key);
+        const snapshot = {
+          income: state.income,
+          bills: structuredClone(state.bills),
+          credits: structuredClone(state.credits),
+          archivedAt: Date.now()
+        };
+        if(existing && existing.name) snapshot.name = existing.name;
+        await setDoc(doc(db, 'budgets', roomId, 'archive', key), snapshot);
+        await loadArchive();
+      } catch(e){
+        alert('Neizdevās saglabāt arhīvā: ' + e.message + ' — mēneša atiestatīšana pārtraukta, lai nezaudētu datus.');
+        return;
+      }
+    }
+    state.bills = state.bills
+      .filter((b,i)=>keepIdx.has(i))
+      .map(b=> b.type==='summing' ? { ...b, entries: [] } : { ...b, paid: false });
+    close(); render(); updateTotals(); scheduleSave();
+    alert('Jauns mēnesis sagatavots ✓');
+  });
+}
+
+$('newMonthBtn').addEventListener('click', openNewMonthModal);
 
 /* ═══════════════════════════════════════════════════════════════
    7. KĀRTOŠANA AR VILKŠANU (drag & drop) + KREDĪTI

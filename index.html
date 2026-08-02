@@ -19,6 +19,27 @@
   <div class="spinner"></div>
 </div>
 
+<!-- Old-browser watchdog: plain ES5, not a module, so it runs even when
+     app.js (which uses modern syntax like optional chaining / structuredClone)
+     fails to parse or crashes on an outdated WebView. If the app hasn't
+     signalled readiness within 8s, show a friendly message instead of an
+     infinite spinner. app.js clears this via window.__clearSplashWatchdog(). -->
+<script>
+(function () {
+  var timer = setTimeout(function () {
+    var el = document.getElementById('splash');
+    if (!el || el.className.indexOf('hidden') !== -1) return;
+    el.innerHTML =
+      '<div class="splash-fallback">' +
+      '<h3>Nepieciešams jaunāks pārlūks</h3>' +
+      '<p>Šķiet, ka šīs ierīces pārlūkprogramma (WebView) ir novecojusi un nespēj palaist lietotni.</p>' +
+      '<p>Lūdzu, atjaunini "Android System WebView" lietotni caur Google Play, vai atver lietotni citā, jaunākā ierīcē.</p>' +
+      '</div>';
+  }, 8000);
+  window.__clearSplashWatchdog = function () { clearTimeout(timer); };
+})();
+</script>
+
 <!-- ============ SIGN-IN GATE ============ -->
 <div class="wrap">
   <div class="gate" id="gate">

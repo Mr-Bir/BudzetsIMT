@@ -25,8 +25,12 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.23.1';
+const VERSION = '1.24.0';
 const CHANGELOG = [
+  { v:'1.24.0', date:'2026-08-01', notes:[
+    'Pievienots draudzīgs ziņojums, ja pārlūkprogramma (WebView) ir pārāk vecs un nespēj palaist lietotni — vairs nav bezgalīga ielādes ekrāna',
+    'Salabota kļūda, kurā ielādes ekrāns nepazuda neautentificētam lietotājam (pirms pieteikšanās)',
+  ]},
   { v:'1.23.1', date:'2026-08-01', notes:[
     'Arhīva ierakstos noņemts dublējošais kalendārā mēneša nosaukums — tagad rādās tikai rēķinu skaits un alga',
   ]},
@@ -360,6 +364,8 @@ onAuthStateChanged(auth, user=>{
     if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
     $('app').classList.add('hidden');
     $('gate').classList.remove('hidden');
+    const splashEl = $('splash'); if(splashEl) splashEl.classList.add('hidden');
+    if(window.__clearSplashWatchdog) window.__clearSplashWatchdog();
   }
 });
 
@@ -369,6 +375,7 @@ function connectForUser(uid){
   $('gate').classList.add('hidden');
   $('app').classList.remove('hidden');
   const splashEl = $('splash'); if(splashEl) splashEl.classList.add('hidden');
+  if(window.__clearSplashWatchdog) window.__clearSplashWatchdog();
   const nameEl = $('userName'); if(nameEl) nameEl.textContent = currentUser?.displayName || currentUser?.email || '';
   setSync('saving','Savienojas…');
   loadArchive();

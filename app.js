@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.24.1';
+const VERSION = '1.25.0';
 const CHANGELOG = [
+  { v:'1.25.0', date:'2026-08-01', notes:[
+    'Pievienots naudas tērēšanas tempa indikators — vidējais tēriņš/dienā, reāli pieejamā summa tagad un droša tēriņa summa dienā līdz mēneša beigām, ar krāsainu tempa signālu',
+  ]},
   { v:'1.24.1', date:'2026-08-01', notes:[
     '"Sakārtot" poga tagad rēķinus kārto vienkārši pēc summas (dilstoši) — vairs negrupē pēc "Samaksāts" statusa',
   ]},
@@ -650,6 +653,43 @@ function updateTotals(){
   bar.style.width=(ratio*100)+'%';
   bar.style.background = total>income?'var(--red)':total>income*0.8?'var(--amber)':'var(--green)';
   renderCategories(total);
+  updatePace();
+}
+
+// Spending-pace indicator: how fast money is actually going out this month,
+// based on real spending (paid bills + summing-bill entries), not the budgeted/limit total.
+function updatePace(){
+  const row = $('paceRow');
+  if(!row) return;
+  const income = Number(state.income)||0;
+  const bills = state.bills||[];
+  const spentSoFar = bills.filter(isBillPaid).reduce((s,b)=>s+billSpent(b),0);
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const daysElapsed = Math.min(now.getDate(), daysInMonth);
+  const daysRemaining = Math.max(daysInMonth - daysElapsed, 1);
+  const dailyAvg = spentSoFar / daysElapsed;
+  const available = income - spentSoFar;
+  const safeDaily = available / daysRemaining;
+  const targetDaily = daysInMonth>0 ? income / daysInMonth : 0;
+
+  $('paceDaily').textContent = fmt(dailyAvg) + ' / d.';
+  $('paceAvailable').textContent = fmt(available);
+  $('paceSafe').textContent = fmt(safeDaily) + ' / d.';
+
+  const dot = $('paceDot');
+  if(dot){
+    dot.classList.remove('under','over');
+    if(income>0){
+      const under = dailyAvg<=targetDaily;
+      dot.classList.add(under ? 'under' : 'over');
+      dot.title = under
+        ? `Tērē lēnāk nekā drošais temps (${fmt(targetDaily)}/d.)`
+        : `Tērē ātrāk nekā drošais temps (${fmt(targetDaily)}/d.)`;
+    } else {
+      dot.title = '';
+    }
+  }
 }
 
 function renderCategories(total){

@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.24.0';
+const VERSION = '1.24.1';
 const CHANGELOG = [
+  { v:'1.24.1', date:'2026-08-01', notes:[
+    '"Sakārtot" poga tagad rēķinus kārto vienkārši pēc summas (dilstoši) — vairs negrupē pēc "Samaksāts" statusa',
+  ]},
   { v:'1.24.0', date:'2026-08-01', notes:[
     'Pievienots draudzīgs ziņojums, ja pārlūkprogramma (WebView) ir pārāk vecs un nespēj palaist lietotni — vairs nav bezgalīga ielādes ekrāna',
     'Salabota kļūda, kurā ielādes ekrāns nepazuda neautentificētam lietotājam (pirms pieteikšanās)',
@@ -1376,13 +1379,7 @@ $('addBill').addEventListener('click', ()=>{
   });
 });
 $('sortBillsBtn').addEventListener('click', ()=>{
-  state.bills.sort((a,b)=>{
-    // Primary: paid first (paid=true before paid=false)
-    const pa = isBillPaid(a)?1:0, pb = isBillPaid(b)?1:0;
-    if(pa!==pb) return pb-pa;
-    // Secondary: larger amount first
-    return billAmount(b) - billAmount(a);
-  });
+  state.bills.sort((a,b)=> billAmount(b) - billAmount(a));
   render(); scheduleSave();
 });
 $('addCredit').addEventListener('click', ()=>{ state.credits.push({name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });

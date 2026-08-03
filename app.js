@@ -25,8 +25,11 @@ const FIREBASE_CONFIG = {
 const RECAPTCHA_SITE_KEY = '6LeK61gtAAAAABRdlySKloEkIl5F1mq-rQDmYPmx';
 
 // ---- Version & changelog ----
-const VERSION = '1.25.0';
+const VERSION = '1.25.1';
 const CHANGELOG = [
+  { v:'1.25.1', date:'2026-08-03', notes:[
+    'Drošības uzlabojums — rēķinu, kredītu un algas summu lauki tagad vienmēr tiek attēloti kā droši skaitļi, nevis neapstrādāts teksts',
+  ]},
   { v:'1.25.0', date:'2026-08-01', notes:[
     'Pievienots naudas tērēšanas tempa indikators — vidējais tēriņš/dienā, reāli pieejamā summa tagad un droša tēriņa summa dienā līdz mēneša beigām, ar krāsainu tempa signālu',
   ]},
@@ -512,7 +515,7 @@ function render(){
     row.className='bill' + (b.paid?' paid':'') + (isSum?' summing':''); row.dataset.cat=b.cat||'cits'; row.dataset.idx=i;
     const amountCell = isSum
       ? `<div class="amount-wrap"><span class="eur">€</span><span class="amount amount-ro" title="${lim>0?'Plānotais limits':'Kopsumma no epizodēm'}">${amt.toFixed(2)}</span><button class="add-entry" data-addentry="${i}" title="Pievienot epizodi">+</button></div>`
-      : `<div class="amount-wrap"><span class="eur">€</span><input class="amount" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-i="${i}" data-f="amount"></div>`;
+      : `<div class="amount-wrap"><span class="eur">€</span><input class="amount" type="number" step="0.01" inputmode="decimal" value="${Number(b.amount)||0}" data-i="${i}" data-f="amount"></div>`;
     row.innerHTML = `
       <div class="drag-handle" data-drag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot" style="border-left-color:${catColor(b.cat||'cits')}">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
@@ -596,7 +599,7 @@ function render(){
         <span class="cd-pay-label">Mēneša maksājums</span>
         <div class="cd-pay-controls">
           <button class="cd-pay-btn minus" data-cpay-minus="${i}" title="Atņemt no atlikuma" ${pay>0?'':'disabled'}>−</button>
-          <div class="cd-pay-amt-wrap"><span class="cd-pay-eur">€</span><input class="cd-pay-amt" type="number" step="0.01" inputmode="decimal" value="${c.monthly!=null?c.monthly:''}" data-cpay="${i}" placeholder="0.00"></div>
+          <div class="cd-pay-amt-wrap"><span class="cd-pay-eur">€</span><input class="cd-pay-amt" type="number" step="0.01" inputmode="decimal" value="${c.monthly!=null?(Number(c.monthly)||0):''}" data-cpay="${i}" placeholder="0.00"></div>
           <button class="cd-pay-btn plus" data-cpay-plus="${i}" title="Pieskaitīt atlikumam (atsaukt)" ${pay>0?'':'disabled'}>+</button>
         </div>
       </div>`;
@@ -878,7 +881,7 @@ function openArchiveModal(key){
         <div class="mini-summary" id="mMini"></div>
 
         <h4 style="margin:0 0 4px;font-family:Georgia,serif;">Alga</h4>
-        <div class="m-income">€ <input id="mIncome" type="number" step="0.01" inputmode="decimal" value="${draft.income}"></div>
+        <div class="m-income">€ <input id="mIncome" type="number" step="0.01" inputmode="decimal" value="${Number(draft.income)||0}"></div>
 
         <h4 style="margin:18px 0 4px;font-family:Georgia,serif;display:flex;justify-content:space-between;align-items:baseline;">Rēķini <span id="mPaidInfo" style="font-family:inherit;font-size:12px;font-weight:400;color:var(--muted);"></span></h4>
         <div id="mBills"></div>
@@ -927,7 +930,7 @@ function openArchiveModal(key){
           : `<button class="echk" data-echk="${i}" title="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
         <input class="ename" value="${escapeHtml(b.name||'')}" data-ei="${i}" data-ef="name" placeholder="Nosaukums">
         <span class="pay-badge ${isBillPaid(b)?'yes':'no'}">${isSumB?'Apmaksāts (automātiski)':(b.paid?'Samaksāts':'Nav samaksāts')}</span>
-        <div class="eamt-wrap"><span class="e-eur">€</span>${b.type==='summing' ? `<span class="eamt" style="display:inline-block;" title="Kopsumma no ${(b.entries||[]).length} epizodēm">${billAmount(b).toFixed(2)}</span>` : `<input class="eamt" type="number" step="0.01" inputmode="decimal" value="${b.amount}" data-ei="${i}" data-ef="amount">`}</div>
+        <div class="eamt-wrap"><span class="e-eur">€</span>${b.type==='summing' ? `<span class="eamt" style="display:inline-block;" title="Kopsumma no ${(b.entries||[]).length} epizodēm">${billAmount(b).toFixed(2)}</span>` : `<input class="eamt" type="number" step="0.01" inputmode="decimal" value="${Number(b.amount)||0}" data-ei="${i}" data-ef="amount">`}</div>
         <div style="display:flex;gap:4px;align-items:center;">
           <select class="ecat" data-ei="${i}" data-ef="cat">${catOpts(b.cat||'cits')}</select>
           <button class="edel" data-edel="${i}" title="Dzēst">×</button>
@@ -943,7 +946,7 @@ function openArchiveModal(key){
       row.className = 'ecredit';
       row.innerHTML = `
         <input class="ec-name" value="${escapeHtml(cr.name||'')}" data-ci="${i}" data-cf="name" placeholder="Kredīta nosaukums">
-        <div class="eamt-wrap"><span class="e-eur">€</span><input class="ec-amt" type="number" step="0.01" inputmode="decimal" value="${cr.amount}" data-ci="${i}" data-cf="amount"></div>
+        <div class="eamt-wrap"><span class="e-eur">€</span><input class="ec-amt" type="number" step="0.01" inputmode="decimal" value="${Number(cr.amount)||0}" data-ci="${i}" data-cf="amount"></div>
         <button class="edel" data-cdel="${i}" title="Dzēst">×</button>`;
       c.appendChild(row);
     });

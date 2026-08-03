@@ -1,9 +1,10 @@
-const CACHE_NAME = 'finanses-shell-v31';
+const CACHE_NAME = 'finanses-shell-v32';
 const SHELL_FILES = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './changelog.js',
   './manifest.json'
 ];
 

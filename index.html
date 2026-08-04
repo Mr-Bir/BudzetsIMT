@@ -56,22 +56,40 @@
 
   <!-- ============ APP ============ -->
   <div id="app" class="hidden">
-    <!-- Top utility bar: brand left · controls right -->
-    <div class="topbar">
-      <div class="brand"><span class="eyebrow">Personīgais budžets</span> · <span class="app-name">Finanšu pārvaldnieks</span></div>
-      <div class="topbar-actions">
-        <button class="btn ghost sm" id="settingsBtn" type="button">Iestatījumi</button>
-        <button class="btn ghost sm hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
-        <div class="sync-badge"><span class="user-name" id="userName"></span><span class="dot" id="syncDot"></span><span id="syncText">Savienojas…</span><button class="signout-btn" id="signOutBtn">Izrakstīties</button></div>
-      </div>
+    <!-- Compact top bar: hamburger · logo · sync dot -->
+    <div class="topbar" id="topbar">
+      <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Atvērt izvēlni">
+        <span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <img class="topbar-logo" src="icons/icon-192.png" alt="Finanšu pārvaldnieks" width="26" height="26">
+      <span class="topbar-spacer"></span>
+      <span class="dot" id="syncDot" title="Sinhronizācijas statuss"></span>
     </div>
 
-    <nav class="section-nav" id="sectionNav" aria-label="Sadaļas">
-      <button class="nav-item active" data-section="budget" type="button">Budžets</button>
-      <button class="nav-item" data-section="credits" type="button">Kredīti</button>
-      <button class="nav-item" data-section="reminders" type="button">Atgādinājumi</button>
-      <button class="nav-item" data-section="savings" type="button">Uzkrājuma mērķi</button>
-      <span class="nav-indicator" id="navIndicator" aria-hidden="true"></span>
+    <!-- Side drawer: navigation + account, opened via hamburger -->
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <nav class="drawer" id="drawer" aria-label="Galvenā izvēlne" aria-hidden="true">
+      <button class="drawer-close" id="drawerClose" type="button" aria-label="Aizvērt izvēlni">×</button>
+
+      <div class="drawer-section drawer-nav" id="drawerNav">
+        <button class="drawer-nav-item active" data-section="budget" type="button">Budžets</button>
+        <button class="drawer-nav-item" data-section="credits" type="button">Kredīti</button>
+        <button class="drawer-nav-item" data-section="reminders" type="button">Atgādinājumi</button>
+        <button class="drawer-nav-item" data-section="savings" type="button">Uzkrājuma mērķi</button>
+      </div>
+
+      <div class="drawer-section">
+        <button class="drawer-link" id="settingsBtn" type="button">Iestatījumi</button>
+        <button class="drawer-link hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
+      </div>
+
+      <div class="drawer-section drawer-account">
+        <div class="drawer-user">
+          <span class="user-name" id="userName"></span>
+          <span class="sync-status" id="syncText">Savienojas…</span>
+        </div>
+        <button class="signout-btn" id="signOutBtn">Izrakstīties</button>
+      </div>
     </nav>
 
     <!-- ============ PANEL: BUDGET ============ -->

@@ -1403,12 +1403,12 @@ function applyTheme(theme){
   if(saved==='dark') document.documentElement.setAttribute('data-theme','dark');
 })();
 
-// ---- Summary pin (sticky compact overview below the section nav) ----
+// ---- Summary pin (sticky compact overview below the compact top bar) ----
 (function initSummaryPin(){
   const wrap = document.querySelector('.summary-wrap');
   const summaryEl = document.querySelector('.summary');
   const btn = $('summaryPinBtn');
-  const nav = $('sectionNav');
+  const nav = $('topbar');
   if(!wrap || !summaryEl || !btn) return;
 
   function updateNavHeightVar(){
@@ -1437,40 +1437,49 @@ function applyTheme(theme){
   setPinned(savedPinned);
 })();
 
-// ---- Section navigation ----
+// ---- Section navigation (inside the drawer) ----
 const SECTIONS = ['budget','credits','reminders','savings'];
-const navIndicator = $('navIndicator');
-const sectionNavEl = $('sectionNav');
-function positionNavIndicator(){
-  if(!navIndicator || !sectionNavEl) return;
-  const activeBtn = sectionNavEl.querySelector('.nav-item.active');
-  if(!activeBtn) return;
-  navIndicator.style.left = activeBtn.offsetLeft + 'px';
-  navIndicator.style.width = activeBtn.offsetWidth + 'px';
-}
 function showSection(name){
   if(!SECTIONS.includes(name)) return;
   document.querySelectorAll('.panel').forEach(p=>{
     p.classList.toggle('hidden', p.id !== 'panel-' + name);
   });
-  document.querySelectorAll('.nav-item').forEach(b=>{
+  document.querySelectorAll('.drawer-nav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.section === name);
   });
-  positionNavIndicator();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-$('sectionNav').addEventListener('click', e=>{
-  const btn = e.target.closest('.nav-item');
-  if(btn) showSection(btn.dataset.section);
+$('drawerNav').addEventListener('click', e=>{
+  const btn = e.target.closest('.drawer-nav-item');
+  if(!btn) return;
+  showSection(btn.dataset.section);
+  closeDrawer();
 });
-// Keep the sliding indicator aligned with the active tab, including right after
-// #app becomes visible post-login (offsetLeft/Width are 0 while display:none).
-if('ResizeObserver' in window && sectionNavEl){
-  new ResizeObserver(positionNavIndicator).observe(sectionNavEl);
-} else {
-  window.addEventListener('resize', positionNavIndicator);
+
+// ---- Hamburger drawer: open/close, backdrop, Escape ----
+const hamburgerBtn = $('hamburgerBtn');
+const drawerEl = $('drawer');
+const drawerBackdrop = $('drawerBackdrop');
+function openDrawer(){
+  drawerEl.classList.add('open');
+  drawerBackdrop.classList.add('open');
+  drawerEl.setAttribute('aria-hidden', 'false');
+  hamburgerBtn.setAttribute('aria-expanded', 'true');
 }
-positionNavIndicator();
+function closeDrawer(){
+  drawerEl.classList.remove('open');
+  drawerBackdrop.classList.remove('open');
+  drawerEl.setAttribute('aria-hidden', 'true');
+  hamburgerBtn.setAttribute('aria-expanded', 'false');
+}
+hamburgerBtn.addEventListener('click', ()=>{
+  if(drawerEl.classList.contains('open')) closeDrawer(); else openDrawer();
+});
+$('drawerClose').addEventListener('click', closeDrawer);
+drawerBackdrop.addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && drawerEl.classList.contains('open')) closeDrawer();
+});
 
 // ---- PWA: install prompt + service worker ----
 let deferredInstall = null;
@@ -1480,6 +1489,7 @@ window.addEventListener('beforeinstallprompt', e=>{
   $('installBtn')?.classList.remove('hidden');
 });
 $('installBtn')?.addEventListener('click', async ()=>{
+  closeDrawer();
   if(!deferredInstall) return;
   deferredInstall.prompt();
   await deferredInstall.userChoice;
@@ -1522,12 +1532,14 @@ function openChangelog(){
 }
 
 $('settingsBtn').addEventListener('click', ()=>{
+  closeDrawer();
   const root = $('modalRoot');
   const dark = currentTheme()==='dark';
   root.innerHTML = `
     <div class="modal-back" id="setBack">
       <div class="modal" style="max-width:460px;">
         <button class="modal-close" id="setClose">×</button>
+        <div class="brand" style="margin-bottom:14px;"><span class="eyebrow">Personīgais budžets</span> · <span class="app-name">Finanšu pārvaldnieks</span></div>
         <h3>Iestatījumi</h3>
         <div class="msub">Lietotnes izskats un informācija</div>
 

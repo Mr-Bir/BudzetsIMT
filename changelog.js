@@ -3,6 +3,10 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.26.0', date:'2026-08-04', notes:[
+    'Jauna kompakta augšējā josla — hamburger izvēlne aizstāj iepriekšējo sadaļu joslu un lietotāja/iestatījumu pogas, kas tagad izbīdās kā sānu panelis',
+    'Lietotnes nosaukums pārcelts no augšējās joslas uz Iestatījumu logu',
+  ]},
   { v:'1.25.2', date:'2026-08-04', notes:[
     'Iekšēji koda uzlabojumi — izmaiņu vēsture (changelog) pārcelta uz atsevišķu failu, versijas numurs tagad tiek atvasināts automātiski — lietotnes darbība nemainās',
   ]},

@@ -1,3 +1,8 @@
+/*
+ * Finanšu pārvaldnieks (BudzetsIMT)
+ * Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
+ * Skatīt LICENSE failu repozitorija saknē.
+ */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';

@@ -1,3 +1,8 @@
+/*
+ * Finanšu pārvaldnieks (BudzetsIMT)
+ * Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
+ * Skatīt LICENSE failu repozitorija saknē.
+ */
 // changelog.js — pilna versiju vēsture (ES modulis)
 // VERSION app.js failā tiek atvasināts no CHANGELOG[0].v — pievienojot jaunu
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.

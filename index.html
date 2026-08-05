@@ -24,25 +24,65 @@
   <div class="spinner"></div>
 </div>
 
-<!-- Old-browser watchdog: plain ES5, not a module, so it runs even when
-     app.js (which uses modern syntax like optional chaining / structuredClone)
-     fails to parse or crashes on an outdated WebView. If the app hasn't
-     signalled readiness within 8s, show a friendly message instead of an
-     infinite spinner. app.js clears this via window.__clearSplashWatchdog(). -->
+<!-- Watchdog, stage 1: plain ES5, not a module, so it runs even when app.js
+     (which uses modern syntax like optional chaining / structuredClone) fails
+     to parse or crashes on an outdated WebView. -->
 <script>
 (function () {
-  var timer = setTimeout(function () {
+  var MODULE_CHECK_MS = 3000;   // confirms the browser can parse modern JS — no network involved
+  var NETWORK_TIMEOUT_MS = 20000; // generous allowance for a slow connection once that's confirmed
+  var moduleOk = false;
+
+  function splashVisible() {
     var el = document.getElementById('splash');
-    if (!el || el.className.indexOf('hidden') !== -1) return;
-    el.innerHTML =
-      '<div class="splash-fallback">' +
-      '<h3>Nepieciešams jaunāks pārlūks</h3>' +
-      '<p>Šķiet, ka šīs ierīces pārlūkprogramma (WebView) ir novecojusi un nespēj palaist lietotni.</p>' +
-      '<p>Lūdzu, atjaunini "Android System WebView" lietotni caur Google Play, vai atver lietotni citā, jaunākā ierīcē.</p>' +
-      '</div>';
-  }, 8000);
-  window.__clearSplashWatchdog = function () { clearTimeout(timer); };
+    return !!el && el.className.indexOf('hidden') === -1;
+  }
+  function show(html) {
+    var el = document.getElementById('splash');
+    if (el) el.innerHTML = html;
+  }
+  var OLD_BROWSER_HTML =
+    '<div class="splash-fallback">' +
+    '<h3>Nepieciešams jaunāks pārlūks</h3>' +
+    '<p>Šķiet, ka šīs ierīces pārlūkprogramma (WebView) ir novecojusi un nespēj palaist lietotni.</p>' +
+    '<p>Lūdzu, atjaunini "Android System WebView" lietotni caur Google Play, vai atver lietotni citā, jaunākā ierīcē.</p>' +
+    '</div>';
+  var SLOW_NETWORK_HTML =
+    '<div class="splash-fallback">' +
+    '<h3>Ielāde aizkavējas</h3>' +
+    '<p>Pārlūks darbojas labi, taču lietotnes ielāde prasa ilgāku laiku nekā parasti — visticamāk, lēna interneta savienojuma dēļ.</p>' +
+    '<p>Lūdzu, uzgaidi, vai pārbaudi savienojumu un mēģini pārlādēt lapu.</p>' +
+    '</div>';
+
+  // Set by a tiny inline <script type="module"> further down (see stage 2 below),
+  // which has no external imports and so runs almost instantly even on a slow
+  // connection — confirming "browser can run this syntax" independently of how
+  // long the Firebase CDN imports in app.js take to download.
+  window.__markModernJsOk = function () { moduleOk = true; };
+
+  var t1 = setTimeout(function () {
+    if (!splashVisible()) return;
+    if (!moduleOk) show(OLD_BROWSER_HTML);
+  }, MODULE_CHECK_MS);
+
+  var t2 = setTimeout(function () {
+    if (!splashVisible()) return;
+    show(moduleOk ? SLOW_NETWORK_HTML : OLD_BROWSER_HTML);
+  }, NETWORK_TIMEOUT_MS);
+
+  window.__clearSplashWatchdog = function () { clearTimeout(t1); clearTimeout(t2); };
 })();
+</script>
+
+<!-- Watchdog, stage 2: mirrors the modern syntax app.js relies on, with zero
+     external imports — so it succeeds/fails purely on browser capability,
+     never on network speed. A genuine syntax error here means the whole
+     module silently fails to run, leaving __markModernJsOk uncalled. -->
+<script type="module">
+  const t = { a: { b: 1 } };
+  const v = t?.a?.b ?? 0;
+  if (typeof structuredClone === 'function') structuredClone({ v });
+  window.__markModernJsOk && window.__markModernJsOk();
 </script>
 
 <!-- ============ SIGN-IN GATE ============ -->

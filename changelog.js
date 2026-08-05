@@ -8,6 +8,10 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.27.1', date:'2026-08-05', notes:[
+    'Salabota kļūda, kad lēna interneta savienojuma dēļ (nevis novecojuša pārlūka dēļ) parādījās maldīgs "vajag jaunāku pārlūku" ziņojums',
+    'Ielādes ekrāna pārbaude tagad nošķir "pārlūks nespēj palaist lietotni" no "lēns savienojums" — otrajā gadījumā rāda precīzāku ziņojumu',
+  ]},
   { v:'1.27.0', date:'2026-08-05', notes:[
     'Naudas tērēšanas tempa indikators pārcelts no Budžets sadaļas uz augšējo joslu (topbar) — tagad redzams visās sadaļās',
     'Aplikācijas ikona noņemta no augšējās joslas, lai atbrīvotu vietu tempa indikatoram',

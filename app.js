@@ -40,6 +40,8 @@ const VERSION = CHANGELOG[0].v;
    ═══════════════════════════════════════════════════════════════ */
 
 const fmt = n => '€ ' + (Number(n)||0).toLocaleString('lv-LV',{minimumFractionDigits:2,maximumFractionDigits:2});
+// Rounded, no-decimals version for the compact topbar pace indicator (full precision stays in the popover)
+const fmtCompact = n => '€' + Math.round(Number(n)||0).toLocaleString('lv-LV',{maximumFractionDigits:0});
 // Actual spent for a summing bill = sum of entries; for normal bill = its amount
 function billSpent(b){
   if(b && b.type==='summing') return (b.entries||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
@@ -466,8 +468,8 @@ function updateTotals(){
 // Spending-pace indicator: how fast money is actually going out this month,
 // based on real spending (paid bills + summing-bill entries), not the budgeted/limit total.
 function updatePace(){
-  const row = $('paceRow');
-  if(!row) return;
+  const group = $('topbarPace');
+  if(!group) return;
   const income = Number(state.income)||0;
   const bills = state.bills||[];
   const spentSoFar = bills.filter(isBillPaid).reduce((s,b)=>s+billSpent(b),0);
@@ -480,21 +482,34 @@ function updatePace(){
   const safeDaily = available / daysRemaining;
   const targetDaily = daysInMonth>0 ? income / daysInMonth : 0;
 
-  $('paceDaily').textContent = fmt(dailyAvg) + ' / d.';
-  $('paceAvailable').textContent = fmt(available);
-  $('paceSafe').textContent = fmt(safeDaily) + ' / d.';
+  // Compact topbar values (rounded, no labels — full precision lives in the popover)
+  $('paceDaily').textContent = fmtCompact(dailyAvg);
+  $('paceDaily').title = 'Tēriņš/dienā: ' + fmt(dailyAvg) + ' / d.';
+  $('paceAvailable').textContent = fmtCompact(available);
+  $('paceAvailable').title = 'Pieejams tagad: ' + fmt(available);
+  $('paceSafe').textContent = fmtCompact(safeDaily);
+  $('paceSafe').title = 'Droša summa/dienā: ' + fmt(safeDaily) + ' / d.';
+
+  // Full-precision popover values
+  $('paceDailyFull').textContent = fmt(dailyAvg) + ' / d.';
+  $('paceAvailableFull').textContent = fmt(available);
+  $('paceSafeFull').textContent = fmt(safeDaily) + ' / d.';
 
   const dot = $('paceDot');
+  const status = $('pacePopStatus');
   if(dot){
     dot.classList.remove('under','over');
     if(income>0){
       const under = dailyAvg<=targetDaily;
       dot.classList.add(under ? 'under' : 'over');
-      dot.title = under
+      const statusText = under
         ? `Tērē lēnāk nekā drošais temps (${fmt(targetDaily)}/d.)`
         : `Tērē ātrāk nekā drošais temps (${fmt(targetDaily)}/d.)`;
+      dot.title = statusText;
+      if(status) status.textContent = statusText;
     } else {
       dot.title = '';
+      if(status) status.textContent = '';
     }
   }
 }
@@ -1484,6 +1499,30 @@ $('drawerClose').addEventListener('click', closeDrawer);
 drawerBackdrop.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && drawerEl.classList.contains('open')) closeDrawer();
+});
+
+// ---- Pace popover (topbar ⓘ button): open/close, outside click, Escape ----
+const paceInfoBtn = $('paceInfoBtn');
+const pacePopover = $('pacePopover');
+function openPacePopover(){
+  pacePopover.classList.remove('hidden');
+  paceInfoBtn.setAttribute('aria-expanded', 'true');
+}
+function closePacePopover(){
+  pacePopover.classList.add('hidden');
+  paceInfoBtn.setAttribute('aria-expanded', 'false');
+}
+paceInfoBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  if(pacePopover.classList.contains('hidden')) openPacePopover(); else closePacePopover();
+});
+document.addEventListener('click', e=>{
+  if(!pacePopover.classList.contains('hidden') && !pacePopover.contains(e.target) && e.target !== paceInfoBtn){
+    closePacePopover();
+  }
+});
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && !pacePopover.classList.contains('hidden')) closePacePopover();
 });
 
 // ---- PWA: install prompt + service worker ----

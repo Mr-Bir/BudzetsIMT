@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.27.0', date:'2026-08-05', notes:[
+    'Naudas tērēšanas tempa indikators pārcelts no Budžets sadaļas uz augšējo joslu (topbar) — tagad redzams visās sadaļās',
+    'Aplikācijas ikona noņemta no augšējās joslas, lai atbrīvotu vietu tempa indikatoram',
+    'Topbar indikators rāda tikai noapaļotas vērtības bez apzīmējumiem; klikšķinot uz jaunās ⓘ pogas, atveras panelis ar pilnu detalizāciju un skaidrojumu',
+  ]},
   { v:'1.26.0', date:'2026-08-04', notes:[
     'Jauna kompakta augšējā josla — hamburger izvēlne aizstāj iepriekšējo sadaļu joslu un lietotāja/iestatījumu pogas, kas tagad izbīdās kā sānu panelis',
     'Lietotnes nosaukums pārcelts no augšējās joslas uz Iestatījumu logu',

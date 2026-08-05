@@ -61,14 +61,40 @@
 
   <!-- ============ APP ============ -->
   <div id="app" class="hidden">
-    <!-- Compact top bar: hamburger · logo · sync dot -->
+    <!-- Compact top bar: hamburger · tēriņa tempa indikators · sync dot -->
     <div class="topbar" id="topbar">
       <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Atvērt izvēlni">
         <span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>
       </button>
-      <img class="topbar-logo" src="icons/icon-192.png" alt="Finanšu pārvaldnieks" width="26" height="26">
+      <div class="topbar-pace" id="topbarPace">
+        <span class="tp-dot" id="paceDot"></span>
+        <span class="tp-val" id="paceDaily"></span>
+        <span class="tp-sep"></span>
+        <span class="tp-val" id="paceAvailable"></span>
+        <span class="tp-sep"></span>
+        <span class="tp-val" id="paceSafe"></span>
+        <button class="tp-info-btn" id="paceInfoBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="pacePopover" aria-label="Par tēriņa tempa rādītājiem">ⓘ</button>
+      </div>
       <span class="topbar-spacer"></span>
       <span class="dot" id="syncDot" title="Sinhronizācijas statuss"></span>
+    </div>
+
+    <!-- Tēriņa tempa detaļu izlecošais panelis (atveras ar ⓘ pogu topbar) -->
+    <div class="tp-popover hidden" id="pacePopover" role="dialog" aria-label="Tēriņa tempa detaļas">
+      <div class="tp-pop-item">
+        <span class="tp-pop-label">Tēriņš / dienā</span>
+        <span class="tp-pop-val" id="paceDailyFull">€ 0.00</span>
+      </div>
+      <div class="tp-pop-item">
+        <span class="tp-pop-label">Pieejams tagad</span>
+        <span class="tp-pop-val" id="paceAvailableFull">€ 0.00</span>
+      </div>
+      <p class="tp-pop-hint">Alga mīnus reāli iztērētais (samaksātie rēķini + summējošo rēķinu epizodes) — atšķiras no "Paliek", kas rēķina arī vēl nesamaksātos rēķinus.</p>
+      <div class="tp-pop-item">
+        <span class="tp-pop-label">Droša summa / dienā</span>
+        <span class="tp-pop-val" id="paceSafeFull">€ 0.00</span>
+      </div>
+      <p class="tp-pop-status" id="pacePopStatus"></p>
     </div>
 
     <!-- Side drawer: navigation + account, opened via hamburger -->
@@ -124,24 +150,6 @@
           <div class="value" id="toPay">€ 0.00</div>
           <div class="sub" id="paidHint">0 no 0 samaksāti</div>
         </div>
-      </div>
-    </div>
-
-    <div class="pace-row" id="paceRow">
-      <div class="pace-stat">
-        <span class="pace-dot" id="paceDot"></span>
-        <span class="pace-label">Tēriņš/dienā</span>
-        <span class="pace-val" id="paceDaily">€ 0.00</span>
-      </div>
-      <div class="pace-sep"></div>
-      <div class="pace-stat">
-        <span class="pace-label">Pieejams tagad <span class="pace-info" id="paceAvailInfo" title="Alga mīnus reāli iztērētais (samaksātie rēķini + summējošo rēķinu epizodes) — atšķiras no 'Paliek', kas rēķina arī vēl nesamaksātos rēķinus.">ⓘ</span></span>
-        <span class="pace-val" id="paceAvailable">€ 0.00</span>
-      </div>
-      <div class="pace-sep"></div>
-      <div class="pace-stat">
-        <span class="pace-label">Droša summa/dienā</span>
-        <span class="pace-val" id="paceSafe">€ 0.00</span>
       </div>
     </div>
 

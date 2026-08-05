@@ -114,10 +114,33 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Compact top bar: hamburger · logo · sync dot, dashed rule below, sticky */
+  /* Compact top bar: hamburger · tēriņa tempa indikators · sync dot, dashed rule below, sticky */
   .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--line); position: sticky; top: 0; z-index: 50; background: var(--paper); }
-  .topbar-logo { border-radius: 6px; display: block; }
   .topbar-spacer { flex: 1; }
+
+  /* Spending-pace mini indicator, lives in the topbar: dot + 3 rounded values + info button.
+     Height stays within the hamburger button's 34px so the topbar itself never grows. */
+  .topbar-pace { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+  .tp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+  .tp-dot.under { background: var(--green); }
+  .tp-dot.over { background: var(--red); }
+  .tp-val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 12.5px; white-space: nowrap; }
+  .tp-sep { width: 1px; height: 12px; background: var(--line); flex: none; }
+  .tp-info-btn { border: none; background: transparent; cursor: pointer; padding: 2px; margin-left: 1px; font-size: 12px; line-height: 1; color: var(--muted); opacity: .75; flex: none; }
+  .tp-info-btn:hover, .tp-info-btn[aria-expanded="true"] { opacity: 1; color: var(--ink); }
+  @media (max-width: 420px) {
+    .topbar-pace { gap: 4px; }
+    .tp-val { font-size: 11px; }
+    .tp-sep { height: 10px; }
+  }
+
+  /* Tēriņa tempa detaļu panelis — fiksēts zem topbar, lai nekad neizraisa horizontālu overflow */
+  .tp-popover { position: fixed; top: var(--nav-h, 54px); left: 12px; right: 12px; max-width: 340px; margin: 6px auto 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); z-index: 60; }
+  .tp-pop-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 4px 0; font-size: 13px; }
+  .tp-pop-label { color: var(--muted); }
+  .tp-pop-val { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+  .tp-pop-hint { font-size: 11.5px; color: var(--muted); line-height: 1.4; margin: 6px 0; }
+  .tp-pop-status { font-size: 11.5px; font-weight: 600; margin: 6px 0 0; }
 
   .hamburger-btn { border: none; background: transparent; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; margin-left: -6px; flex-shrink: 0; }
   .hamburger-btn:hover { background: var(--card); }
@@ -336,20 +359,6 @@
 
   .grid2 { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: start; }
   section { margin-top: 36px; }
-  .pace-row { display: flex; align-items: center; gap: 16px; margin-top: 14px; padding: 10px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; flex-wrap: wrap; }
-  .pace-stat { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 140px; }
-  .pace-sep { width: 1px; align-self: stretch; background: var(--line); flex: none; }
-  .pace-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
-  .pace-dot.under { background: var(--green); }
-  .pace-dot.over { background: var(--red); }
-  .pace-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .pace-val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13.5px; margin-left: auto; }
-  .pace-info { cursor: help; opacity: .65; font-size: 11px; }
-  @media (max-width: 620px) {
-    .pace-row { gap: 10px; padding: 10px 12px; }
-    .pace-stat { min-width: 100%; }
-    .pace-sep { display: none; }
-  }
   .bar-track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 14px; }
   .bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease, background .3s; }
   /* Category breakdown */

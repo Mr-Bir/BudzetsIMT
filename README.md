@@ -52,7 +52,7 @@ LICENSE         autortiesību piezīme (visas tiesības paturētas)
 
 ## Datu eksports
 
-R�kjoslas apakšā ir divas eksporta pogas:
+Rīkjoslas apakšā ir divas eksporta pogas:
 
 - **JSON** — pilns dublējums, ko var izmantot atjaunošanai (poga "Importēt")
 - **CSV** — atver Excel/Google Sheets tālākai analīzei vai arhivēšanai

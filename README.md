@@ -24,6 +24,8 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 - **Kompakta, mobilajām ierīcēm draudzīga navigācija** — sānu izvēlne ar visām sadaļām un kontu
 - **Instalējama kā lietotne** telefonā vai datorā (PWA)
 - **Papildu aizsardzība pret ļaunprātīgu piekļuvi** (Firebase App Check)
+- **Privātuma politika un lietošanas noteikumi** pieejami tieši lietotnē (Iestatījumi)
+- **Konta un datu dzēšana** vienā vietā (Iestatījumi → "Dzēst kontu") — neatgriezeniski dzēš visus datus un pašu kontu
 
 ## Sadaļas
 
@@ -39,15 +41,17 @@ Lietotne sadalīta četrās sadaļās (pieejamas caur sānu izvēlni):
 ## Failu struktūra
 
 ```
-index.html      lapas struktūra
-style.css       dizains
-app.js          loģika (VERSION konstante atvasināta no changelog.js)
-changelog.js    pilna versiju/izmaiņu vēsture (ES modulis)
-manifest.json   PWA konfigurācija
-sw.js           nodrošina instalējamību un ātru ielādi
-icons/          lietotnes ikonas
-screenshots/    ekrānuzņēmumi
-LICENSE         autortiesību piezīme (visas tiesības paturētas)
+index.html                    lapas struktūra
+style.css                     dizains
+app.js                        loģika (VERSION konstante atvasināta no changelog.js)
+changelog.js                  pilna versiju/izmaiņu vēsture (ES modulis)
+manifest.json                 PWA konfigurācija
+sw.js                         nodrošina instalējamību un ātru ielādi
+privatuma-politika.html       privātuma politika (arī atveras lietotnē pašā, Iestatījumos)
+lietosanas-noteikumi.html     lietošanas noteikumi (arī atveras lietotnē pašā, Iestatījumos)
+icons/                        lietotnes ikonas
+screenshots/                  ekrānuzņēmumi
+LICENSE                       autortiesību piezīme (visas tiesības paturētas)
 ```
 
 ## Datu eksports
@@ -68,7 +72,7 @@ Rīkjoslas apakšā ir divas eksporta pogas:
 
 ## Versija
 
-Aktuālā versija: **v1.26.0**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
+Aktuālā versija: **v1.30.0**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
 
 ## Licence
 
@@ -79,6 +83,23 @@ Aktuālā versija: **v1.26.0**. Pilna izmaiņu vēsture ir redzama pašā lietot
 ## Nesenās izmaiņas
 
 Pilnu vēsturi kopš v1.0.0 skatīt `changelog.js` vai lietotnē (Iestatījumi → "Kas jauns").
+
+### v1.30.0 — 2026-08-05
+- Privātuma politika un Lietošanas noteikumi tagad atveras lietotnē pašā (modālī), nevis jaunā pārlūka cilnē
+
+### v1.29.0 — 2026-08-05
+- Pievienota Lietošanas noteikumu lapa un saite uz to Iestatījumos
+
+### v1.28.0 — 2026-08-05
+- Pievienota "Dzēst kontu" poga Iestatījumos — neatgriezeniski dzēš visus datus (rēķinus, kredītus, kategorijas, arhīvu) un pašu kontu, ar dubultu apstiprinājumu
+- Pievienota Privātuma politikas lapa un saite uz to Iestatījumos
+
+### v1.27.1 — 2026-08-05
+- Salabota kļūda, kad lēna interneta savienojuma dēļ (nevis novecojuša pārlūka dēļ) parādījās maldīgs "vajag jaunāku pārlūku" ziņojums
+
+### v1.27.0 — 2026-08-05
+- Naudas tērēšanas tempa indikators pārcelts no Budžets sadaļas uz augšējo joslu (topbar) — tagad redzams visās sadaļās
+- Aplikācijas ikona noņemta no augšējās joslas, lai atbrīvotu vietu tempa indikatoram
 
 ### v1.26.0 — 2026-08-04
 - Jauna kompakta augšējā josla — hamburger izvēlne aizstāj iepriekšējo sadaļu joslu un lietotāja/iestatījumu pogas, kas tagad izbīdās kā sānu panelis

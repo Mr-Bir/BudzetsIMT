@@ -1,0 +1,154 @@
+<!--
+  Finanšu pārvaldnieks (BudzetsIMT)
+  Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
+  Skatīt LICENSE failu repozitorija saknē.
+-->
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lietošanas noteikumi — Finanšu pārvaldnieks</title>
+<meta name="description" content="Lietošanas noteikumi lietotnei Finanšu pārvaldnieks (BudzetsIMT).">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --ink: #1a1d29;
+    --paper: #f7f5f0;
+    --card: #ffffff;
+    --line: #e4e0d6;
+    --muted: #8a8576;
+    --accent: #2d5f4f;
+    --shadow: 0 1px 3px rgba(26,29,41,.06), 0 8px 24px rgba(26,29,41,.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+  .back { display: inline-block; margin-bottom: 20px; color: var(--muted); font-size: 13px; text-decoration: none; }
+  .back:hover { color: var(--accent); }
+  .brand { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; margin: 0 0 6px; }
+  .updated { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 19px; margin: 32px 0 10px; padding-top: 4px; }
+  p, li { color: var(--ink); }
+  ul { padding-left: 20px; }
+  a { color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 16px 0; box-shadow: var(--shadow); }
+  .callout { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 14px 18px; margin: 16px 0; box-shadow: var(--shadow); }
+  .foot-note { color: var(--muted); font-size: 12.5px; margin-top: 40px; border-top: 1px dashed var(--line); padding-top: 16px; }
+  code { background: var(--line); padding: 1px 5px; border-radius: 4px; font-size: 90%; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="./">← Atpakaļ uz lietotni</a>
+  <div class="brand">Personīgais budžets</div>
+  <h1>Lietošanas noteikumi</h1>
+  <div class="updated">Spēkā no: 2026. gada 5. augusta</div>
+
+  <p>Šie lietošanas noteikumi ("Noteikumi") regulē lietotnes
+  <strong>"Finanšu pārvaldnieks"</strong> (turpmāk — "lietotne"),
+  pieejamas <a href="https://mr-bir.github.io/BudzetsIMT/">mr-bir.github.io/BudzetsIMT</a>
+  un kā Android lietotne, izmantošanu. Izmantojot lietotni, tu piekrīti
+  šiem Noteikumiem.</p>
+
+  <h2>1. Par lietotni un tās izstrādātāju</h2>
+  <div class="card">
+    <strong>Mārtiņš Barons</strong><br>
+    E-pasts: <a href="mailto:birmons@gmail.com">birmons@gmail.com</a>
+  </div>
+
+  <h2>2. Lietotnes raksturs — svarīgs atrunājums</h2>
+  <p>Lietotne ir <strong>personīgās budžeta izsekošanas rīks</strong>. Tā
+  palīdz tev pašam pārskatāmi ievadīt, sekot līdzi un uzskaitīt savus
+  rēķinus, kredītu atlikumus un tēriņus.</p>
+  <div class="callout">
+    <strong>Lietotne NAV finanšu, investīciju, nodokļu vai juridiskā
+    konsultāciju rīks.</strong> Visi lietotnē redzamie aprēķini (piem.,
+    "droša tēriņa summa", tēriņa tempa indikators) ir vienkārši, uz taviem
+    pašu ievadītajiem datiem balstīti orientieri — nevis profesionāls
+    ieteikums. Par saviem finanšu lēmumiem atbildi tu pats. Ja
+    nepieciešams profesionāls padoms, lūdzu, konsultējies ar kvalificētu
+    finanšu speciālistu.
+  </div>
+
+  <h2>3. Konta izveide un lietošana</h2>
+  <ul>
+    <li>Lai lietotu lietotni, jāpiesakās ar Google kontu.</li>
+    <li>Tu esi atbildīgs par sava Google konta drošību un piekļuves
+      saglabāšanu.</li>
+    <li>Tu apņemies ievadīt lietotnē tikai savus paša datus un neizmantot
+      to citu personu datu apstrādei bez viņu piekrišanas.</li>
+  </ul>
+
+  <h2>4. Pieņemama lietošana</h2>
+  <p>Izmantojot lietotni, tu piekrīti:</p>
+  <ul>
+    <li>neizmantot to nelikumīgiem mērķiem,</li>
+    <li>nemēģināt apiet vai ietekmēt lietotnes drošības mehānismus
+      (piemēram, Firebase App Check) vai piekļūt citu lietotāju
+      datiem,</li>
+    <li>neievadīt lietotnē saturu, kas pārkāpj trešo pušu tiesības.</li>
+  </ul>
+  <p>Noteikumu pārkāpuma gadījumā mēs paturam tiesības ierobežot vai
+  pārtraukt piekļuvi lietotnei.</p>
+
+  <h2>5. Dati un privātums</h2>
+  <p>Informācija par to, kādi dati tiek vākti un kā tie tiek apstrādāti,
+  atrodama mūsu <a href="privatuma-politika.html">Privātuma politikā</a>.</p>
+
+  <h2>6. Intelektuālais īpašums</h2>
+  <p>Lietotnes kods, dizains un saturs ir aizsargāts ar autortiesībām —
+  <strong>visas tiesības paturētas</strong> (skat. <code>LICENSE</code>
+  failu projekta repozitorijā). Kopēšana, modificēšana vai izplatīšana
+  bez autora atļaujas nav atļauta.</p>
+
+  <h2>7. Garantiju atruna un atbildības ierobežojums</h2>
+  <p>Lietotne tiek nodrošināta <strong>"kāda tā ir"</strong>, bez jebkādām
+  tiešām vai netiešām garantijām, tai skaitā bez garantijas par
+  nepārtrauktu darbību, kļūdu neesamību vai piemērotību konkrētam
+  mērķim.</p>
+  <p>Ciktāl to pieļauj piemērojamie tiesību akti, izstrādātājs <strong>nav
+  atbildīgs</strong> par jebkādiem zaudējumiem (tiešiem, netiešiem,
+  nejaušiem vai izrietošiem), kas radušies:</p>
+  <ul>
+    <li>lietotnes lietošanas vai nespējas to lietot rezultātā,</li>
+    <li>datu zuduma rezultātā,</li>
+    <li>lietotāja pieņemto finanšu lēmumu rezultātā, kas balstīti uz
+      lietotnē redzamo informāciju.</li>
+  </ul>
+
+  <h2>8. Pakalpojuma pieejamība un izmaiņas</h2>
+  <p>Lietotne tiek uzturēta kā neliels, personīgs projekts. Mēs paturam
+  tiesības jebkurā laikā mainīt, papildināt vai pārtraukt lietotnes
+  darbību (pilnībā vai daļēji), pēc iespējas savlaicīgi par to informējot
+  (piem., caur Iestatījumi → "Kas jauns").</p>
+
+  <h2>9. Konta izbeigšana</h2>
+  <p>Tu vari jebkurā brīdī pats dzēst savu kontu un visus ar to saistītos
+  datus — Iestatījumi → "Dzēst kontu". Šī darbība ir neatgriezeniska.</p>
+  <p>Ļaunprātīgas izmantošanas vai šo Noteikumu pārkāpuma gadījumā mēs
+  varam ierobežot vai izbeigt tavu piekļuvi lietotnei.</p>
+
+  <h2>10. Piemērojamie tiesību akti</h2>
+  <p>Šos Noteikumus regulē Latvijas Republikas tiesību akti.</p>
+
+  <h2>11. Izmaiņas šajos noteikumos</h2>
+  <p>Ja šie Noteikumi tiks būtiski mainīti, par to tiks paziņots lietotnē
+  (Iestatījumi → "Kas jauns") vai pa e-pastu, ja tas būs iespējams.</p>
+
+  <h2>12. Kontakti</h2>
+  <p>Ar jautājumiem par šiem Noteikumiem vari sazināties, rakstot uz
+  <a href="mailto:birmons@gmail.com">birmons@gmail.com</a>.</p>
+
+  <p class="foot-note">Šie lietošanas noteikumi attiecas tikai uz lietotni
+  "Finanšu pārvaldnieks" (BudzetsIMT) un neattiecas uz citām Mārtiņa
+  Barona vietnēm vai lietotnēm.</p>
+</div>
+</body>
+</html>

@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.29.0', date:'2026-08-05', notes:[
+    'Pievienota Lietošanas noteikumu lapa un saite uz to Iestatījumos, blakus Privātuma politikai',
+  ]},
   { v:'1.28.0', date:'2026-08-05', notes:[
     'Pievienota "Dzēst kontu" poga Iestatījumos — neatgriezeniski dzēš visus datus (rēķinus, kredītus, kategorijas, arhīvu) un pašu kontu, ar dubultu apstiprinājumu',
     'Pievienota Privātuma politikas lapa un saite uz to Iestatījumos',

@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
  * Skatīt LICENSE failu repozitorija saknē.
  */
-const CACHE_NAME = 'finanses-shell-v36';
+const CACHE_NAME = 'finanses-shell-v37';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -11,7 +11,8 @@ const SHELL_FILES = [
   './app.js',
   './changelog.js',
   './manifest.json',
-  './privatuma-politika.html'
+  './privatuma-politika.html',
+  './lietosanas-noteikumi.html'
 ];
 
 self.addEventListener('install', event => {

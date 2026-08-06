@@ -1625,6 +1625,14 @@ $('settingsBtn').addEventListener('click', ()=>{
           <a class="btn ghost sm" href="privatuma-politika.html" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">Privātuma politika</a>
         </div>
 
+        <div class="set-row">
+          <div>
+            <div class="set-label">Noteikumi</div>
+            <div class="set-hint">Lietotnes lietošanas noteikumi</div>
+          </div>
+          <a class="btn ghost sm" href="lietosanas-noteikumi.html" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">Lietošanas noteikumi</a>
+        </div>
+
         <div class="set-danger">
           <div class="set-row">
             <div>

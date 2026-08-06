@@ -5,7 +5,7 @@
  */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { CHANGELOG } from './changelog.js';
 
@@ -179,6 +179,7 @@ onAuthStateChanged(auth, user=>{
     if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
     $('app').classList.add('hidden');
     $('gate').classList.remove('hidden');
+    $('modalRoot').innerHTML = ''; // close any open modal (e.g. Iestatījumi after account deletion)
     const splashEl = $('splash'); if(splashEl) splashEl.classList.add('hidden');
     if(window.__clearSplashWatchdog) window.__clearSplashWatchdog();
   }
@@ -221,6 +222,16 @@ function applyRemote(incoming){
   applyingRemote = false;
   pendingSnapshot = null;
   setSync('ok','Sinhronizēts');
+}
+
+// Permanently deletes all Firestore data for a user: the archive subcollection
+// docs, then the main budgets/{uid} document. Does NOT touch the Auth account —
+// that's a separate step (see deleteAccountBtn handler) since it can fail with
+// auth/requires-recent-login and needs its own retry path.
+async function deleteAllUserData(uid){
+  const archiveSnap = await getDocs(collection(db, 'budgets', uid, 'archive'));
+  await Promise.all(archiveSnap.docs.map(d => deleteDoc(d.ref)));
+  await deleteDoc(doc(db, 'budgets', uid));
 }
 
 // True if focus is in a bill/credit/income input on the main view (not the archive modal)
@@ -1605,6 +1616,24 @@ $('settingsBtn').addEventListener('click', ()=>{
           </div>
           <button class="btn ghost sm" id="setChangelog" type="button">Kas jauns</button>
         </div>
+
+        <div class="set-row">
+          <div>
+            <div class="set-label">Privātums</div>
+            <div class="set-hint">Kādi dati tiek vākti un kā tos pārvaldīt</div>
+          </div>
+          <a class="btn ghost sm" href="privatuma-politika.html" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">Privātuma politika</a>
+        </div>
+
+        <div class="set-danger">
+          <div class="set-row">
+            <div>
+              <div class="set-label">Dzēst kontu</div>
+              <div class="set-hint">Neatgriezeniski dzēš kontu un visus datus</div>
+            </div>
+            <button class="btn danger sm" id="deleteAccountBtn" type="button">Dzēst kontu</button>
+          </div>
+        </div>
       </div>
     </div>`;
   const close = ()=>{ root.innerHTML=''; };
@@ -1619,6 +1648,37 @@ $('settingsBtn').addEventListener('click', ()=>{
     });
   });
   $('setChangelog').addEventListener('click', openChangelog);
+
+  $('deleteAccountBtn').addEventListener('click', async ()=>{
+    if(!confirm('Vai tiešām vēlies neatgriezeniski dzēst savu kontu? Tiks dzēsti VISI dati — rēķini, kredīti, kategorijas un mēnešu arhīvs.')) return;
+    if(!confirm('Pilnīgi droši? Šo darbību nevar atsaukt, un dati pazudīs no visām ierīcēm.')) return;
+
+    const btn = $('deleteAccountBtn');
+    btn.disabled = true; btn.textContent = 'Dzēš…';
+
+    const uid = currentUser.uid;
+    try {
+      await deleteAllUserData(uid);
+      await deleteUser(currentUser);
+      // onAuthStateChanged (user=null) automatically shows the sign-in gate and closes this modal.
+    } catch(e){
+      if(e && e.code === 'auth/requires-recent-login'){
+        // Firebase requires a fresh sign-in for account deletion; re-prompt Google popup, then retry once.
+        btn.textContent = 'Nepieciešams apstiprināt no jauna…';
+        try {
+          await reauthenticateWithPopup(currentUser, provider);
+          await deleteAllUserData(uid);
+          await deleteUser(currentUser);
+        } catch(e2){
+          alert('Neizdevās dzēst kontu: ' + (e2?.message || e2));
+          btn.disabled = false; btn.textContent = 'Dzēst kontu';
+        }
+      } else {
+        alert('Neizdevās dzēst kontu: ' + (e?.message || e));
+        btn.disabled = false; btn.textContent = 'Dzēst kontu';
+      }
+    }
+  });
 });
 
 // ---- Boot ----

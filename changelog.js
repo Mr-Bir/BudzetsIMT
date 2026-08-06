@@ -8,6 +8,10 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.28.0', date:'2026-08-05', notes:[
+    'Pievienota "Dzēst kontu" poga Iestatījumos — neatgriezeniski dzēš visus datus (rēķinus, kredītus, kategorijas, arhīvu) un pašu kontu, ar dubultu apstiprinājumu',
+    'Pievienota Privātuma politikas lapa un saite uz to Iestatījumos',
+  ]},
   { v:'1.27.1', date:'2026-08-05', notes:[
     'Salabota kļūda, kad lēna interneta savienojuma dēļ (nevis novecojuša pārlūka dēļ) parādījās maldīgs "vajag jaunāku pārlūku" ziņojums',
     'Ielādes ekrāna pārbaude tagad nošķir "pārlūks nespēj palaist lietotni" no "lēns savienojums" — otrajā gadījumā rāda precīzāku ziņojumu',

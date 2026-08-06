@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.30.0', date:'2026-08-05', notes:[
+    'Privātuma politika un Lietošanas noteikumi tagad atveras lietotnē pašā (modālī), nevis jaunā pārlūka cilnē',
+  ]},
   { v:'1.29.0', date:'2026-08-05', notes:[
     'Pievienota Lietošanas noteikumu lapa un saite uz to Iestatījumos, blakus Privātuma politikai',
   ]},

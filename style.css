@@ -407,6 +407,8 @@
   .modal input::placeholder { color: var(--muted); }
   [data-theme="dark"] .modal input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.6); }
   .modal h3 { font-family: Georgia, serif; font-size: 22px; margin-bottom: 4px; }
+  .modal-doc { max-width: 720px; }
+  .doc-frame { display: block; width: 100%; height: min(65vh, 640px); margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; background: #f7f5f0; }
   .arch-name-edit { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
   .arch-name-edit input { flex: 1; font-family: Georgia, serif; font-size: 22px; font-weight: 700; border: none; border-bottom: 2px dashed var(--line); background: transparent; color: var(--ink); padding: 2px 0; }
   .arch-name-edit input:focus { outline: none; border-bottom-color: var(--accent); }

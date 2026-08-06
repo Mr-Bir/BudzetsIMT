@@ -1586,6 +1586,23 @@ function openChangelog(){
   $('clClose').addEventListener('click', ()=>{ root.innerHTML=''; });
 }
 
+// Shows a standalone HTML document (privacy policy, terms of use) inline in a
+// modal via an iframe, so the page content has a single source of truth — the
+// same file also serves as the public URL required by Play Store / GDPR.
+function openDocModal(title, url){
+  const root = $('modalRoot');
+  root.innerHTML = `
+    <div class="modal-back" id="docBack">
+      <div class="modal modal-doc">
+        <button class="modal-close" id="docClose">×</button>
+        <h3>${escapeHtml(title)}</h3>
+        <iframe class="doc-frame" src="${url}" title="${escapeHtml(title)}"></iframe>
+      </div>
+    </div>`;
+  $('docBack').addEventListener('click', e=>{ if(e.target.id==='docBack') root.innerHTML=''; });
+  $('docClose').addEventListener('click', ()=>{ root.innerHTML=''; });
+}
+
 $('settingsBtn').addEventListener('click', ()=>{
   closeDrawer();
   const root = $('modalRoot');
@@ -1622,7 +1639,7 @@ $('settingsBtn').addEventListener('click', ()=>{
             <div class="set-label">Privātums</div>
             <div class="set-hint">Kādi dati tiek vākti un kā tos pārvaldīt</div>
           </div>
-          <a class="btn ghost sm" href="privatuma-politika.html" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">Privātuma politika</a>
+          <button class="btn ghost sm" id="privacyPolicyBtn" type="button">Privātuma politika</button>
         </div>
 
         <div class="set-row">
@@ -1630,7 +1647,7 @@ $('settingsBtn').addEventListener('click', ()=>{
             <div class="set-label">Noteikumi</div>
             <div class="set-hint">Lietotnes lietošanas noteikumi</div>
           </div>
-          <a class="btn ghost sm" href="lietosanas-noteikumi.html" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">Lietošanas noteikumi</a>
+          <button class="btn ghost sm" id="termsBtn" type="button">Lietošanas noteikumi</button>
         </div>
 
         <div class="set-danger">
@@ -1656,6 +1673,8 @@ $('settingsBtn').addEventListener('click', ()=>{
     });
   });
   $('setChangelog').addEventListener('click', openChangelog);
+  $('privacyPolicyBtn').addEventListener('click', ()=> openDocModal('Privātuma politika', 'privatuma-politika.html'));
+  $('termsBtn').addEventListener('click', ()=> openDocModal('Lietošanas noteikumi', 'lietosanas-noteikumi.html'));
 
   $('deleteAccountBtn').addEventListener('click', async ()=>{
     if(!confirm('Vai tiešām vēlies neatgriezeniski dzēst savu kontu? Tiks dzēsti VISI dati — rēķini, kredīti, kategorijas un mēnešu arhīvs.')) return;

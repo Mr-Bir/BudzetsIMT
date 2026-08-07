@@ -5,9 +5,16 @@
  */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential, reauthenticateWithCredential, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, initializeAuth, indexedDBLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { CHANGELOG } from './changelog.js';
+
+// Capacitor runtime + native Firebase Authentication plugin (bundler-free copies
+// in js/, wired up via the import map in index.html). On the public web the
+// plugin is inert — the native sign-in path is only used inside the Capacitor
+// WebView, where window.open() based popups do not work.
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 
 /* ═══════════════════════════════════════════════════════════════
    1. KONFIGURĀCIJA — Firebase, App Check, versija, changelog
@@ -142,42 +149,42 @@ try {
 }
 
 db = getFirestore(fbApp);
-auth = getAuth(fbApp);
+// True inside the Capacitor WebView; false on the public web.
+const IS_NATIVE = !!Capacitor.isNativePlatform();
+// In the WebView the native plugin performs Google sign-in; the web SDK is then
+// told to persist its session in IndexedDB (sessionStorage/localStorage are
+// unreliable there). On the public web default getAuth() behavior is used.
+auth = IS_NATIVE ? initializeAuth(fbApp, { persistence: indexedDBLocalPersistence }) : getAuth(fbApp);
 const provider = new GoogleAuthProvider();
+
+// Native Google sign-in via the @capacitor-firebase/authentication plugin. Returns
+// a web-SDK AuthCredential built from the native ID token; rejects if the user
+// cancels or fails in the native account chooser. Only used on Android/iOS.
+async function nativeGoogleCredential(){
+  const res = await FirebaseAuthentication.signInWithGoogle();
+  const idToken = res.credential && res.credential.idToken;
+  if(!idToken) throw new Error('Google neapstiprināja pieteikšanos');
+  return GoogleAuthProvider.credential(idToken);
+}
 
 $('signInBtn').addEventListener('click', async ()=>{
   $('gateErr').textContent = '';
-
-  // Native Android (Capacitor WebView): signInWithPopup's window.open() and
-  // signInWithRedirect's sessionStorage handoff don't survive the WebView's
-  // storage partitioning — use the native @capacitor-firebase/authentication
-  // plugin instead, then exchange its credential for a Firebase Auth session.
-  // Web/PWA (browser) keeps the existing popup/redirect flow, unchanged.
-  if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()){
-    try {
-      const { FirebaseAuthentication } = window.Capacitor.Plugins;
-      const result = await FirebaseAuthentication.signInWithGoogle();
-      const idToken = result?.credential?.idToken;
-      if(!idToken) throw new Error('Native pieteikšanās neatgrieza idToken.');
-      const credential = GoogleAuthProvider.credential(idToken);
-      await signInWithCredential(auth, credential);
-    } catch(e){
-      if(e && (e.code === 'auth/cancelled' || e.message === 'User cancelled the interaction')){
-        // User closed the native account picker — no error message needed
-      } else {
-        $('gateErr').textContent = 'Neizdevās pieteikties: ' + (e?.message || e);
-      }
-    }
-    return;
-  }
-
   try {
-    // Popup is Firebase's recommended flow — avoids the third-party storage
-    // partitioning that breaks signInWithRedirect in Chrome M115+/Brave.
-    await signInWithPopup(auth, provider);
+    if(IS_NATIVE){
+      // WebView path: window.open()-based popups and full-page redirects do not
+      // work inside the Capacitor WebView, so sign in natively and bridge the
+      // resulting ID token into the web SDK.
+      await signInWithCredential(auth, await nativeGoogleCredential());
+    } else {
+      // Popup is Firebase's recommended flow — avoids the third-party storage
+      // partitioning that breaks signInWithRedirect in Chrome M115+/Brave.
+      await signInWithPopup(auth, provider);
+    }
   } catch(e){
-    // Popup blocked or unsupported (e.g. some mobile PWAs) → fall back to redirect
-    if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/cancelled-popup-request')){
+    if(IS_NATIVE){
+      $('gateErr').textContent = 'Neizdevās pieteikties: ' + (e?.message || e);
+    } else if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/cancelled-popup-request')){
+      // Popup blocked or unsupported (e.g. some mobile PWAs) → fall back to redirect
       try { await signInWithRedirect(auth, provider); }
       catch(e2){ $('gateErr').textContent = 'Neizdevās pieteikties: ' + e2.message; }
     } else if(e && e.code === 'auth/popup-closed-by-user'){
@@ -188,10 +195,12 @@ $('signInBtn').addEventListener('click', async ()=>{
   }
 });
 
-// Still handle redirect result, in case the fallback redirect flow was used
-getRedirectResult(auth).catch(e=>{
-  if(e && e.code !== 'auth/no-auth-event'){ $('gateErr').textContent = 'Pieteikšanās kļūda: ' + e.message; }
-});
+// Still handle redirect result, in case the fallback redirect flow was used on web
+if(!IS_NATIVE){
+  getRedirectResult(auth).catch(e=>{
+    if(e && e.code !== 'auth/no-auth-event'){ $('gateErr').textContent = 'Pieteikšanās kļūda: ' + e.message; }
+  });
+}
 
 // React to auth state changes
 onAuthStateChanged(auth, user=>{
@@ -1323,17 +1332,13 @@ $('fileIn').addEventListener('change', e=>{
   r.readAsText(file);
 });
 
-$('signOutBtn').addEventListener('click', ()=>{
-  if(confirm('Izrakstīties? Nākamreiz atkal būs jāpiesakās ar Google.')){
-    const doSignOut = async ()=>{
-      if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()){
-        // Also clear the native session, or the account picker gets skipped next time.
-        const { FirebaseAuthentication } = window.Capacitor.Plugins;
-        await FirebaseAuthentication.signOut();
-      }
-      await signOut(auth);
-    };
-    doSignOut().catch(e=>alert('Neizdevās izrakstīties: '+e.message));
+$('signOutBtn').addEventListener('click', async ()=>{
+  if(!confirm('Izrakstīties? Nākamreiz atkal būs jāpiesakās ar Google.')) return;
+  try {
+    if(IS_NATIVE) await FirebaseAuthentication.signOut();
+    await signOut(auth);
+  } catch(e){
+    alert('Neizdevās izrakstīties: '+e.message);
   }
 });
 
@@ -1722,17 +1727,13 @@ $('settingsBtn').addEventListener('click', ()=>{
       // onAuthStateChanged (user=null) automatically shows the sign-in gate and closes this modal.
     } catch(e){
       if(e && e.code === 'auth/requires-recent-login'){
-        // Firebase requires a fresh sign-in for account deletion; re-prompt Google
-        // sign-in (native picker on Android, popup on web), then retry once.
+        // Firebase requires a fresh sign-in for account deletion; re-prompt Google, then retry once.
         btn.textContent = 'Nepieciešams apstiprināt no jauna…';
         try {
-          if(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()){
-            const { FirebaseAuthentication } = window.Capacitor.Plugins;
-            const result = await FirebaseAuthentication.signInWithGoogle();
-            const idToken = result?.credential?.idToken;
-            if(!idToken) throw new Error('Native pieteikšanās neatgrieza idToken.');
-            const credential = GoogleAuthProvider.credential(idToken);
-            await reauthenticateWithCredential(currentUser, credential);
+          if(IS_NATIVE){
+            // Same flow as the initial sign-in: native chooser, then bridge the
+            // fresh ID token into the web SDK to reauthenticate the current user.
+            await signInWithCredential(auth, await nativeGoogleCredential());
           } else {
             await reauthenticateWithPopup(currentUser, provider);
           }

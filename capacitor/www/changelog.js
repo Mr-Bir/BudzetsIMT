@@ -8,6 +8,12 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.30.2', date:'2026-08-08', notes:[
+    'Pabeigta native Android pieteikšanās/izrakstīšanās funkcionalitāte — pievienoti nepieciešamie palīgmoduļi, lai tā reāli darbotos; web/PWA lietotāju plūsma nemainās',
+  ]},
+  { v:'1.30.1', date:'2026-08-06', notes:[
+    'Pievienots native Android pieteikšanās/izrakstīšanās ceļš (Capacitor) — web/PWA lietotāju plūsma nemainās',
+  ]},
   { v:'1.30.0', date:'2026-08-05', notes:[
     'Privātuma politika un Lietošanas noteikumi tagad atveras lietotnē pašā (modālī), nevis jaunā pārlūka cilnē',
   ]},

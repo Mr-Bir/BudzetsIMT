@@ -15,6 +15,20 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
+<!-- Import map: allows app.js to load the Capacitor runtime + the native
+     FirebaseAuthentication plugin without a bundler. The JS lives in js/
+     (version-matched copies of @capacitor/core and
+     @capacitor-firebase/authentication). On the public web these modules are
+     inert — they only activate inside the native Capacitor WebView. -->
+<script type="importmap">
+{
+  "imports": {
+    "@capacitor/core": "./js/capacitor-core.js",
+    "@capacitor-firebase/authentication": "./js/firebase-auth/index.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+  }
+}
+</script>
 </head>
 <body>
 

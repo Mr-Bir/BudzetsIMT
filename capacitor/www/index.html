@@ -1,0 +1,266 @@
+<!--
+  Finanšu pārvaldnieks (BudzetsIMT)
+  Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
+  Skatīt LICENSE failu repozitorija saknē.
+-->
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanšu pārvaldnieks</title>
+<meta name="description" content="Personīgais budžeta un tēriņu pārvaldnieks ar sinhronizāciju starp ierīcēm.">
+<meta name="theme-color" content="#6d5c2e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ SPLASH SCREEN ============ -->
+<div id="splash" class="splash">
+  <img src="splash/splash.png" alt="Finanšu pārvaldnieks" class="splash-img">
+  <div class="spinner"></div>
+</div>
+
+<!-- Watchdog, stage 1: plain ES5, not a module, so it runs even when app.js
+     (which uses modern syntax like optional chaining / structuredClone) fails
+     to parse or crashes on an outdated WebView. -->
+<script>
+(function () {
+  var MODULE_CHECK_MS = 3000;   // confirms the browser can parse modern JS — no network involved
+  var NETWORK_TIMEOUT_MS = 20000; // generous allowance for a slow connection once that's confirmed
+  var moduleOk = false;
+
+  function splashVisible() {
+    var el = document.getElementById('splash');
+    return !!el && el.className.indexOf('hidden') === -1;
+  }
+  function show(html) {
+    var el = document.getElementById('splash');
+    if (el) el.innerHTML = html;
+  }
+  var OLD_BROWSER_HTML =
+    '<div class="splash-fallback">' +
+    '<h3>Nepieciešams jaunāks pārlūks</h3>' +
+    '<p>Šķiet, ka šīs ierīces pārlūkprogramma (WebView) ir novecojusi un nespēj palaist lietotni.</p>' +
+    '<p>Lūdzu, atjaunini "Android System WebView" lietotni caur Google Play, vai atver lietotni citā, jaunākā ierīcē.</p>' +
+    '</div>';
+  var SLOW_NETWORK_HTML =
+    '<div class="splash-fallback">' +
+    '<h3>Ielāde aizkavējas</h3>' +
+    '<p>Pārlūks darbojas labi, taču lietotnes ielāde prasa ilgāku laiku nekā parasti — visticamāk, lēna interneta savienojuma dēļ.</p>' +
+    '<p>Lūdzu, uzgaidi, vai pārbaudi savienojumu un mēģini pārlādēt lapu.</p>' +
+    '</div>';
+
+  // Set by a tiny inline <script type="module"> further down (see stage 2 below),
+  // which has no external imports and so runs almost instantly even on a slow
+  // connection — confirming "browser can run this syntax" independently of how
+  // long the Firebase CDN imports in app.js take to download.
+  window.__markModernJsOk = function () { moduleOk = true; };
+
+  var t1 = setTimeout(function () {
+    if (!splashVisible()) return;
+    if (!moduleOk) show(OLD_BROWSER_HTML);
+  }, MODULE_CHECK_MS);
+
+  var t2 = setTimeout(function () {
+    if (!splashVisible()) return;
+    show(moduleOk ? SLOW_NETWORK_HTML : OLD_BROWSER_HTML);
+  }, NETWORK_TIMEOUT_MS);
+
+  window.__clearSplashWatchdog = function () { clearTimeout(t1); clearTimeout(t2); };
+})();
+</script>
+
+<!-- Watchdog, stage 2: mirrors the modern syntax app.js relies on, with zero
+     external imports — so it succeeds/fails purely on browser capability,
+     never on network speed. A genuine syntax error here means the whole
+     module silently fails to run, leaving __markModernJsOk uncalled. -->
+<script type="module">
+  const t = { a: { b: 1 } };
+  const v = t?.a?.b ?? 0;
+  if (typeof structuredClone === 'function') structuredClone({ v });
+  window.__markModernJsOk && window.__markModernJsOk();
+</script>
+
+<!-- ============ SIGN-IN GATE ============ -->
+<div class="wrap">
+  <div class="gate" id="gate">
+    <h2>Finanšu pārvaldnieks</h2>
+    <p>Piesakies ar savu Google kontu, lai piekļūtu savam budžetam. Tavi dati ir privāti un pieejami tikai tev.</p>
+    <button class="btn full" id="signInBtn">
+      <span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.6l-6.6-5.6C29.6 34.5 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.6l6.6 5.6C41.4 36.7 44 31 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
+        Pieteikties ar Google
+      </span>
+    </button>
+    <div class="hint" id="gateErr" style="color:var(--red);margin-top:14px;"></div>
+  </div>
+
+  <!-- ============ APP ============ -->
+  <div id="app" class="hidden">
+    <!-- Compact top bar: hamburger · tēriņa tempa indikators · sync dot -->
+    <div class="topbar" id="topbar">
+      <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Atvērt izvēlni">
+        <span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <div class="topbar-pace" id="topbarPace">
+        <span class="tp-dot" id="paceDot"></span>
+        <span class="tp-val" id="paceDaily"></span>
+        <span class="tp-sep"></span>
+        <span class="tp-val" id="paceAvailable"></span>
+        <span class="tp-sep"></span>
+        <span class="tp-val" id="paceSafe"></span>
+        <button class="tp-info-btn" id="paceInfoBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="pacePopover" aria-label="Par tēriņa tempa rādītājiem">ⓘ</button>
+      </div>
+      <span class="topbar-spacer"></span>
+      <span class="dot" id="syncDot" title="Sinhronizācijas statuss"></span>
+    </div>
+
+    <!-- Tēriņa tempa detaļu izlecošais panelis (atveras ar ⓘ pogu topbar) -->
+    <div class="tp-popover hidden" id="pacePopover" role="dialog" aria-label="Tēriņa tempa detaļas">
+      <div class="tp-pop-item">
+        <span class="tp-pop-label">Tēriņš / dienā</span>
+        <span class="tp-pop-val" id="paceDailyFull">€ 0.00</span>
+      </div>
+      <div class="tp-pop-item">
+        <span class="tp-pop-label">Pieejams tagad</span>
+        <span class="tp-pop-val" id="paceAvailableFull">€ 0.00</span>
+      </div>
+      <p class="tp-pop-hint">Alga mīnus reāli iztērētais (samaksātie rēķini + summējošo rēķinu epizodes) — atšķiras no "Paliek", kas rēķina arī vēl nesamaksātos rēķinus.</p>
+      <div class="tp-pop-item">
+        <span class="tp-pop-label">Droša summa / dienā</span>
+        <span class="tp-pop-val" id="paceSafeFull">€ 0.00</span>
+      </div>
+      <p class="tp-pop-status" id="pacePopStatus"></p>
+    </div>
+
+    <!-- Side drawer: navigation + account, opened via hamburger -->
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <nav class="drawer" id="drawer" aria-label="Galvenā izvēlne" aria-hidden="true">
+      <button class="drawer-close" id="drawerClose" type="button" aria-label="Aizvērt izvēlni">×</button>
+
+      <div class="drawer-section drawer-nav" id="drawerNav">
+        <button class="drawer-nav-item active" data-section="budget" type="button">Budžets</button>
+        <button class="drawer-nav-item" data-section="credits" type="button">Kredīti</button>
+        <button class="drawer-nav-item" data-section="reminders" type="button">Atgādinājumi</button>
+        <button class="drawer-nav-item" data-section="savings" type="button">Uzkrājuma mērķi</button>
+      </div>
+
+      <div class="drawer-section">
+        <button class="drawer-link" id="settingsBtn" type="button">Iestatījumi</button>
+        <button class="drawer-link hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
+      </div>
+
+      <div class="drawer-section drawer-account">
+        <div class="drawer-user">
+          <span class="user-name" id="userName"></span>
+          <span class="sync-status" id="syncText">Savienojas…</span>
+        </div>
+        <button class="signout-btn" id="signOutBtn">Izrakstīties</button>
+      </div>
+    </nav>
+
+    <!-- ============ PANEL: BUDGET ============ -->
+    <div class="panel" id="panel-budget">
+    <div class="summary-wrap">
+      <button class="summary-pin" id="summaryPinBtn" title="Piespraust kopsavilkumu" aria-pressed="false" aria-label="Piespraust kopsavilkumu">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l1 6 2 2v2H6v-2l2-2 1-6z"/></svg>
+      </button>
+      <div class="summary">
+        <div class="stat">
+          <div class="label">Prognozējamā alga</div>
+          <div class="value input-val">€ <input id="income" type="number" step="0.01" inputmode="decimal"></div>
+        </div>
+        <div class="stat">
+          <div class="label">Kopā rēķini</div>
+          <div class="value" id="sumTotal">€ 0.00</div>
+          <div class="sub" id="sumPct">0 % no ieņēmumiem</div>
+          <div class="sub" id="sumSpent"></div>
+        </div>
+        <div class="stat">
+          <div class="label">Paliek <span class="over-badge hidden" id="remOverBadge" title="">⚠</span></div>
+          <div class="value" id="remaining">€ 0.00</div>
+          <div class="sub" id="remHint"></div>
+        </div>
+        <div class="stat">
+          <div class="label">Vēl jāmaksā <span class="over-badge hidden" id="payOverBadge" title="">⚠</span></div>
+          <div class="value" id="toPay">€ 0.00</div>
+          <div class="sub" id="paidHint">0 no 0 samaksāti</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+
+    <div class="grid2">
+      <section>
+        <div class="sec-head"><h2>Rēķini <span class="period-label" id="periodLabel" tabindex="0" role="button" title="Klikšķini, lai mainītu mēneša nosaukumu"></span><input class="period-label-input hidden" id="periodLabelInput" maxlength="60"></h2><div style="display:flex;gap:8px;"><button class="btn ghost sm" id="sortBillsBtn">Sakārtot</button><button class="btn ghost sm" id="newMonthBtn">🗓 Jauns mēnesis</button><button class="btn" id="addBill">+ Pievienot rēķinu</button></div></div>
+        <div class="bills" id="billsList"></div>
+        <div class="bills-foot"><span class="lbl">Kopā</span><span class="total" id="billsFootTotal">€ 0.00</span></div>
+      </section>
+    </div>
+
+    <section>
+      <div class="sec-head"><h2>Sadalījums pa kategorijām</h2><button class="btn ghost sm" id="manageCatBtn">Pārvaldīt kategorijas</button></div>
+      <div class="cat-wrap">
+        <div class="donut">
+          <svg viewBox="0 0 100 100" width="200" height="200" id="donut"></svg>
+          <div class="center"><span class="big" id="donutTotal">€ 0</span><span class="small">kopā</span></div>
+        </div>
+        <div class="cat-legend" id="catLegend"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head">
+        <h2>Mēnešu arhīvs</h2>
+        <button class="btn" id="closeMonthBtn">✓ Saglabāt aktuālo mēnesi → arhīvā</button>
+      </div>
+      <div class="archive-list" id="archiveList"></div>
+    </section>
+
+    <div class="toolbar">
+      <button class="btn ghost sm" id="exportBtn">↓ Eksportēt (JSON)</button>
+      <button class="btn ghost sm" id="exportCsvBtn">↓ Eksportēt (CSV)</button>
+      <button class="btn ghost sm" id="importBtn">↑ Importēt</button>
+      <input type="file" id="fileIn" accept="application/json" hidden>
+      <span class="saved-note" id="savedNote"></span>
+    </div>
+    </div><!-- /panel-budget -->
+
+    <!-- ============ PANEL: CREDITS ============ -->
+    <div class="panel hidden" id="panel-credits">
+      <section>
+        <div class="sec-head"><h2>Kredītu atlikumi</h2><button class="btn ghost sm" id="addCredit">+ Kredīts</button></div>
+        <div class="credits" id="creditsList"></div>
+        <div class="credits-foot"><span>Atlikums kopā</span><span class="total" id="creditsFootTotal">€ 0.00</span></div>
+        <div class="credits-foot credits-foot-sub" id="creditsMonthlyFoot"><span>Mēneša maksājumi kopā</span><span class="total" id="creditsMonthlyTotal">€ 0.00</span></div>
+      </section>
+    </div><!-- /panel-credits -->
+
+    <!-- ============ PANEL: REMINDERS ============ -->
+    <div class="panel hidden" id="panel-reminders">
+      <section>
+        <div class="sec-head"><h2>Atgādinājumi</h2></div>
+        <div class="empty-note">Šī sadaļa vēl top. Drīzumā šeit varēsi sekot līdzi maksājumu termiņiem.</div>
+      </section>
+    </div><!-- /panel-reminders -->
+
+    <!-- ============ PANEL: SAVINGS ============ -->
+    <div class="panel hidden" id="panel-savings">
+      <section>
+        <div class="sec-head"><h2>Uzkrājuma mērķi</h2></div>
+        <div class="empty-note">Šī sadaļa vēl top. Drīzumā šeit varēsi izvirzīt un sekot līdzi saviem uzkrājuma mērķiem.</div>
+      </section>
+    </div><!-- /panel-savings -->
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+Copyright (c) 2026 Mārtiņš Barons
+Visas tiesības paturētas / All rights reserved.
+
+------------------------------------------------------------------------
+LATVIEŠU
+------------------------------------------------------------------------
+
+Šis programmatūras pirmkods, tā struktūra, dizains un ar to saistītie
+faili (kopā — "Programmatūra"), kas veido lietotni "Finanšu pārvaldnieks"
+(BudzetsIMT), pieder Mārtiņam Baronam.
+
+Bez iepriekšējas skaidras rakstiskas autora atļaujas ir AIZLIEGTS:
+
+  - kopēt, izplatīt, publicēt vai atkārtoti hostēt Programmatūru vai
+    jebkuru tās daļu;
+  - modificēt, pielāgot, tulkot vai veidot atvasinātus darbus, kas
+    balstīti uz Programmatūru;
+  - izmantot Programmatūru vai tās daļas komerciālos nolūkos;
+  - dekompilēt, veikt reversāsu inženieriju vai citādi mēģināt iegūt
+    pirmkodu no apkopotām vai izplatītām lietotnes versijām
+    (piemēram, APK failiem Google Play veikalā);
+  - izmantot lietotnes nosaukumu, ikonu vai citus zīmola elementus
+    citā projektā vai publikācijā.
+
+Programmatūra tiek nodrošināta "tāda, kāda tā ir", bez jebkādām
+tiešām vai netiešām garantijām, tostarp, bet ne tikai, garantijām par
+tirgojamību vai piemērotību konkrētam mērķim. Autors nenes atbildību
+par jebkādiem zaudējumiem, kas radušies Programmatūras lietošanas
+rezultātā.
+
+Lai saņemtu atļauju izmantot, kopēt, modificēt vai izplatīt šo
+Programmatūru vai jebkuru tās daļu, lūdzu, sazinieties ar autoru.
+
+------------------------------------------------------------------------
+ENGLISH
+------------------------------------------------------------------------
+
+This software's source code, structure, design, and associated files
+(collectively, the "Software"), which make up the application
+"Finanšu pārvaldnieks" (BudzetsIMT), are owned by Mārtiņš Barons.
+
+Without prior express written permission from the author, it is
+PROHIBITED to:
+
+  - copy, distribute, publish, or re-host the Software or any part
+    of it;
+  - modify, adapt, translate, or create derivative works based on
+    the Software;
+  - use the Software or any part of it for commercial purposes;
+  - decompile, reverse-engineer, or otherwise attempt to extract the
+    source code from compiled or distributed versions of the app
+    (e.g. APK files on the Google Play Store);
+  - use the app's name, icon, or other branding elements in another
+    project or publication.
+
+The Software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties of
+merchantability and fitness for a particular purpose. The author
+shall not be liable for any damages arising from the use of the
+Software.
+
+To request permission to use, copy, modify, or distribute this
+Software or any part of it, please contact the author.

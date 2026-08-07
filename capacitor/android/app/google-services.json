@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "862378422626",
+    "project_id": "budzets-c5d39",
+    "storage_bucket": "budzets-c5d39.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862378422626:android:5e47a6e5b0b6cb5dd43c3b",
+        "android_client_info": {
+          "package_name": "lv.mrbir.budzetsimt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "862378422626-84n89c50vhj9flv6320l4rtfo01o4ure.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzMIFGdrXpgaxxn75-AGXIV-aFc2SyBQ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "862378422626-84n89c50vhj9flv6320l4rtfo01o4ure.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

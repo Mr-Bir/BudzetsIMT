@@ -1,0 +1,185 @@
+<!--
+  Finanšu pārvaldnieks (BudzetsIMT)
+  Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
+  Skatīt LICENSE failu repozitorija saknē.
+-->
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privātuma politika — Finanšu pārvaldnieks</title>
+<meta name="description" content="Privātuma politika lietotnei Finanšu pārvaldnieks (BudzetsIMT).">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --ink: #1a1d29;
+    --paper: #f7f5f0;
+    --card: #ffffff;
+    --line: #e4e0d6;
+    --muted: #8a8576;
+    --accent: #2d5f4f;
+    --shadow: 0 1px 3px rgba(26,29,41,.06), 0 8px 24px rgba(26,29,41,.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+  .back { display: inline-block; margin-bottom: 20px; color: var(--muted); font-size: 13px; text-decoration: none; }
+  .back:hover { color: var(--accent); }
+  .brand { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; margin: 0 0 6px; }
+  .updated { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 19px; margin: 32px 0 10px; padding-top: 4px; }
+  h3 { font-size: 15px; margin: 20px 0 6px; }
+  p, li { color: var(--ink); }
+  ul { padding-left: 20px; }
+  a { color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 16px 0; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .foot-note { color: var(--muted); font-size: 12.5px; margin-top: 40px; border-top: 1px dashed var(--line); padding-top: 16px; }
+  code { background: var(--line); padding: 1px 5px; border-radius: 4px; font-size: 90%; }
+  /* Hide the "back to app" link when this page is embedded in the app's own
+     in-app doc modal (iframe) — following it there would nest the whole SPA
+     inside the iframe. Set by the inline script right after <body>. */
+  html.in-iframe .back { display: none; }
+</style>
+</head>
+<body>
+<script>if (window.self !== window.top) document.documentElement.classList.add('in-iframe');</script>
+<div class="wrap">
+  <a class="back" href="./">← Atpakaļ uz lietotni</a>
+  <div class="brand">Personīgais budžets</div>
+  <h1>Privātuma politika</h1>
+  <div class="updated">Spēkā no: 2026. gada 5. augusta</div>
+
+  <p>Šī privātuma politika apraksta, kādus personas datus vāc un apstrādā
+  lietotne <strong>"Finanšu pārvaldnieks"</strong> (turpmāk — "lietotne"),
+  pieejama <a href="https://mr-bir.github.io/BudzetsIMT/">mr-bir.github.io/BudzetsIMT</a>
+  un kā Android lietotne, un kādas tiesības tev kā lietotnes lietotājam ir
+  attiecībā uz šiem datiem.</p>
+
+  <h2>1. Pārzinis</h2>
+  <div class="card">
+    <strong>Mārtiņš Barons</strong><br>
+    E-pasts: <a href="mailto:birmons@gmail.com">birmons@gmail.com</a>
+  </div>
+  <p>Ar jautājumiem, pieprasījumiem vai sūdzībām par saviem datiem vari
+  sazināties, rakstot uz iepriekš norādīto e-pastu.</p>
+
+  <h2>2. Kādus datus mēs apstrādājam</h2>
+
+  <h3>2.1 Konta dati (caur Google pieteikšanos)</h3>
+  <p>Piesakoties lietotnē ar Google kontu, mēs saņemam un saglabājam:</p>
+  <ul>
+    <li>tavu e-pasta adresi,</li>
+    <li>tavu vārdu (ja tas ir pieejams Google kontā),</li>
+    <li>unikālu Google konta identifikatoru (UID), ko izmantojam, lai
+      piesaistītu tavus datus tikai tev.</li>
+  </ul>
+  <p>Mēs neredzam un neuzglabājam tavu Google konta paroli — pieteikšanos
+  pilnībā nodrošina Google.</p>
+
+  <h3>2.2 Lietotnes dati, ko ievadi pats</h3>
+  <p>Lai lietotne pildītu savu funkciju, tu pats ievadi un lietotne
+  saglabā:</p>
+  <ul>
+    <li>alga/ienākumu summas,</li>
+    <li>rēķinu un to kategoriju informāciju (nosaukumi, summas, apmaksas statuss),</li>
+    <li>kredītu atlikumu informāciju (summas, termiņi, mēneša maksājumi),</li>
+    <li>pašizveidotas kategorijas un to iestatījumus,</li>
+    <li>mēnešu arhīva ierakstus.</li>
+  </ul>
+  <p>Šie dati tiek uzskatīti par <strong>finanšu informāciju</strong> GDPR
+  izpratnē un tiek apstrādāti ar paaugstinātu rūpību (skat. 5. sadaļu par
+  drošību).</p>
+
+  <h3>2.3 Lietošanas un diagnostikas dati</h3>
+  <p>Izmantojam <strong>Firebase Analytics</strong> (Google), lai saprastu,
+  kā lietotne tiek lietota (piem., cik bieži tiek atvērtas dažādas
+  sadaļas), un uzlabotu tās darbību. Šie dati parasti ir apkopoti un
+  nesatur tavus finanšu ierakstus.</p>
+
+  <h3>2.4 Drošības signāli</h3>
+  <p>Izmantojam <strong>Firebase App Check</strong> (ar reCAPTCHA
+  Enterprise), lai atšķirtu īstus lietotnes pieprasījumus no
+  automatizētas/ļaunprātīgas piekļuves. Šis process var apstrādāt tehniskus
+  ierīces/pārlūka signālus, bet nav paredzēts tavas identitātes
+  noteikšanai.</p>
+
+  <h2>3. Kāpēc mēs apstrādājam šos datus</h2>
+  <table>
+    <tr><th>Dati</th><th>Nolūks</th><th>Tiesiskais pamats (GDPR)</th></tr>
+    <tr><td>Konta dati</td><td>Autentifikācija, datu piesaiste tavam kontam, sinhronizācija starp ierīcēm</td><td>Līguma izpilde (6. panta 1.b)</td></tr>
+    <tr><td>Lietotnes dati (rēķini, kredīti u.c.)</td><td>Lietotnes pamatfunkcionalitāte — budžeta pārvaldība</td><td>Līguma izpilde (6. panta 1.b)</td></tr>
+    <tr><td>Analytics dati</td><td>Lietotnes uzlabošana</td><td>Leģitīmās intereses (6. panta 1.f)</td></tr>
+    <tr><td>App Check signāli</td><td>Aizsardzība pret ļaunprātīgu piekļuvi</td><td>Leģitīmās intereses (6. panta 1.f)</td></tr>
+  </table>
+
+  <h2>4. Kam mēs nododam datus</h2>
+  <p>Dati tiek glabāti un apstrādāti, izmantojot <strong>Google
+  Firebase</strong> infrastruktūru (Firestore datubāze, Authentication, App
+  Check, Analytics). Google šajā gadījumā darbojas kā mūsu <strong>datu
+  apstrādātājs</strong>. Firestore datubāzes reģions ir iestatīts uz
+  <strong>Eiropu (eur3)</strong>.</p>
+  <p>Mēs nepārdodam un nekad nenododam tavus datus trešajām pusēm
+  mārketinga nolūkos.</p>
+
+  <h2>5. Kā mēs aizsargājam tavus datus</h2>
+  <ul>
+    <li>Piekļuve datiem tiek kontrolēta ar <strong>Firestore drošības
+      noteikumiem</strong>, kas balstīti uz tavu unikālo konta ID — cits
+      lietotājs nevar redzēt vai mainīt tavus datus.</li>
+    <li><strong>Firebase App Check</strong> ierobežo piekļuvi no
+      neatzītiem/automatizētiem avotiem.</li>
+    <li>Visa saziņa starp lietotni un serveriem notiek šifrētā veidā
+      (HTTPS).</li>
+  </ul>
+
+  <h2>6. Cik ilgi mēs glabājam datus</h2>
+  <p>Tavi dati tiek glabāti, kamēr pastāv tavs konts lietotnē. Ja pieprasi
+  konta dzēšanu (skat. 7. sadaļu), visi ar tavu kontu saistītie dati tiek
+  dzēsti no mūsu sistēmām saprātīgā termiņā pēc pieprasījuma.</p>
+
+  <h2>7. Tavas tiesības un konta dzēšana</h2>
+  <p>Saskaņā ar GDPR tev ir tiesības:</p>
+  <ul>
+    <li><strong>piekļūt</strong> saviem datiem,</li>
+    <li><strong>labot</strong> neprecīzus datus,</li>
+    <li><strong>pieprasīt dzēšanu</strong> ("tiesības tikt aizmirstam"),</li>
+    <li><strong>ierobežot</strong> vai <strong>iebilst</strong> pret apstrādi,</li>
+    <li><strong>pārnest</strong> savus datus (datu pārnesamība).</li>
+  </ul>
+  <div class="card">
+    <strong>Konta un datu dzēšanu</strong> var pieprasīt divos veidos:
+    <ol>
+      <li>Lietotnē — Iestatījumi → "Dzēst kontu" (dzēš kontu un visus ar to
+        saistītos datus no Firebase).</li>
+      <li>Bez lietotnes lejupielādes — rakstot uz
+        <a href="mailto:birmons@gmail.com">birmons@gmail.com</a>.</li>
+    </ol>
+  </div>
+  <p>Ja uzskati, ka tavas tiesības ir pārkāptas, tev ir tiesības iesniegt
+  sūdzību <strong>Datu valsts inspekcijā</strong>
+  (<a href="https://www.dvi.gov.lv/">dvi.gov.lv</a>).</p>
+
+  <h2>8. Bērnu dati</h2>
+  <p>Lietotne nav paredzēta bērniem līdz 16 gadu vecumam, un mēs apzināti
+  nevācam datus no bērniem.</p>
+
+  <h2>9. Izmaiņas šajā politikā</h2>
+  <p>Ja šī politika tiks būtiski mainīta, par to tiks paziņots lietotnē
+  (Iestatījumi → "Kas jauns") vai pa e-pastu, ja tas būs iespējams.</p>
+
+  <p class="foot-note">Šī privātuma politika attiecas tikai uz lietotni
+  "Finanšu pārvaldnieks" (BudzetsIMT) un neattiecas uz citām Mārtiņa Barona
+  vietnēm vai lietotnēm.</p>
+</div>
+</body>
+</html>

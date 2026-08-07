@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Finanšu pārvaldnieks</string>
+    <string name="title_activity_main">Finanšu pārvaldnieks</string>
+    <string name="package_name">lv.mrbir.budzetsimt</string>
+    <string name="custom_url_scheme">lv.mrbir.budzetsimt</string>
+</resources>

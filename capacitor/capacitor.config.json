@@ -1,0 +1,11 @@
+{
+  "appId": "lv.mrbir.budzetsimt",
+  "appName": "Finanšu pārvaldnieks",
+  "webDir": "www",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"]
+    }
+  }
+}

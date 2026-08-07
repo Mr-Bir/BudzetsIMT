@@ -51,6 +51,8 @@ privatuma-politika.html       privātuma politika (arī atveras lietotnē pašā
 lietosanas-noteikumi.html     lietošanas noteikumi (arī atveras lietotnē pašā, Iestatījumos)
 icons/                        lietotnes ikonas
 screenshots/                  ekrānuzņēmumi
+js/                           bundler-free Capacitor/Firebase-Auth palīgmoduļi native Android pieteikšanās atbalstam (uz publiskā tīmekļa neaktīvi)
+capacitor/                    native Android (Capacitor) projekts — atsevišķa, ar web versiju sinhronizēta www/ kopija
 LICENSE                       autortiesību piezīme (visas tiesības paturētas)
 ```
 
@@ -72,7 +74,7 @@ Rīkjoslas apakšā ir divas eksporta pogas:
 
 ## Versija
 
-Aktuālā versija: **v1.30.0**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
+Aktuālā versija: **v1.30.2**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
 
 ## Licence
 
@@ -83,6 +85,12 @@ Aktuālā versija: **v1.30.0**. Pilna izmaiņu vēsture ir redzama pašā lietot
 ## Nesenās izmaiņas
 
 Pilnu vēsturi kopš v1.0.0 skatīt `changelog.js` vai lietotnē (Iestatījumi → "Kas jauns").
+
+### v1.30.2 — 2026-08-08
+- Pabeigta native Android pieteikšanās/izrakstīšanās funkcionalitāte — pievienoti nepieciešamie palīgmoduļi, lai tā reāli darbotos; web/PWA lietotāju plūsma nemainās
+
+### v1.30.1 — 2026-08-06
+- Pievienots native Android pieteikšanās/izrakstīšanās ceļš (Capacitor) — web/PWA lietotāju plūsma nemainās
 
 ### v1.30.0 — 2026-08-05
 - Privātuma politika un Lietošanas noteikumi tagad atveras lietotnē pašā (modālī), nevis jaunā pārlūka cilnē

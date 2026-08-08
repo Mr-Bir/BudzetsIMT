@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.31.0', date:'2026-08-09', notes:[
+    'Kredītu sadaļas ieraksti vizuāli saskaņoti ar Rēķinu sadaļu — vienādas krāsas (fons, apmales, teksts), izmēri un atstarpes; iepriekšējais atsevišķais violetais tonis noņemts',
+  ]},
   { v:'1.30.3', date:'2026-08-08', notes:[
     'Drošības uzlabojums — kategoriju krāsu vērtības tagad vienmēr tiek pārbaudītas pirms attēlošanas (aizsardzība pret nederīgu/ļaunprātīgu ievadi, arī importējot rezerves kopiju)',
     'Salabota kļūda, kad lietotnes automātiskā atjaunināšana varēja pārtraukt lietotāju rakstīšanas vidū — tagad atjaunināšana nogaida, kamēr lauks tiek pamests',

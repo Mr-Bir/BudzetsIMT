@@ -326,42 +326,43 @@
   .bills-foot .total { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
   .credits { display: flex; flex-direction: column; gap: 8px; }
-  .credit { background: var(--plum-soft); border: 1px solid var(--plum-border); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: 20px 1fr 120px auto; align-items: center; gap: 12px; transition: opacity .2s, box-shadow .15s; }
-  .credit .cdrag { display: flex; align-items: center; justify-content: center; cursor: grab; color: var(--plum-eur); border-left: 4px solid var(--plum); padding-left: 4px; height: 32px; touch-action: none; }
+  .credit { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 10px; display: grid; grid-template-columns: 20px 1fr 120px auto; align-items: center; gap: 12px; box-shadow: var(--shadow); transition: opacity .2s, background .2s, box-shadow .15s; }
+  .credit .cdrag { display: flex; align-items: center; justify-content: center; cursor: grab; color: var(--muted); border-left: 4px solid var(--line); padding-left: 4px; height: 30px; touch-action: none; }
   .credit .cdrag:active { cursor: grabbing; }
   .credit.dragging { opacity: .4; }
-  .credit.drag-over { box-shadow: 0 -2px 0 var(--plum), var(--shadow); }
-  .credit input.cname { border: none; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: var(--plum-ink); width: 100%; }
-  .credit input.cname:focus { outline: none; }
+  .credit.drag-over { box-shadow: 0 -2px 0 var(--accent), var(--shadow); }
+  .credit input.cname { border: none; background: transparent; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink); width: 100%; padding: 2px 0; }
+  .credit input.cname:focus { outline: none; background: var(--surface-sub); border-radius: 4px; padding: 2px 6px; margin: 0 -6px; }
   .credit .camount-wrap { display: flex; align-items: center; gap: 3px; justify-content: flex-end; }
-  .credit .camount { border: none; background: transparent; font: inherit; font-size: 16px; font-weight: 700; width: 80px; text-align: right; color: var(--plum-ink); font-variant-numeric: tabular-nums; border-bottom: 1px dashed transparent; }
-  .credit .camount:focus { outline: none; border-bottom-color: var(--plum); }
-  .credit-detail { margin: -4px 0 4px 34px; padding: 6px 12px; background: var(--cd-bg); border: 1px solid var(--plum-border); border-radius: 0 0 10px 10px; border-top: none; }
+  .credit .camount { border: none; background: transparent; font: inherit; font-size: 16px; font-weight: 700; width: 75px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; border-bottom: 1px dashed transparent; }
+  .credit .camount:focus { outline: none; border-bottom-color: var(--accent); }
+  .credit-detail { margin: -4px 0 4px 34px; padding: 6px 12px; background: var(--entry-bg); border: 1px solid var(--line); border-radius: 0 0 10px 10px; border-top: none; }
   .cd-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 2px 0 6px; }
-  .cd-label { font-size: 12.5px; color: var(--plum-ink); }
-  .cd-label strong { color: var(--plum-ink); font-variant-numeric: tabular-nums; }
-  .cd-muted { color: var(--plum-eur); }
-  .cd-edit { border: none; background: transparent; color: var(--plum); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; white-space: nowrap; }
+  .cd-label { font-size: 12.5px; color: var(--muted); }
+  .cd-label strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .cd-muted { color: var(--muted); }
+  .cd-edit { border: none; background: transparent; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; white-space: nowrap; }
   .cd-edit:hover { opacity: .75; }
-  .cd-track { height: 6px; background: var(--cd-track); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
-  .cd-fill { height: 100%; border-radius: 4px; background: var(--plum); transition: width .3s; }
-  .cd-pay-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0 2px; margin-top: 4px; border-top: 1px dashed var(--plum-border); }
-  .cd-pay-label { font-size: 12.5px; color: var(--plum-ink); font-weight: 600; }
+  .cd-track { height: 6px; background: var(--line); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+  .cd-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width .3s; }
+  .cd-pay-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0 2px; margin-top: 4px; border-top: 1px dashed var(--line); }
+  .cd-pay-label { font-size: 12.5px; color: var(--ink); font-weight: 600; }
   .cd-pay-controls { display: flex; align-items: center; gap: 6px; }
-  .cd-pay-btn { width: 26px; height: 26px; border-radius: 7px; border: 1.5px solid var(--plum); background: transparent; color: var(--plum); font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
-  .cd-pay-btn:hover:not(:disabled) { background: var(--plum); color: var(--btn-ink); }
+  .cd-pay-btn { width: 26px; height: 26px; border-radius: 7px; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .cd-pay-btn:hover:not(:disabled) { background: var(--accent); color: var(--btn-ink); }
   .cd-pay-btn:disabled { opacity: .35; cursor: not-allowed; }
   .cd-pay-amt-wrap { display: flex; align-items: center; gap: 2px; }
-  .cd-pay-eur { color: var(--plum-eur); font-size: 13px; }
-  .cd-pay-amt { width: 68px; text-align: right; border: none; background: transparent; font: inherit; font-size: 14px; font-weight: 700; color: var(--plum-ink); border-bottom: 1px dashed var(--plum-border); font-variant-numeric: tabular-nums; }
-  .cd-pay-amt:focus { outline: none; border-bottom-color: var(--plum); }
-  .credit .eur { color: var(--plum-eur); }
+  .cd-pay-eur { color: var(--muted); font-size: 13px; }
+  .cd-pay-amt { width: 68px; text-align: right; border: none; background: transparent; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); border-bottom: 1px dashed var(--line); font-variant-numeric: tabular-nums; }
+  .cd-pay-amt:focus { outline: none; border-bottom-color: var(--accent); }
+  .credit .eur { color: var(--muted); }
   .credit .del { border: none; background: transparent; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
-  .credit .del:hover { background: var(--plum-soft); color: var(--red); }
-  .credits-foot { display: flex; justify-content: space-between; padding: 12px 14px 0; margin-top: 4px; border-top: 2px solid #e0d2e1; font-weight: 700; }
-  .credits-foot .total { color: var(--plum-ink); font-variant-numeric: tabular-nums; }
-  .credits-foot-sub { border-top: none; padding-top: 4px; font-weight: 600; font-size: 13px; color: var(--muted); }
-  .credits-foot-sub .total { color: var(--muted); }
+  .credit .del:hover { background: var(--red-soft); color: var(--red); }
+  .credits-foot { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 14px 4px; margin-top: 4px; border-top: 2px solid var(--line); }
+  .credits-foot .lbl, .credits-foot span:first-child { font-weight: 700; font-size: 15px; }
+  .credits-foot .total { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .credits-foot-sub { border-top: none; padding-top: 4px; margin-top: 0; font-weight: 600; font-size: 13px; color: var(--muted); }
+  .credits-foot-sub .total { font-size: 13px; font-weight: 600; color: var(--muted); }
 
   .grid2 { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: start; }
   section { margin-top: 36px; }

@@ -8,7 +8,9 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 
 ![Finanšu pārvaldnieks](screenshots/desktop-2.png)
 
-> Ekrānuzņēmumi šobrīd rāda iepriekšējo augšējās joslas dizainu — kopš v1.26.0 navigācija ir pārcelta uz izbīdāmu sānu izvēlni (hamburger). Vērts atjaunot ekrānuzņēmumus.
+![Sānu izvēlne](screenshots/menu.png)
+
+![Iestatījumi](screenshots/settings.png)
 
 ## Ko lietotne dara
 

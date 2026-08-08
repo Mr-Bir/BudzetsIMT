@@ -97,7 +97,13 @@ const DEFAULT_CATEGORIES = [
 // Live lookups derived from state.categories
 function catList(){ return (state.categories && state.categories.length) ? state.categories : DEFAULT_CATEGORIES; }
 function catName(key){ const c = catList().find(x=>x.key===key); return c ? c.name : 'Cits'; }
-function catColor(key){ const c = catList().find(x=>x.key===key); return c ? c.color : '#8a8576'; }
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+// Vienots aizsardzības punkts: jebkura kategorijas krāsa, kas nonāk DOM inline style
+// atribūtā, vispirms iet caur šo — neatkarīgi no tā, vai tā nāk no color picker,
+// JSON importa vai sinhronizācijas no citas ierīces (piem., ja tur nonāktu dati,
+// kas apietu Firestore rules validāciju, piem. no vecākas app versijas).
+function safeColor(c){ return (typeof c==='string' && HEX_COLOR_RE.test(c)) ? c : '#8a8576'; }
+function catColor(key){ const c = catList().find(x=>x.key===key); return safeColor(c ? c.color : '#8a8576'); }
 
 const DEFAULT = {
   income: 1850,
@@ -118,7 +124,7 @@ const DEFAULT = {
 
 let state = structuredClone(DEFAULT);
 let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null;
-let lastSentJSON = null, pendingSnapshot = null;
+let lastSentJSON = null, pendingSnapshot = null, pendingReload = false;
 let currentUser = null, snapshotUnsub = null;
 
 const $ = id => document.getElementById(id);
@@ -280,6 +286,9 @@ document.addEventListener('focusout', ()=>{
   setTimeout(()=>{
     if(pendingSnapshot && !isEditingActive()){
       applyRemote(pendingSnapshot);
+    }
+    if(pendingReload && !isEditingActive()){
+      window.location.reload();
     }
   }, 150);
 });
@@ -1321,7 +1330,7 @@ $('fileIn').addEventListener('change', e=>{
       periodName: (typeof data.periodName==='string') ? data.periodName : (state.periodName||''),
       bills: Array.isArray(data.bills)?data.bills:[],
       credits: Array.isArray(data.credits)?data.credits:[],
-      categories: (Array.isArray(data.categories)&&data.categories.length)?data.categories:structuredClone(DEFAULT_CATEGORIES)
+      categories: (Array.isArray(data.categories)&&data.categories.length)?data.categories.map(c=>({ ...c, color:safeColor(c.color) })):structuredClone(DEFAULT_CATEGORIES)
     };
     // Ensure 'cits' fallback category always exists
     if(!state.categories.some(c=>c.key==='cits')) state.categories.push({key:'cits',name:'Cits',color:'#8a8576'});
@@ -1432,7 +1441,7 @@ function openCategoryManager(){
   $('catSave').addEventListener('click', ()=>{
     // Validate: names non-empty, ensure 'cits' still present
     const cleaned = draft
-      .map(c=>({ key:c.key, name:(c.name||'').trim(), color:c.color }))
+      .map(c=>({ key:c.key, name:(c.name||'').trim(), color:safeColor(c.color) }))
       .filter(c=>c.name.length>0);
     if(!cleaned.some(c=>c.key==='cits')){
       cleaned.push({ key:'cits', name:'Cits', color:'#8a8576' });
@@ -1597,10 +1606,20 @@ if('serviceWorker' in navigator){
   // Listen for cache updates from service worker
   navigator.serviceWorker.addEventListener('message', event => {
     if(event.data.type === 'CACHE_UPDATED'){
+      if(isEditingActive()){
+        console.log('SW: Cache updated — reload atlikts, lietotājs tobrīd raksta');
+        pendingReload = true;
+        return;
+      }
       console.log('SW: Cache updated — reloading page');
       setTimeout(() => window.location.reload(), 500);
     }
   });
+  // Fallback: ja atliktais reload nekad neatbrīvojas caur focusout (piem., lietotājs
+  // aizver modāli ar peli, nevis pamet lauku), pārbauda ik pa 5s, kamēr nav rediģēšanas.
+  setInterval(()=>{
+    if(pendingReload && !isEditingActive()) window.location.reload();
+  }, 5000);
 }
 // ---- Settings modal ----
 function openChangelog(){

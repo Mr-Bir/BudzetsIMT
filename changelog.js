@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.30.3', date:'2026-08-08', notes:[
+    'Drošības uzlabojums — kategoriju krāsu vērtības tagad vienmēr tiek pārbaudītas pirms attēlošanas (aizsardzība pret nederīgu/ļaunprātīgu ievadi, arī importējot rezerves kopiju)',
+    'Salabota kļūda, kad lietotnes automātiskā atjaunināšana varēja pārtraukt lietotāju rakstīšanas vidū — tagad atjaunināšana nogaida, kamēr lauks tiek pamests',
+    'Firestore drošības noteikumi paplašināti ar padziļinātu datu validāciju (katra rēķina, kredīta un kategorijas lauka līmenī) un App Check pārbaudi',
+  ]},
   { v:'1.30.2', date:'2026-08-08', notes:[
     'Pabeigta native Android pieteikšanās/izrakstīšanās funkcionalitāte — pievienoti nepieciešamie palīgmoduļi, lai tā reāli darbotos; web/PWA lietotāju plūsma nemainās',
   ]},

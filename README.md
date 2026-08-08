@@ -74,7 +74,7 @@ Rīkjoslas apakšā ir divas eksporta pogas:
 
 ## Versija
 
-Aktuālā versija: **v1.30.2**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
+Aktuālā versija: **v1.30.3**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
 
 ## Licence
 
@@ -85,6 +85,11 @@ Aktuālā versija: **v1.30.2**. Pilna izmaiņu vēsture ir redzama pašā lietot
 ## Nesenās izmaiņas
 
 Pilnu vēsturi kopš v1.0.0 skatīt `changelog.js` vai lietotnē (Iestatījumi → "Kas jauns").
+
+### v1.30.3 — 2026-08-08
+- Drošības uzlabojums — kategoriju krāsu vērtības tagad vienmēr tiek pārbaudītas pirms attēlošanas
+- Salabota kļūda, kad lietotnes automātiskā atjaunināšana varēja pārtraukt lietotāju rakstīšanas vidū
+- Firestore drošības noteikumi paplašināti ar padziļinātu datu validāciju un App Check pārbaudi
 
 ### v1.30.2 — 2026-08-08
 - Pabeigta native Android pieteikšanās/izrakstīšanās funkcionalitāte — pievienoti nepieciešamie palīgmoduļi, lai tā reāli darbotos; web/PWA lietotāju plūsma nemainās

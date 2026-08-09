@@ -368,21 +368,65 @@ function scheduleSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushNow, 600);
 }
+
 async function pushNow(){
   try {
-    lastSentJSON = JSON.stringify({ income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders||[] });
-    await setDoc(docRef, { income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders||[], updated: Date.now() });
+    // 1. STINGRĀ DATU SANITIZĀCIJA (lai atbilstu firebase.rules)
+    const safeIncome = Math.min(Math.max(Number(state.income) || 0, 0), 1000000);
+    const safePeriodName = String(state.periodName || '').slice(0, 60);
+
+    // Kategorijām jābūt tieši 3 laukiem un noteiktos garumos
+    const safeCategories = (state.categories || catList()).map(c => ({
+      key: String(c.key || 'cits').slice(0, 20),
+      name: String(c.name || 'Cits').slice(0, 40),
+      color: safeColor(c.color)
+    })).slice(0, 50);
+
+    // Atgādinājumiem jābūt tieši 7 laukiem un korektam datumam/dienai
+    const safeReminders = (state.reminders || []).map(r => {
+      let parsedDay = parseInt(r.day, 10);
+      return {
+        id: r.id ? String(r.id).slice(0, 40) : genId(),
+        billId: (r.billId !== undefined && r.billId !== null) ? String(r.billId).slice(0, 40) : null,
+        name: r.name ? String(r.name).slice(0, 80) : '',
+        day: (!isNaN(parsedDay) && parsedDay >= 1 && parsedDay <= 31) ? parsedDay : null,
+        date: (r.date !== undefined && r.date !== null) ? String(r.date).slice(0, 10) : null,
+        active: r.active !== undefined ? Boolean(r.active) : true,
+        dismissedFor: (r.dismissedFor !== undefined && r.dismissedFor !== null) ? String(r.dismissedFor).slice(0, 10) : null
+      };
+    }).slice(0, 50);
+
+    // Sagatavojam tīru sūtījumu
+    const payload = {
+      income: safeIncome,
+      periodName: safePeriodName,
+      bills: Array.isArray(state.bills) ? state.bills.slice(0, 200) : [],
+      credits: Array.isArray(state.credits) ? state.credits.slice(0, 100) : [],
+      categories: safeCategories,
+      reminders: safeReminders,
+      updated: Date.now()
+    };
+
+    lastSentJSON = JSON.stringify({ 
+      income: payload.income, 
+      periodName: payload.periodName, 
+      bills: payload.bills, 
+      credits: payload.credits, 
+      categories: payload.categories, 
+      reminders: payload.reminders 
+    });
+    
+    // 2. SŪTĀM UZ MĀKONI
+    await setDoc(docRef, payload);
+    
     localDirty = false;
     setSync('ok','Sinhronizēts');
-    // Saglabāšana pabeigta — ja kamēr tā notika, pienāca jauns (nu jau droši piemērojams)
-    // snapshot, uzreiz to piemēro, nevis gaida nākamo focusout notikumu.
+    
     if(pendingSnapshot && !isEditingActive()){
       applyRemote(pendingSnapshot);
     }
   } catch(e){
-    console.error('Kļūda saglabājot datus Firebase:', e); // Šis parādīs sarkano kļūdu F12!
-    // Neatiestatām localDirty uz false — nesaglabātā lokālā izmaiņa vēl "dzīvo" tikai šeit,
-    // tāpēc arī turpmāk ienākošie snapshot jāatliek, nevis jāpārraksta ar to virsū.
+    console.error('Kļūda saglabājot datus Firebase:', e); 
     setSync('err','Saglabāšana neizdevās');
   }
 }

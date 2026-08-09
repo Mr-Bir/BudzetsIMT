@@ -75,6 +75,20 @@ function genId(){ return 'id_' + Date.now().toString(36) + '_' + Math.random().t
 // Backfills missing bill ids in-place — needed for data saved before reminders existed,
 // and for cross-device sync where an older app version might still write id-less bills.
 function ensureBillIds(bills){ (bills||[]).forEach(b=>{ if(!b.id) b.id = genId(); }); return bills; }
+
+// Aizpilda trūkstošos laukus vecajiem atgādinājumiem, lai tie izietu firebase.rules validāciju
+function ensureReminderFields(reminders) {
+  return (reminders || []).map(r => ({
+    id: r.id || genId(),
+    billId: r.billId !== undefined ? r.billId : null,
+    name: r.name || '',
+    day: r.day !== undefined ? r.day : null,
+    date: r.date !== undefined ? r.date : null,
+    active: r.active !== undefined ? r.active : true,
+    dismissedFor: r.dismissedFor !== undefined ? r.dismissedFor : null
+  }));
+}
+
 // ---- Reminder date logic ----
 // Linked reminders (billId set) store only a day-of-month ("day"); the actual due date
 // is always computed against the REAL current calendar month, so it stays correct
@@ -274,7 +288,14 @@ function connectForUser(uid){
   snapshotUnsub = onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
-      const incoming = { income: d.income ?? DEFAULT.income, periodName: d.periodName || '', bills: ensureBillIds(d.bills ?? []), credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES), reminders: d.reminders ?? [] };
+      const incoming = { 
+        income: d.income ?? DEFAULT.income, 
+        periodName: d.periodName || '', 
+        bills: ensureBillIds(d.bills ?? []), 
+        credits: d.credits ?? [], 
+        categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES), 
+        reminders: ensureReminderFields(d.reminders ?? []) 
+      };
       const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
@@ -358,6 +379,7 @@ async function pushNow(){
       applyRemote(pendingSnapshot);
     }
   } catch(e){
+    console.error('Kļūda saglabājot datus Firebase:', e); // Šis parādīs sarkano kļūdu F12!
     // Neatiestatām localDirty uz false — nesaglabātā lokālā izmaiņa vēl "dzīvo" tikai šeit,
     // tāpēc arī turpmāk ienākošie snapshot jāatliek, nevis jāpārraksta ar to virsū.
     setSync('err','Saglabāšana neizdevās');

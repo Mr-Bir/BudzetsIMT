@@ -159,7 +159,7 @@
       <div class="drawer-section drawer-nav" id="drawerNav">
         <button class="drawer-nav-item active" data-section="budget" type="button">Budžets</button>
         <button class="drawer-nav-item" data-section="credits" type="button">Kredīti</button>
-        <button class="drawer-nav-item" data-section="reminders" type="button">Atgādinājumi</button>
+        <button class="drawer-nav-item" data-section="reminders" type="button">Atgādinājumi<span class="nav-badge hidden" id="remindersBadge">0</span></button>
         <button class="drawer-nav-item" data-section="savings" type="button">Uzkrājuma mērķi</button>
       </div>
 
@@ -176,6 +176,14 @@
         <button class="signout-btn" id="signOutBtn">Izrakstīties</button>
       </div>
     </nav>
+
+    <!-- Atgādinājumu baneris — redzams visās sadaļās, kad šodien vai kavēts kāds atgādinājums -->
+    <div class="reminder-banner hidden" id="reminderBanner">
+      <span class="rb-icon" aria-hidden="true">⏰</span>
+      <span class="rb-text" id="reminderBannerText"></span>
+      <button class="rb-view" id="reminderBannerView" type="button">Skatīt</button>
+      <button class="rb-dismiss" id="reminderBannerDismiss" type="button" title="Atzīmēt kā redzētu">✓</button>
+    </div>
 
     <!-- ============ PANEL: BUDGET ============ -->
     <div class="panel" id="panel-budget">
@@ -258,8 +266,24 @@
     <!-- ============ PANEL: REMINDERS ============ -->
     <div class="panel hidden" id="panel-reminders">
       <section>
-        <div class="sec-head"><h2>Atgādinājumi</h2></div>
-        <div class="empty-note">Šī sadaļa vēl top. Drīzumā šeit varēsi sekot līdzi maksājumu termiņiem.</div>
+        <div class="sec-head"><h2>Atgādinājumi</h2><button class="btn" id="addReminderBtn">+ Pievienot atgādinājumu</button></div>
+
+        <div class="rem-group" id="remGroupDue">
+          <div class="rem-group-title rem-group-title-due">Šodien / nokavēts</div>
+          <div class="rem-list" id="remListDue"></div>
+        </div>
+
+        <div class="rem-group" id="remGroupUpcoming">
+          <div class="rem-group-title">Gaidāmie</div>
+          <div class="rem-list" id="remListUpcoming"></div>
+        </div>
+
+        <div class="rem-group hidden" id="remGroupPaused">
+          <div class="rem-group-title">Pauzētie</div>
+          <div class="rem-list" id="remListPaused"></div>
+        </div>
+
+        <div class="empty-note hidden" id="remEmptyNote">Vēl nav neviena atgādinājuma. Pievieno pirmo ar pogu augšā.</div>
       </section>
     </div><!-- /panel-reminders -->
 

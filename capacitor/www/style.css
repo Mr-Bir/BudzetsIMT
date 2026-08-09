@@ -166,7 +166,8 @@
   .drawer-section:last-child { border-bottom: none; margin-top: auto; padding-bottom: 0; }
   .drawer-nav { display: flex; flex-direction: column; gap: 4px; }
   .drawer-nav-item, .drawer-link { display: block; width: 100%; text-align: left; border: none; background: transparent; cursor: pointer; font: inherit; color: var(--muted); padding: 10px; border-radius: 9px; transition: background .15s, color .15s; }
-  .drawer-nav-item { font-size: 17px; font-weight: 700; }
+  .drawer-nav-item { font-size: 17px; font-weight: 700; position: relative; }
+  .nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; margin-left: 7px; border-radius: 9px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; vertical-align: 2px; }
   .drawer-nav-item:hover, .drawer-link:hover { background: var(--paper); color: var(--ink); }
   .drawer-nav-item.active { color: var(--accent); background: var(--paper); }
   .drawer-link { font-size: 14px; font-weight: 600; }
@@ -401,6 +402,36 @@
   .arch-figure.rem-pos { color: var(--green); } .arch-figure.rem-neg { color: var(--red); }
   .arch-actions { display: flex; gap: 6px; }
   .empty-note { color: var(--muted); font-size: 14px; padding: 20px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
+
+  /* ---- Reminder banner (visible above panels when something is due today/overdue) ---- */
+  .reminder-banner { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--red); border-left: 4px solid var(--red); border-radius: 10px; padding: 10px 12px; margin: 0 0 14px; box-shadow: var(--shadow); }
+  .reminder-banner .rb-icon { font-size: 16px; line-height: 1; }
+  .reminder-banner .rb-text { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .reminder-banner .rb-view { border: 1px solid var(--red); background: transparent; color: var(--red); font: inherit; font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+  .reminder-banner .rb-view:hover { background: var(--red); color: #fff; }
+  .reminder-banner .rb-dismiss { border: none; background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; padding: 4px 6px; border-radius: 6px; line-height: 1; }
+  .reminder-banner .rb-dismiss:hover { background: var(--red-soft); color: var(--red); }
+
+  /* ---- Reminders section ---- */
+  .rem-group { margin-bottom: 18px; }
+  .rem-group.hidden { display: none; }
+  .rem-group-title { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .rem-group-title-due { color: var(--red); }
+  .rem-list { display: flex; flex-direction: column; gap: 8px; }
+  .rem-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); }
+  .rem-row.due { border-color: var(--red); border-left: 4px solid var(--red); }
+  .rem-row.paused { opacity: .55; }
+  .rem-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .rem-name { font-size: 14.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rem-sub { font-size: 12px; color: var(--muted); }
+  .rem-sub.due-text { color: var(--red); font-weight: 600; }
+  .rem-toggle, .rem-del { border: none; background: transparent; cursor: pointer; color: var(--muted); font-size: 13px; padding: 6px 8px; border-radius: 7px; white-space: nowrap; }
+  .rem-toggle:hover { background: var(--paper); color: var(--ink); }
+  .rem-del { font-size: 18px; line-height: 1; padding: 4px 6px; }
+  .rem-del:hover { background: var(--red-soft); color: var(--red); }
+  .rem-type-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .rem-type-btn { flex: 1; border: 1px solid var(--line); background: var(--card); color: var(--muted); font: inherit; font-size: 13.5px; font-weight: 600; padding: 10px; border-radius: 9px; cursor: pointer; }
+  .rem-type-btn.active { border-color: var(--accent); color: var(--accent); background: var(--paper); }
 
   .modal-back { position: fixed; inset: 0; background: rgba(26,29,41,.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
   .modal { background: var(--paper); border-radius: 16px; padding: 28px; max-width: 640px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }

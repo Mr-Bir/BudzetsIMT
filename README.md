@@ -18,6 +18,7 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 - **Rēķinu un ienākumu pārskats** — redzi uzreiz, cik paliek pāri pēc visiem rēķiniem
 - **Divi rēķinu veidi** — parasti (fiksēta summa) un summējošie (piem. degviela — pievieno epizodes visa mēneša garumā, summa saskaitās automātiski, var iestatīt mēneša limitu)
 - **Kredītu atlikumu izsekošana** — atlikumi, termiņi ar progresu un mēneša maksājumi
+- **Atgādinājumi** — piesaisti atgādinājumu esošam rēķinam (atkārtojas katru mēnesi izvēlētajā dienā, automātiski pārdzīvo "Jauns mēnesis") vai izveido brīvu vienreizēju atgādinājumu; baneris un sarkans skaitītājs parāda, kad kaut kam termiņš ir šodien vai nokavēts
 - **Kategorijas ar krāsu kodējumu** un vizuālu sadalījumu (donut diagramma)
 - **Mēnešu arhīvs** — aizver mēnesi un saglabā to vēsturē, ar rediģējamu perioda nosaukumu
 - **Naudas tērēšanas tempa indikators** — vidējais tēriņš/dienā un droša tēriņa summa līdz mēneša beigām
@@ -37,7 +38,7 @@ Lietotne sadalīta četrās sadaļās (pieejamas caur sānu izvēlni):
 |---|---|
 | **Budžets** | Alga, rēķini, kategoriju sadalījums, mēnešu arhīvs, eksports/imports |
 | **Kredīti** | Kredītu atlikumi, termiņi ar progresu, mēneša maksājumi |
-| **Atgādinājumi** | Vēl top — maksājumu termiņu izsekošana |
+| **Atgādinājumi** | Maksājumu termiņu atgādinājumi — piesaistīti rēķinam (atkārtojas mēnesi) vai brīvi (vienreizēji); baneris un skaitītājs, kad termiņš tuvojas. *Native paziņojumi ierīcē (Android) vēl top.* |
 | **Uzkrājuma mērķi** | Vēl top — uzkrājuma mērķu izvirzīšana un izsekošana |
 
 ## Failu struktūra
@@ -76,7 +77,7 @@ Rīkjoslas apakšā ir divas eksporta pogas:
 
 ## Versija
 
-Aktuālā versija: **v1.30.3**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
+Aktuālā versija: **v1.32.0**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
 
 ## Licence
 
@@ -87,6 +88,14 @@ Aktuālā versija: **v1.30.3**. Pilna izmaiņu vēsture ir redzama pašā lietot
 ## Nesenās izmaiņas
 
 Pilnu vēsturi kopš v1.0.0 skatīt `changelog.js` vai lietotnē (Iestatījumi → "Kas jauns").
+
+### v1.32.0 — 2026-08-09
+- Pievienota Atgādinājumu sadaļa — atgādinājumu var piesaistīt esošam rēķinam (atkārtojas katru mēnesi izvēlētajā dienā, automātiski pārdzīvo "Jauns mēnesis") vai izveidot brīvu vienreizēju atgādinājumu ar fiksētu datumu
+- Kad rēķins tiek izslēgts no jaunā mēneša (vai izdzēsts), tam piesaistītais atgādinājums automātiski pāriet pauzes stāvoklī, nevis pazūd
+- Pievienots sarkans skaitītājs pie "Atgādinājumi" izvēlnē un baneris visās sadaļās, kad kādam atgādinājumam termiņš ir šodien vai nokavēts
+
+### v1.31.0 — 2026-08-09
+- Kredītu sadaļas ieraksti vizuāli saskaņoti ar Rēķinu sadaļu — vienādas krāsas, izmēri un atstarpes
 
 ### v1.30.3 — 2026-08-08
 - Drošības uzlabojums — kategoriju krāsu vērtības tagad vienmēr tiek pārbaudītas pirms attēlošanas

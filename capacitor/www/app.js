@@ -69,6 +69,40 @@ function billAmount(b){
 // spent at the time it was logged, so they're always treated as "paid" for totals/sorting.
 function isBillPaid(b){ return b && b.type==='summing' ? true : !!b.paid; }
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+// Stable random id for bills/reminders — lets reminders reference a bill across
+// reorders, renames, and "Jauns mēnesis" resets (which only touch amount/paid/entries).
+function genId(){ return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,9); }
+// Backfills missing bill ids in-place — needed for data saved before reminders existed,
+// and for cross-device sync where an older app version might still write id-less bills.
+function ensureBillIds(bills){ (bills||[]).forEach(b=>{ if(!b.id) b.id = genId(); }); return bills; }
+// ---- Reminder date logic ----
+// Linked reminders (billId set) store only a day-of-month ("day"); the actual due date
+// is always computed against the REAL current calendar month, so it stays correct
+// automatically after "Jauns mēnesis" without any extra bookkeeping.
+function daysInMonth(year, month){ return new Date(year, month+1, 0).getDate(); } // month: 0-11
+function reminderDueDate(r){
+  if(r.billId){
+    const day = Math.min(Math.max(parseInt(r.day,10)||1,1),31);
+    const now = new Date();
+    const clamped = Math.min(day, daysInMonth(now.getFullYear(), now.getMonth()));
+    return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(clamped).padStart(2,'0');
+  }
+  return r.date || '';
+}
+// 'overdue' | 'today' | 'upcoming' | null (no valid date)
+function reminderStatus(r){
+  const due = reminderDueDate(r);
+  if(!due) return null;
+  const today = todayStr();
+  if(due < today) return 'overdue';
+  if(due === today) return 'today';
+  return 'upcoming';
+}
+function billById(id){ return (state.bills||[]).find(b=>b.id===id); }
+function reminderDisplayName(r){
+  if(r.billId){ const b = billById(r.billId); return b ? (b.name||'(bez nosaukuma)') : (r.name || '(dzēsts rēķins)'); }
+  return r.name || '(bez nosaukuma)';
+}
 // Time-based credit progress from start/end dates. Returns null if dates missing/invalid.
 function creditProgress(c){
   if(!c || !c.start || !c.end) return null;
@@ -109,17 +143,18 @@ const DEFAULT = {
   income: 1850,
   periodName: '',
   bills: [
-    {name:'Pārtika', amount:380, cat:'partika'},
-    {name:'Īre', amount:650, cat:'ire'},
-    {name:'Komunālie pakalpojumi', amount:150, cat:'komunalie'},
-    {name:'Degviela', type:'summing', entries:[], cat:'transports'},
+    {id:'bill_partika', name:'Pārtika', amount:380, cat:'partika'},
+    {id:'bill_ire', name:'Īre', amount:650, cat:'ire'},
+    {id:'bill_komunalie', name:'Komunālie pakalpojumi', amount:150, cat:'komunalie'},
+    {id:'bill_degviela', name:'Degviela', type:'summing', entries:[], cat:'transports'},
   ],
   credits: [
     {name:'In Credit', amount:550},
     {name:'Swedbank patēriņa kredīts', amount:2500},
     {name:'Privātpersonas A. Bērziņa aizdevums', amount:1585},
   ],
-  categories: structuredClone(DEFAULT_CATEGORIES)
+  categories: structuredClone(DEFAULT_CATEGORIES),
+  reminders: []
 };
 
 let state = structuredClone(DEFAULT);
@@ -239,14 +274,14 @@ function connectForUser(uid){
   snapshotUnsub = onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
-      const incoming = { income: d.income ?? DEFAULT.income, periodName: d.periodName || '', bills: d.bills ?? [], credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES) };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories });
+      const incoming = { income: d.income ?? DEFAULT.income, periodName: d.periodName || '', bills: ensureBillIds(d.bills ?? []), credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES), reminders: d.reminders ?? [] };
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
       if(isEditingActive()){ pendingSnapshot = incoming; setSync('ok','Sinhronizēts'); return; }
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data)
-      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES) };
+      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [] };
       render(); pushNow();
     }
   }, err=>{
@@ -307,8 +342,8 @@ function scheduleSave(){
 }
 async function pushNow(){
   try {
-    lastSentJSON = JSON.stringify({ income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories });
-    await setDoc(docRef, { income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, updated: Date.now() });
+    lastSentJSON = JSON.stringify({ income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders||[] });
+    await setDoc(docRef, { income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders||[], updated: Date.now() });
     setSync('ok','Sinhronizēts');
   } catch(e){
     setSync('err','Saglabāšana neizdevās');
@@ -466,6 +501,83 @@ function render(){
     cl.appendChild(sub);
   });
   updateTotals();
+  renderReminders();
+}
+
+function formatDateLv(iso){
+  if(!iso) return '';
+  const parts = iso.split('-');
+  if(parts.length!==3) return iso;
+  return parts[2]+'.'+parts[1]+'.'+parts[0];
+}
+
+// Renders the Atgādinājumi section lists + the always-visible nav badge/banner.
+// Called from render() so it stays in sync with every state change automatically.
+function renderReminders(){
+  const reminders = state.reminders || [];
+  const dueBox = $('remListDue'), upBox = $('remListUpcoming'), pauseBox = $('remListPaused');
+  const pauseGroup = $('remGroupPaused'), emptyNote = $('remEmptyNote');
+  if(dueBox && upBox && pauseBox){
+    dueBox.innerHTML=''; upBox.innerHTML=''; pauseBox.innerHTML='';
+    const dueRows=[], upRows=[], pausedRows=[];
+    reminders.forEach((r,i)=>{
+      const status = reminderStatus(r);
+      if(!r.active){ pausedRows.push({r,i,status}); return; }
+      if(status==='overdue' || status==='today') dueRows.push({r,i,status});
+      else upRows.push({r,i,status});
+    });
+    dueRows.sort((a,b)=> reminderDueDate(a.r) < reminderDueDate(b.r) ? -1 : 1);
+    upRows.sort((a,b)=> reminderDueDate(a.r) < reminderDueDate(b.r) ? -1 : 1);
+
+    const rowHtml = (r,i,status,paused)=>{
+      const due = reminderDueDate(r);
+      const name = reminderDisplayName(r);
+      let subHtml;
+      if(paused) subHtml = `<span class="rem-sub">Pauzēts${r.billId?' — rēķins vairs nav aktīvs':''}</span>`;
+      else if(status==='today') subHtml = `<span class="rem-sub due-text">Šodien jāmaksā</span>`;
+      else if(status==='overdue') subHtml = `<span class="rem-sub due-text">Nokavēts — bija ${formatDateLv(due)}</span>`;
+      else if(r.billId) subHtml = `<span class="rem-sub">Katru mēnesi ap ${Math.min(Math.max(parseInt(r.day,10)||1,1),31)}. · nākamreiz ${formatDateLv(due)}</span>`;
+      else subHtml = `<span class="rem-sub">Termiņš: ${formatDateLv(due)}</span>`;
+      return `
+        <div class="rem-row${(status==='today'||status==='overdue')&&!paused?' due':''}${paused?' paused':''}" data-remidx="${i}">
+          <div class="rem-main">
+            <span class="rem-name">${escapeHtml(name)}</span>
+            ${subHtml}
+          </div>
+          <button class="rem-toggle" data-remtoggle="${i}">${paused?'Atsākt':'Pauzēt'}</button>
+          <button class="rem-del" data-remdel="${i}" title="Dzēst">×</button>
+        </div>`;
+    };
+
+    dueBox.innerHTML = dueRows.map(x=>rowHtml(x.r,x.i,x.status,false)).join('');
+    upBox.innerHTML = upRows.map(x=>rowHtml(x.r,x.i,x.status,false)).join('') || '<div class="empty-note" style="padding:14px;">Nav gaidāmu atgādinājumu.</div>';
+    pauseBox.innerHTML = pausedRows.map(x=>rowHtml(x.r,x.i,x.status,true)).join('');
+    if(pauseGroup) pauseGroup.classList.toggle('hidden', pausedRows.length===0);
+    if(emptyNote) emptyNote.classList.toggle('hidden', reminders.length>0);
+    $('remGroupDue')?.classList.toggle('hidden', reminders.length===0);
+    $('remGroupUpcoming')?.classList.toggle('hidden', reminders.length===0);
+  }
+
+  // ---- Badge + banner (visible in ALL sections, not just Atgādinājumi) ----
+  const activeDue = reminders.filter(r=>r.active && (reminderStatus(r)==='overdue'||reminderStatus(r)==='today'));
+  const badge = $('remindersBadge');
+  if(badge){
+    if(activeDue.length>0){ badge.textContent = String(activeDue.length); badge.classList.remove('hidden'); }
+    else badge.classList.add('hidden');
+  }
+  const undismissed = activeDue.filter(r=>r.dismissedFor !== reminderDueDate(r));
+  const banner = $('reminderBanner');
+  if(banner){
+    if(undismissed.length>0){
+      const names = undismissed.slice(0,2).map(r=>reminderDisplayName(r)).join(', ');
+      const extra = undismissed.length>2 ? ` +${undismissed.length-2}` : '';
+      const textEl = $('reminderBannerText');
+      if(textEl) textEl.textContent = undismissed.length===1 ? `Šodien jāmaksā: ${names}` : `${undismissed.length} maksājumi šodien/kavēti: ${names}${extra}`;
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
 }
 
 function updateTotals(){
@@ -967,7 +1079,16 @@ $('billsList').addEventListener('click', e=>{
   const entryDelBtn = e.target.closest('[data-entrydel]');
   const limitBtn = e.target.closest('[data-limit]');
   const toggleBtn = e.target.closest('[data-toggle]');
-  if(delBtn){ const i=+delBtn.dataset.del; const nm=(state.bills[i].name||'').trim(); if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){ state.bills.splice(i,1); render(); scheduleSave(); } return; }
+  if(delBtn){
+    const i=+delBtn.dataset.del; const nm=(state.bills[i].name||'').trim();
+    if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){
+      const removedId = state.bills[i].id;
+      state.bills.splice(i,1);
+      (state.reminders||[]).forEach(r=>{ if(r.billId===removedId) r.active=false; });
+      render(); scheduleSave();
+    }
+    return;
+  }
   if(payBtn){ const i=+payBtn.dataset.pay; state.bills[i].paid = !state.bills[i].paid; render(); updateTotals(); scheduleSave(); return; }
   if(addEntryBtn){ openAddEntry(+addEntryBtn.dataset.addentry); return; }
   if(limitBtn){ openSetLimit(+limitBtn.dataset.limit); return; }
@@ -1113,9 +1234,14 @@ function openNewMonthModal(){
         return;
       }
     }
+    const removedIds = state.bills.filter((b,i)=>!keepIdx.has(i)).map(b=>b.id);
     state.bills = state.bills
       .filter((b,i)=>keepIdx.has(i))
       .map(b=> b.type==='summing' ? { ...b, entries: [] } : { ...b, paid: false });
+    // Reminders linked to a bill that wasn't kept are paused, not deleted — the
+    // data stays in case the bill reappears later. Reminders on KEPT bills need no
+    // change here: their due date is computed live from the real calendar month.
+    (state.reminders||[]).forEach(r=>{ if(r.billId && removedIds.includes(r.billId)) r.active=false; });
     state.periodName = monthLabel(monthKey());
     close(); render(); updateTotals(); scheduleSave();
     alert('Jauns mēnesis sagatavots ✓');
@@ -1123,6 +1249,116 @@ function openNewMonthModal(){
 }
 
 $('newMonthBtn').addEventListener('click', openNewMonthModal);
+
+/* ═══════════════════════════════════════════════════════════════
+   6.5 ATGĀDINĀJUMI — pievienošanas modālis + saraksta darbības
+   Atgādinājums var būt piesaistīts esošam rēķinam (atkārtojas katru
+   mēnesi pēc izvēlētās dienas — pārdzīvo "Jauns mēnesis") vai brīvs
+   (fiksēts vienreizējs datums, nesaistīts ar rēķinu).
+   ═══════════════════════════════════════════════════════════════ */
+
+function openAddReminderModal(){
+  const root = $('modalRoot');
+  const billsOptions = (state.bills||[]).map(b=>`<option value="${b.id}">${escapeHtml(b.name||'(bez nosaukuma)')}</option>`).join('');
+  const hasBills = (state.bills||[]).length>0;
+  root.innerHTML = `
+    <div class="modal-back" id="arBack">
+      <div class="modal" style="max-width:440px;">
+        <button class="modal-close" id="arClose">×</button>
+        <h3>Pievienot atgādinājumu</h3>
+        <div class="rem-type-toggle">
+          <button class="rem-type-btn${hasBills?' active':''}" id="arTypeLinked" type="button" ${hasBills?'':'disabled'}>Piesaistīts rēķinam</button>
+          <button class="rem-type-btn${hasBills?'':' active'}" id="arTypeFree" type="button">Brīvs atgādinājums</button>
+        </div>
+
+        <div id="arLinkedFields" class="${hasBills?'':'hidden'}">
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Rēķins</label>
+          <select id="arBillSelect" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">${billsOptions}</select>
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Diena mēnesī (1–31)</label>
+          <input id="arDay" type="number" min="1" max="31" step="1" value="15" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;">Atgādinājums automātiski atkārtojas katru mēnesi šajā dienā — arī pēc "Jauns mēnesis".</div>
+        </div>
+
+        <div id="arFreeFields" class="${hasBills?'hidden':''}">
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Nosaukums</label>
+          <input id="arName" type="text" placeholder="piem. Auto tehniskā apskate" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Datums</label>
+          <input id="arDate" type="date" value="${todayStr()}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn ghost sm" id="arCancel">Atcelt</button>
+          <button class="btn" id="arSave">Pievienot</button>
+        </div>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('arBack').addEventListener('click', e=>{ if(e.target.id==='arBack') close(); });
+  $('arClose').addEventListener('click', close);
+  $('arCancel').addEventListener('click', close);
+
+  let mode = hasBills ? 'linked' : 'free';
+  const setMode = m=>{
+    mode = m;
+    $('arTypeLinked').classList.toggle('active', m==='linked');
+    $('arTypeFree').classList.toggle('active', m==='free');
+    $('arLinkedFields').classList.toggle('hidden', m!=='linked');
+    $('arFreeFields').classList.toggle('hidden', m!=='free');
+  };
+  $('arTypeLinked').addEventListener('click', ()=>{ if(hasBills) setMode('linked'); });
+  $('arTypeFree').addEventListener('click', ()=>setMode('free'));
+
+  $('arSave').addEventListener('click', ()=>{
+    if(!state.reminders) state.reminders = [];
+    if(mode==='linked'){
+      const billId = $('arBillSelect').value;
+      const bill = billById(billId);
+      let day = parseInt($('arDay').value,10);
+      if(!day || day<1 || day>31){ alert('Ievadi derīgu dienu (1–31).'); return; }
+      state.reminders.push({ id: genId(), billId, name: bill?bill.name:'', day, date:null, active:true, dismissedFor:null });
+    } else {
+      const name = $('arName').value.trim();
+      const date = $('arDate').value;
+      if(!name){ alert('Ievadi nosaukumu.'); return; }
+      if(!date){ alert('Izvēlies datumu.'); return; }
+      state.reminders.push({ id: genId(), billId:null, name, day:null, date, active:true, dismissedFor:null });
+    }
+    close(); render(); scheduleSave();
+  });
+}
+$('addReminderBtn')?.addEventListener('click', openAddReminderModal);
+
+// Reminder list clicks: pause/resume, delete
+['remListDue','remListUpcoming','remListPaused'].forEach(id=>{
+  $(id)?.addEventListener('click', e=>{
+    const toggleBtn = e.target.closest('[data-remtoggle]');
+    const delBtn = e.target.closest('[data-remdel]');
+    if(toggleBtn){
+      const i = +toggleBtn.dataset.remtoggle;
+      const r = state.reminders[i];
+      if(r){ r.active = !r.active; if(r.active) r.dismissedFor = null; render(); scheduleSave(); }
+      return;
+    }
+    if(delBtn){
+      const i = +delBtn.dataset.remdel;
+      const r = state.reminders[i];
+      if(r && confirm(`Dzēst atgādinājumu "${reminderDisplayName(r)}"?`)){
+        state.reminders.splice(i,1); render(); scheduleSave();
+      }
+      return;
+    }
+  });
+});
+
+// Banner: "Skatīt" jumps to the section, "✓" dismisses today's/overdue reminders
+// (per-reminder dismissedFor, so it reappears automatically once the due date moves on)
+$('reminderBannerView')?.addEventListener('click', ()=>{ showSection('reminders'); });
+$('reminderBannerDismiss')?.addEventListener('click', ()=>{
+  (state.reminders||[]).forEach(r=>{
+    if(r.active){ const st = reminderStatus(r); if(st==='overdue'||st==='today') r.dismissedFor = reminderDueDate(r); }
+  });
+  renderReminders(); scheduleSave();
+});
 
 /* ═══════════════════════════════════════════════════════════════
    7. KĀRTOŠANA AR VILKŠANU (drag & drop) + KREDĪTI
@@ -1285,11 +1521,11 @@ $('addBill').addEventListener('click', ()=>{
   $('nbBack').addEventListener('click', e=>{ if(e.target.id==='nbBack') close(); });
   $('nbClose').addEventListener('click', close);
   $('nbNormal').addEventListener('click', ()=>{
-    close(); state.bills.push({name:'',amount:0,cat:'cits'}); render(); scheduleSave();
+    close(); state.bills.push({id:genId(),name:'',amount:0,cat:'cits'}); render(); scheduleSave();
     const n=document.querySelectorAll('#billsList .name'); n[n.length-1]?.focus();
   });
   $('nbSumming').addEventListener('click', ()=>{
-    close(); state.bills.push({name:'',type:'summing',entries:[],cat:'cits'}); render(); scheduleSave();
+    close(); state.bills.push({id:genId(),name:'',type:'summing',entries:[],cat:'cits'}); render(); scheduleSave();
     const n=document.querySelectorAll('#billsList .name'); n[n.length-1]?.focus();
   });
 });

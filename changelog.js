@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.32.0', date:'2026-08-09', notes:[
+    'Pievienota Atgādinājumu sadaļa — var pievienot atgādinājumu, kas piesaistīts esošam rēķinam (atkārtojas katru mēnesi izvēlētajā dienā, automātiski pārdzīvo "Jauns mēnesis") vai brīvu vienreizēju atgādinājumu ar fiksētu datumu',
+    'Kad rēķins tiek izslēgts no jaunā mēneša (vai izdzēsts), tam piesaistītais atgādinājums automātiski pāriet pauzes stāvoklī, nevis pazūd — datus var atjaunot, ja rēķins parādās vēlreiz',
+    'Pievienots sarkans skaitītājs pie "Atgādinājumi" izvēlnē un baneris visās sadaļās, kad kādam atgādinājumam termiņš ir šodien vai nokavēts',
+  ]},
   { v:'1.31.0', date:'2026-08-09', notes:[
     'Kredītu sadaļas ieraksti vizuāli saskaņoti ar Rēķinu sadaļu — vienādas krāsas (fons, apmales, teksts), izmēri un atstarpes; iepriekšējais atsevišķais violetais tonis noņemts',
   ]},

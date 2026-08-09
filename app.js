@@ -336,6 +336,7 @@ function setSync(cls, text){
 
 function scheduleSave(){
   if(applyingRemote) return;
+   pendingSnapshot = null; // lokāla izmaiņa pārspēj atlikto veco snapshot
   setSync('saving','Saglabā…');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushNow, 600);

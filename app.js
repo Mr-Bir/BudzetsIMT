@@ -76,16 +76,17 @@ function genId(){ return 'id_' + Date.now().toString(36) + '_' + Math.random().t
 // and for cross-device sync where an older app version might still write id-less bills.
 function ensureBillIds(bills){ (bills||[]).forEach(b=>{ if(!b.id) b.id = genId(); }); return bills; }
 
-// Aizpilda trūkstošos laukus vecajiem atgādinājumiem, lai tie izietu firebase.rules validāciju
+// Aizpilda trūkstošos laukus un piespiež precīzus datu tipus, lai vienmēr izietu firebase.rules
 function ensureReminderFields(reminders) {
   return (reminders || []).map(r => ({
-    id: r.id || genId(),
-    billId: r.billId !== undefined ? r.billId : null,
-    name: r.name || '',
-    day: r.day !== undefined ? r.day : null,
-    date: r.date !== undefined ? r.date : null,
-    active: r.active !== undefined ? r.active : true,
-    dismissedFor: r.dismissedFor !== undefined ? r.dismissedFor : null
+    id: r.id ? String(r.id) : genId(),
+    billId: (r.billId !== undefined && r.billId !== null) ? String(r.billId) : null,
+    name: r.name ? String(r.name) : '',
+    // Pārliecināmies, ka diena vienmēr ir skaitlis, nevis teksts
+    day: (r.day !== undefined && r.day !== null && r.day !== '') ? Number(r.day) : null,
+    date: (r.date !== undefined && r.date !== null) ? String(r.date) : null,
+    active: r.active !== undefined ? Boolean(r.active) : true,
+    dismissedFor: (r.dismissedFor !== undefined && r.dismissedFor !== null) ? String(r.dismissedFor) : null
   }));
 }
 
@@ -187,9 +188,8 @@ const $ = id => document.getElementById(id);
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
 
-// App Check jāinicializē PIRMS Firestore/Auth lietošanas.
-// Lokālā izstrādē (localhost) lieto debug token — konsolē parādīsies
-// UUID, kas jāreģistrē Firebase Console → App Check → Manage debug tokens.
+// PAGAIDĀM AIZKOMENTĒJAM APP CHECK KODU
+/*
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
@@ -202,6 +202,7 @@ try {
   // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
   console.warn('App Check inicializācija neizdevās:', e);
 }
+*/
 
 db = getFirestore(fbApp);
 // True inside the Capacitor WebView; false on the public web.

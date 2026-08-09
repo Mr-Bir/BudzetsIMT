@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.32.1', date:'2026-08-09', notes:[
+    'Salabota kļūda, kad tikko pievienots atgādinājums (vai cita izmaiņa) uz īsu brīdi parādījās un tad pazuda — Firestore reāllaika sinhronizācija varēja pārrakstīt vēl nesaglabātas lokālas izmaiņas ar vecāku datu kopiju',
+  ]},
   { v:'1.32.0', date:'2026-08-09', notes:[
     'Pievienota Atgādinājumu sadaļa — var pievienot atgādinājumu, kas piesaistīts esošam rēķinam (atkārtojas katru mēnesi izvēlētajā dienā, automātiski pārdzīvo "Jauns mēnesis") vai brīvu vienreizēju atgādinājumu ar fiksētu datumu',
     'Kad rēķins tiek izslēgts no jaunā mēneša (vai izdzēsts), tam piesaistītais atgādinājums automātiski pāriet pauzes stāvoklī, nevis pazūd — datus var atjaunot, ja rēķins parādās vēlreiz',

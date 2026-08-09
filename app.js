@@ -158,7 +158,7 @@ const DEFAULT = {
 };
 
 let state = structuredClone(DEFAULT);
-let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null;
+let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null, localDirty=false;
 let lastSentJSON = null, pendingSnapshot = null, pendingReload = false;
 let currentUser = null, snapshotUnsub = null;
 
@@ -277,7 +277,12 @@ function connectForUser(uid){
       const incoming = { income: d.income ?? DEFAULT.income, periodName: d.periodName || '', bills: ensureBillIds(d.bills ?? []), credits: d.credits ?? [], categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES), reminders: d.reminders ?? [] };
       const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
-      if(isEditingActive()){ pendingSnapshot = incoming; setSync('ok','Sinhronizēts'); return; }
+      // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
+      // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
+      // veca datu kopija, kas šo lokālo izmaiņu vēl neredz. Pretējā gadījumā jauns ieraksts
+      // (piem. atgādinājums) uzmirgo un momentā pazūd. isEditingActive() vien nepietiek, jo
+      // tā pārbauda tikai fokusu — modālis var jau būt aizvērts, kad snapshot pienāk.
+      if(isEditingActive() || localDirty){ pendingSnapshot = incoming; setSync('ok','Sinhronizēts'); return; }
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data)
@@ -319,7 +324,7 @@ function isEditingActive(){
 // When the user leaves a field, apply any deferred remote update
 document.addEventListener('focusout', ()=>{
   setTimeout(()=>{
-    if(pendingSnapshot && !isEditingActive()){
+    if(pendingSnapshot && !isEditingActive() && !localDirty){
       applyRemote(pendingSnapshot);
     }
     if(pendingReload && !isEditingActive()){
@@ -336,7 +341,7 @@ function setSync(cls, text){
 
 function scheduleSave(){
   if(applyingRemote) return;
-   pendingSnapshot = null; // lokāla izmaiņa pārspēj atlikto veco snapshot
+  localDirty = true;
   setSync('saving','Saglabā…');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushNow, 600);
@@ -345,8 +350,16 @@ async function pushNow(){
   try {
     lastSentJSON = JSON.stringify({ income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders||[] });
     await setDoc(docRef, { income: state.income, periodName: state.periodName||'', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders||[], updated: Date.now() });
+    localDirty = false;
     setSync('ok','Sinhronizēts');
+    // Saglabāšana pabeigta — ja kamēr tā notika, pienāca jauns (nu jau droši piemērojams)
+    // snapshot, uzreiz to piemēro, nevis gaida nākamo focusout notikumu.
+    if(pendingSnapshot && !isEditingActive()){
+      applyRemote(pendingSnapshot);
+    }
   } catch(e){
+    // Neatiestatām localDirty uz false — nesaglabātā lokālā izmaiņa vēl "dzīvo" tikai šeit,
+    // tāpēc arī turpmāk ienākošie snapshot jāatliek, nevis jāpārraksta ar to virsū.
     setSync('err','Saglabāšana neizdevās');
   }
 }

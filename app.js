@@ -424,6 +424,10 @@ async function pushNow(){
       reminders: payload.reminders 
     });
     
+    // ⚠️ PAGAIDU DIAGNOSTIKAS RINDIŅA (2026-08-10) — izdrukā precīzu payload, lai
+    // varētu to ielīmēt Firebase Console → Rules Playground. Noņemt pēc problēmas atrisināšanas.
+    console.log('[DEBUG payload]', JSON.stringify(payload, null, 2));
+
     // 2. SŪTĀM UZ MĀKONI
     await setDoc(docRef, payload);
     

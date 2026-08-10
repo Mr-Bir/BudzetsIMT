@@ -8,7 +8,7 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 
 ![Finanšu pārvaldnieks](screenshots/desktop-2.png)
 
-![Sānu izvēlne](screenshots/menu.png) ![Iestatījumi](screenshots/settings.png)
+![Sānu izvēlne](screenshots/setmen.png)
 
 ![Finanšu pārvaldnieks](screenshots/notific.png)
 

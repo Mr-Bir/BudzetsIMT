@@ -10,6 +10,8 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 
 ![Sānu izvēlne](screenshots/menu.png) ![Iestatījumi](screenshots/settings.png)
 
+![Finanšu pārvaldnieks](screenshots/notific.png)
+
 ## Ko lietotne dara
 
 - **Pieteikšanās ar Google kontu** — katram lietotājam savs privāts budžets, bez telpas ID

@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.32.2', date:'2026-08-10', notes:[
+    'Atrasts un salabots īstais iemesls, kāpēc nekas nesaglabājās — App Check klienta puses inicializācija (nevis Firestore drošības noteikumi) klusi bloķēja pilnīgi visu saglabāšanu, jo reCAPTCHA Enterprise pieprasījums serverī kļūdojas; App Check pagaidām atslēgts, kamēr tas netiek atrisināts',
+    'Pievienota stingra datu sanitizācija pirms katras saglabāšanas (summas, teksta garumi, atgādinājumu lauku tipi) — garantē, ka Firestore vienmēr saņem pareizi formētus datus',
+    'Firestore drošības noteikumos atjaunota pilna atgādinājumu un kategoriju lauku validācija (bija īslaicīgi vienkāršota diagnostikas laikā) — droša, jo klients tagad vienmēr sūta pareizu formu',
+  ]},
   { v:'1.32.1', date:'2026-08-09', notes:[
     'Salabota kļūda, kad tikko pievienots atgādinājums (vai cita izmaiņa) uz īsu brīdi parādījās un tad pazuda — Firestore reāllaika sinhronizācija varēja pārrakstīt vēl nesaglabātas lokālas izmaiņas ar vecāku datu kopiju',
   ]},

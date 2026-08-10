@@ -188,7 +188,15 @@ const $ = id => document.getElementById(id);
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
 
-// PAGAIDĀM AIZKOMENTĒJAM APP CHECK KODU
+// App Check PAGAIDĀM IZSLĒGTS (2026-08-09/10) — root cause apstiprināts: reCAPTCHA
+// Enterprise "GetPolicy" prasība servera pusē kļūdojas (IAM/billing, sk. instrukciju
+// failu sadaļu 9), un initializeAppCheck() zemāk (kaut arī try/catch ietverts) aiz kadra
+// piesaista tokena pieprasījumu KATRAM Firestore izsaukumam — tā kā tokens nekad
+// neienāk, PIEPRASĪJUMI VISPĀR NEAIZIET UZ TĪKLU. Tas bloķēja PILNĪGI VISU saglabāšanu
+// klusi, bez redzamas kļūdas. Rules līmeņa appChecked() noņemšana (08-08/09) šo
+// nefiksēja, jo problēma bija šeit, klienta pusē, nevis serverī.
+// ATJAUNOT TIKAI pēc GetPolicy problēmas atrisināšanas (sk. instrukciju sadaļu 9),
+// un vispirms testēt uz localhost ar debug token, PIRMS ieslēgt produkcijā.
 /*
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){

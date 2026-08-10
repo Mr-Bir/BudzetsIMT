@@ -188,15 +188,7 @@ const $ = id => document.getElementById(id);
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
 
-// App Check PAGAIDĀM IZSLĒGTS (2026-08-09/10) — root cause apstiprināts: reCAPTCHA
-// Enterprise "GetPolicy" prasība servera pusē kļūdojas (IAM/billing, sk. instrukciju
-// failu sadaļu 9), un initializeAppCheck() zemāk (kaut arī try/catch ietverts) aiz kadra
-// piesaista tokena pieprasījumu KATRAM Firestore izsaukumam — tā kā tokens nekad
-// neienāk, PIEPRASĪJUMI VISPĀR NEAIZIET UZ TĪKLU. Tas bloķēja PILNĪGI VISU saglabāšanu
-// klusi, bez redzamas kļūdas. Rules līmeņa appChecked() noņemšana (08-08/09) šo
-// nefiksēja, jo problēma bija šeit, klienta pusē, nevis serverī.
-// ATJAUNOT TIKAI pēc GetPolicy problēmas atrisināšanas (sk. instrukciju sadaļu 9),
-// un vispirms testēt uz localhost ar debug token, PIRMS ieslēgt produkcijā.
+// App Check PAGAIDĀM IZSLĒGTS (2026-08-09/10)
 /*
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
@@ -207,7 +199,6 @@ try {
     isTokenAutoRefreshEnabled: true
   });
 } catch(e){
-  // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
   console.warn('App Check inicializācija neizdevās:', e);
 }
 */
@@ -404,12 +395,37 @@ async function pushNow(){
       };
     }).slice(0, 50);
 
-    // Sagatavojam tīru sūtījumu
+    // Sagatavojam tīru sūtījumu (Ar masīvu satura sanitizāciju)
     const payload = {
       income: safeIncome,
       periodName: safePeriodName,
-      bills: Array.isArray(state.bills) ? state.bills.slice(0, 200) : [],
-      credits: Array.isArray(state.credits) ? state.credits.slice(0, 100) : [],
+      bills: Array.isArray(state.bills) 
+        ? state.bills.slice(0, 200).map(b => ({
+            id: String(b.id || ''),
+            name: String(b.name || '').slice(0, 120),
+            amount: Number(b.amount) || 0,
+            type: b.type === 'summing' ? 'summing' : null,
+            paid: Boolean(b.paid),
+            cat: String(b.cat || 'cits').slice(0, 20),
+            limit: Number(b.limit) || 0,
+            entries: Array.isArray(b.entries)
+              ? b.entries.slice(0, 200).map(e => ({
+                  amount: Number(e.amount) || 0,
+                  note: String(e.note || '').slice(0, 200),
+                  date: String(e.date || '').slice(0, 10)
+                }))
+              : []
+          }))
+        : [],
+      credits: Array.isArray(state.credits) 
+        ? state.credits.slice(0, 100).map(c => ({
+            name: String(c.name || '').slice(0, 120),
+            amount: Number(c.amount) || 0,
+            monthly: Number(c.monthly) || 0,
+            start: c.start ? String(c.start).slice(0, 10) : null,
+            end: c.end ? String(c.end).slice(0, 10) : null
+          }))
+        : [],
       categories: safeCategories,
       reminders: safeReminders,
       updated: Date.now()

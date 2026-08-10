@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+    { v:'1.32.3', date:'2026-08-10', notes:[
+    'Pabeigta pilna datu sanitizācija klienta pusē — tagad arī rēķinu, kredītu un epizožu masīvu iekšējie lauki tiek stingri pārbaudīti pirms nosūtīšanas uz Firebase',
+  ]},
   { v:'1.32.2', date:'2026-08-10', notes:[
     'Atrasts un salabots īstais iemesls, kāpēc nekas nesaglabājās — App Check klienta puses inicializācija (nevis Firestore drošības noteikumi) klusi bloķēja pilnīgi visu saglabāšanu, jo reCAPTCHA Enterprise pieprasījums serverī kļūdojas; App Check pagaidām atslēgts, kamēr tas netiek atrisināts',
     'Pievienota stingra datu sanitizācija pirms katras saglabāšanas (summas, teksta garumi, atgādinājumu lauku tipi) — garantē, ka Firestore vienmēr saņem pareizi formētus datus',

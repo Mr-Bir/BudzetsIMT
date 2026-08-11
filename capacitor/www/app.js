@@ -188,7 +188,15 @@ const $ = id => document.getElementById(id);
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
 
-// App Check PAGAIDĀM IZSLĒGTS (2026-08-09/10)
+// App Check PAGAIDĀM IZSLĒGTS (2026-08-09/10) — root cause apstiprināts: reCAPTCHA
+// Enterprise "GetPolicy" prasība servera pusē kļūdojas (IAM/billing, sk. instrukciju
+// failu sadaļu 9), un initializeAppCheck() zemāk (kaut arī try/catch ietverts) aiz kadra
+// piesaista tokena pieprasījumu KATRAM Firestore izsaukumam — tā kā tokens nekad
+// neienāk, PIEPRASĪJUMI VISPĀR NEAIZIET UZ TĪKLU. Tas bloķēja PILNĪGI VISU saglabāšanu
+// klusi, bez redzamas kļūdas. Rules līmeņa appChecked() noņemšana (08-08/09) šo
+// nefiksēja, jo problēma bija šeit, klienta pusē, nevis serverī.
+// ATJAUNOT TIKAI pēc GetPolicy problēmas atrisināšanas (sk. instrukciju sadaļu 9),
+// un vispirms testēt uz localhost ar debug token, PIRMS ieslēgt produkcijā.
 /*
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
@@ -199,6 +207,7 @@ try {
     isTokenAutoRefreshEnabled: true
   });
 } catch(e){
+  // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
   console.warn('App Check inicializācija neizdevās:', e);
 }
 */
@@ -395,37 +404,49 @@ async function pushNow(){
       };
     }).slice(0, 50);
 
-    // Sagatavojam tīru sūtījumu (Ar masīvu satura sanitizāciju)
+    // Rēķinu un kredītu sanitizācija (2026-08-10) — pēc tā paša principa, kā jau tiek
+    // darīts categories/reminders: piespiežam pareizus tipus, lai UI kļūda (piem., amount
+    // kā teksts) nevarētu nokļūt Firebase un salauzt aprēķinus. SVARĪGI: limit/monthly ir
+    // NEOBLIGĀTI lauki ar nozīmi "nav iestatīts" (atšķiras no "iestatīts uz 0" —
+    // sk. kredīta "Mēneša maksājums" lauku, kas rāda tukšu vietu vs "0"), tāpēc, ja lauks
+    // nebija klāt, to arī NEPIEVIENOJAM, nevis piespiežam uz 0.
+    const safeBills = (Array.isArray(state.bills) ? state.bills : []).slice(0, 200).map(b => {
+      const out = {
+        id: String(b.id || genId()),
+        name: String(b.name || '').slice(0, 120),
+        amount: Number(b.amount) || 0,
+        cat: String(b.cat || 'cits').slice(0, 20)
+      };
+      if (b.type === 'summing') {
+        out.type = 'summing';
+        out.entries = (Array.isArray(b.entries) ? b.entries : []).slice(0, 200).map(e => ({
+          amount: Number(e.amount) || 0,
+          note: String(e.note || '').slice(0, 200),
+          date: String(e.date || '').slice(0, 10)
+        }));
+        if (b.limit !== undefined && b.limit !== null && b.limit !== '') out.limit = Number(b.limit) || 0;
+      } else {
+        out.paid = Boolean(b.paid);
+      }
+      return out;
+    });
+    const safeCredits = (Array.isArray(state.credits) ? state.credits : []).slice(0, 100).map(c => {
+      const out = {
+        name: String(c.name || '').slice(0, 120),
+        amount: Number(c.amount) || 0
+      };
+      if (c.monthly !== undefined && c.monthly !== null && c.monthly !== '') out.monthly = Number(c.monthly) || 0;
+      if (c.start) out.start = String(c.start).slice(0, 10);
+      if (c.end) out.end = String(c.end).slice(0, 10);
+      return out;
+    });
+
+    // Sagatavojam tīru sūtījumu
     const payload = {
       income: safeIncome,
       periodName: safePeriodName,
-      bills: Array.isArray(state.bills) 
-        ? state.bills.slice(0, 200).map(b => ({
-            id: String(b.id || ''),
-            name: String(b.name || '').slice(0, 120),
-            amount: Number(b.amount) || 0,
-            type: b.type === 'summing' ? 'summing' : null,
-            paid: Boolean(b.paid),
-            cat: String(b.cat || 'cits').slice(0, 20),
-            limit: Number(b.limit) || 0,
-            entries: Array.isArray(b.entries)
-              ? b.entries.slice(0, 200).map(e => ({
-                  amount: Number(e.amount) || 0,
-                  note: String(e.note || '').slice(0, 200),
-                  date: String(e.date || '').slice(0, 10)
-                }))
-              : []
-          }))
-        : [],
-      credits: Array.isArray(state.credits) 
-        ? state.credits.slice(0, 100).map(c => ({
-            name: String(c.name || '').slice(0, 120),
-            amount: Number(c.amount) || 0,
-            monthly: Number(c.monthly) || 0,
-            start: c.start ? String(c.start).slice(0, 10) : null,
-            end: c.end ? String(c.end).slice(0, 10) : null
-          }))
-        : [],
+      bills: safeBills,
+      credits: safeCredits,
       categories: safeCategories,
       reminders: safeReminders,
       updated: Date.now()

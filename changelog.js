@@ -8,8 +8,15 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
-    { v:'1.32.3', date:'2026-08-10', notes:[
-    'Pabeigta pilna datu sanitizācija klienta pusē — tagad arī rēķinu, kredītu un epizožu masīvu iekšējie lauki tiek stingri pārbaudīti pirms nosūtīšanas uz Firebase',
+  { v:'1.32.5', date:'2026-08-10', notes:[
+    'Pievienota rēķinu un kredītu datu sanitizācija pirms katras saglabāšanas (tāpat kā jau bija kategorijām un atgādinājumiem) — pasargā pret iespējamu UI kļūdu, kas varētu nosūtīt nepareiza tipa datus (piem., summu kā tekstu), nesabojājot "nav iestatīts" nozīmi neobligātiem laukiem (piem., kredīta mēneša maksājums)',
+  ]},
+  { v:'1.32.4', date:'2026-08-10', notes:[
+    'Salabota Firestore drošības noteikumu sintakses kļūda — Firestore Rules valoda neatbalsta saraksta elementu-pa-elementam pārbaudes sintaksi (list.all()); atgriezta uz pierādīti strādājošu struktūras/izmēru validāciju, papildināta ar drošāku laika lauku pārbaudi (validTime) un tīrāku arhīva noteikumu pierakstu',
+  ]},
+  { v:'1.32.3', date:'2026-08-10', notes:[
+    'Mēģinājums aizvietot "atritināto" (unrolled) validācijas ķēdi ar list.all() — IZRĀDĪJĀS Firestore Rules sintakses kļūda, netika publicēts, sk. v1.32.4',
+    'Noņemta pagaidu diagnostikas izvade konsolē',
   ]},
   { v:'1.32.2', date:'2026-08-10', notes:[
     'Atrasts un salabots īstais iemesls, kāpēc nekas nesaglabājās — App Check klienta puses inicializācija (nevis Firestore drošības noteikumi) klusi bloķēja pilnīgi visu saglabāšanu, jo reCAPTCHA Enterprise pieprasījums serverī kļūdojas; App Check pagaidām atslēgts, kamēr tas netiek atrisināts',

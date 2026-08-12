@@ -8,8 +8,12 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.33.1', date:'2026-08-12', notes:[
+    'Pievienots jauns iestatījums "Atgādinājumu laiks" (Iestatījumi, redzams tikai native lietotnē) — ļauj izvēlēties, cikos dienā parādās native paziņojumi par atgādinājumiem; noklusējums 09:00, saglabājas lokāli šajā ierīcē',
+    'Labots gadījums, kad brīvam atgādinājumam ar šodienas datumu izvēlētais paziņojuma laiks jau bija pagājis — iepriekš paziņojums klusi netika ieplānots vispār, tagad tiek nosūtīts tuvākajā minūtē',
+  ]},
   { v:'1.33.0', date:'2026-08-11', notes:[
-    'Pievienoti native Android paziņojumi (push-style) priekš Atgādinājumiem — ar rēķinu saistīti atgādinājumi atkārtojas katru mēnesi tajā pašā dienā (plkst. 9:00), brīvie atgādinājumi paziņo vienreiz izvēlētajā datumā (plkst. 9:00); darbojas tikai native lietotnē (Android/iOS), web/PWA versiju neskar',
+    'Pievienoti native Android paziņojumi (push-style) priekš Atgādinājumiem — ar rēķinu saistīti atgādinājumi atkārtojas katru mēnesi tajā pašā dienā, brīvie atgādinājumi paziņo vienreiz izvēlētajā datumā; laiks konfigurējams Iestatījumos (skat. v1.33.1); darbojas tikai native lietotnē (Android/iOS), web/PWA versiju neskar',
     'Pieprasa paziņojumu atļauju automātiski pēc pieteikšanās native lietotnē; paziņojumi tiek pārplānoti pēc katras atgādinājuma izmaiņas (pievienošana, dzēšana, pauzēšana, sinhronizācija starp ierīcēm)',
     'Papildus: pievienota RECEIVE_BOOT_COMPLETED atļauja AndroidManifest.xml, lai ieplānotie paziņojumi izdzīvotu pēc ierīces restarta',
   ]},

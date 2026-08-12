@@ -150,6 +150,7 @@ async function scheduleReminderNotifications(){
       await LocalNotifications.cancel({ notifications: pending.notifications.map(n=>({ id:n.id })) });
     }
 
+    const [notifHour, notifMinute] = getReminderNotifTime().split(':').map(n=>parseInt(n,10));
     const notifications = [];
     (state.reminders||[]).filter(r=>r.active).forEach(r=>{
       const id = reminderNotifId(r.id);
@@ -157,12 +158,20 @@ async function scheduleReminderNotifications(){
       const body = reminderDisplayName(r);
       if(r.billId){
         const day = Math.min(Math.max(parseInt(r.day,10)||1,1),31);
-        notifications.push({ id, title, body, schedule: { on: { day, hour:9, minute:0 }, allowWhileIdle:true } });
+        notifications.push({ id, title, body, schedule: { on: { day, hour:notifHour, minute:notifMinute }, allowWhileIdle:true } });
       } else if(r.date){
-        const at = new Date(r.date + 'T09:00:00');
-        if(!isNaN(at) && at.getTime() > Date.now()){
-          notifications.push({ id, title, body, schedule: { at, allowWhileIdle:true } });
+        let at = new Date(r.date + 'T' + getReminderNotifTime() + ':00');
+        if(isNaN(at)) return;
+        // Ja izvēlētais laiks šodien jau pagājis (bet datums vēl nav pagātnē),
+        // paziņo tuvākajā minūtē, nevis izlaiž pavisam — citādi lietotājs, kas
+        // pievieno "šodienas" atgādinājumu pēc plkst. 9:00, paziņojumu nesaņemtu.
+        const today = new Date(); today.setHours(0,0,0,0);
+        const remDate = new Date(r.date + 'T00:00:00');
+        if(at.getTime() <= Date.now()){
+          if(remDate.getTime() === today.getTime()) at = new Date(Date.now() + 60000);
+          else return; // datums pats ir pagātnē — neko nesūtām
         }
+        notifications.push({ id, title, body, schedule: { at, allowWhileIdle:true } });
       }
     });
     if(notifications.length){
@@ -1898,6 +1907,16 @@ function applyTheme(theme){
   if(saved==='dark') document.documentElement.setAttribute('data-theme','dark');
 })();
 
+// ---- Atgādinājumu native paziņojumu laiks, saglabāts lokāli šajā ierīcē ----
+function getReminderNotifTime(){
+  let t = '09:00';
+  try { t = localStorage.getItem('reminderNotifTime') || '09:00'; } catch(e){}
+  return /^\d{2}:\d{2}$/.test(t) ? t : '09:00';
+}
+function setReminderNotifTime(t){
+  try { localStorage.setItem('reminderNotifTime', t); } catch(e){}
+}
+
 // ---- Summary pin (sticky compact overview below the compact top bar) ----
 (function initSummaryPin(){
   const wrap = document.querySelector('.summary-wrap');
@@ -2100,6 +2119,16 @@ $('settingsBtn').addEventListener('click', ()=>{
           </div>
         </div>
 
+        ${IS_NATIVE ? `
+        <div class="set-row">
+          <div>
+            <div class="set-label">Atgādinājumu laiks</div>
+            <div class="set-hint">Cikos parādās native paziņojumi šajā ierīcē</div>
+          </div>
+          <input type="time" id="reminderTimeInput" value="${getReminderNotifTime()}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">
+        </div>
+        ` : ''}
+
         <div class="set-row">
           <div>
             <div class="set-label">Versija</div>
@@ -2149,6 +2178,13 @@ $('settingsBtn').addEventListener('click', ()=>{
   $('setChangelog').addEventListener('click', openChangelog);
   $('privacyPolicyBtn').addEventListener('click', ()=> openDocModal('Privātuma politika', 'privatuma-politika.html'));
   $('termsBtn').addEventListener('click', ()=> openDocModal('Lietošanas noteikumi', 'lietosanas-noteikumi.html'));
+  $('reminderTimeInput')?.addEventListener('change', e=>{
+    const val = e.target.value;
+    if(/^\d{2}:\d{2}$/.test(val)){
+      setReminderNotifTime(val);
+      scheduleReminderNotifications();
+    }
+  });
 
   $('deleteAccountBtn').addEventListener('click', async ()=>{
     if(!confirm('Vai tiešām vēlies neatgriezeniski dzēst savu kontu? Tiks dzēsti VISI dati — rēķini, kredīti, kategorijas un mēnešu arhīvs.')) return;

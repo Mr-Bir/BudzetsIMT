@@ -115,6 +115,17 @@ function reminderStatus(r){
   return 'upcoming';
 }
 function billById(id){ return (state.bills||[]).find(b=>b.id===id); }
+// Bill-linked atgādinājums, kura rēķins jau atzīmēts "Samaksāts", šim ciklam
+// tiek uzskatīts par atrisinātu (nerādās Šodien/Nokavēts, kamēr rēķins nav "atpazīmēts"
+// vai nav sācies jauns mēnesis, kas paid atiestata uz false). Summējošiem rēķiniem
+// (kuriem nav "paid" lauka vispār) šī pārbaude nekad neaktivizējas — bill.paid ir
+// vienmēr falsy — tāpēc to atgādinājumi (ja tādi palikuši no laika pirms šī ierobežojuma)
+// turpina rādīties tīri pēc datuma, bez izmaiņām.
+function reminderIsResolved(r){
+  if(!r.billId) return false;
+  const b = billById(r.billId);
+  return !!(b && b.paid);
+}
 function reminderDisplayName(r){
   if(r.billId){ const b = billById(r.billId); return b ? (b.name||'(bez nosaukuma)') : (r.name || '(dzēsts rēķins)'); }
   return r.name || '(bez nosaukuma)';
@@ -714,23 +725,25 @@ function renderReminders(){
     reminders.forEach((r,i)=>{
       const status = reminderStatus(r);
       if(!r.active){ pausedRows.push({r,i,status}); return; }
-      if(status==='overdue' || status==='today') dueRows.push({r,i,status});
-      else upRows.push({r,i,status});
+      const resolved = reminderIsResolved(r);
+      if(!resolved && (status==='overdue' || status==='today')) dueRows.push({r,i,status,resolved});
+      else upRows.push({r,i,status,resolved});
     });
     dueRows.sort((a,b)=> reminderDueDate(a.r) < reminderDueDate(b.r) ? -1 : 1);
     upRows.sort((a,b)=> reminderDueDate(a.r) < reminderDueDate(b.r) ? -1 : 1);
 
-    const rowHtml = (r,i,status,paused)=>{
+    const rowHtml = (r,i,status,paused,resolved)=>{
       const due = reminderDueDate(r);
       const name = reminderDisplayName(r);
       let subHtml;
       if(paused) subHtml = `<span class="rem-sub">Pauzēts${r.billId?' — rēķins vairs nav aktīvs':''}</span>`;
+      else if(resolved) subHtml = `<span class="rem-sub">✓ Samaksāts — nākamreiz ${formatDateLv(due)}</span>`;
       else if(status==='today') subHtml = `<span class="rem-sub due-text">Šodien jāmaksā</span>`;
       else if(status==='overdue') subHtml = `<span class="rem-sub due-text">Nokavēts — bija ${formatDateLv(due)}</span>`;
       else if(r.billId) subHtml = `<span class="rem-sub">Katru mēnesi ap ${Math.min(Math.max(parseInt(r.day,10)||1,1),31)}. · nākamreiz ${formatDateLv(due)}</span>`;
       else subHtml = `<span class="rem-sub">Termiņš: ${formatDateLv(due)}</span>`;
       return `
-        <div class="rem-row${(status==='today'||status==='overdue')&&!paused?' due':''}${paused?' paused':''}" data-remidx="${i}">
+        <div class="rem-row${(status==='today'||status==='overdue')&&!paused&&!resolved?' due':''}${paused?' paused':''}" data-remidx="${i}">
           <div class="rem-main">
             <span class="rem-name">${escapeHtml(name)}</span>
             ${subHtml}
@@ -740,9 +753,9 @@ function renderReminders(){
         </div>`;
     };
 
-    dueBox.innerHTML = dueRows.map(x=>rowHtml(x.r,x.i,x.status,false)).join('');
-    upBox.innerHTML = upRows.map(x=>rowHtml(x.r,x.i,x.status,false)).join('') || '<div class="empty-note" style="padding:14px;">Nav gaidāmu atgādinājumu.</div>';
-    pauseBox.innerHTML = pausedRows.map(x=>rowHtml(x.r,x.i,x.status,true)).join('');
+    dueBox.innerHTML = dueRows.map(x=>rowHtml(x.r,x.i,x.status,false,x.resolved)).join('');
+    upBox.innerHTML = upRows.map(x=>rowHtml(x.r,x.i,x.status,false,x.resolved)).join('') || '<div class="empty-note" style="padding:14px;">Nav gaidāmu atgādinājumu.</div>';
+    pauseBox.innerHTML = pausedRows.map(x=>rowHtml(x.r,x.i,x.status,true,false)).join('');
     if(pauseGroup) pauseGroup.classList.toggle('hidden', pausedRows.length===0);
     if(emptyNote) emptyNote.classList.toggle('hidden', reminders.length>0);
     $('remGroupDue')?.classList.toggle('hidden', reminders.length===0);
@@ -750,7 +763,7 @@ function renderReminders(){
   }
 
   // ---- Badge + banner (visible in ALL sections, not just Atgādinājumi) ----
-  const activeDue = reminders.filter(r=>r.active && (reminderStatus(r)==='overdue'||reminderStatus(r)==='today'));
+  const activeDue = reminders.filter(r=>r.active && (reminderStatus(r)==='overdue'||reminderStatus(r)==='today') && !reminderIsResolved(r));
   const badge = $('remindersBadge');
   if(badge){
     if(activeDue.length>0){ badge.textContent = String(activeDue.length); badge.classList.remove('hidden'); }
@@ -1450,8 +1463,9 @@ $('newMonthBtn').addEventListener('click', openNewMonthModal);
 
 function openAddReminderModal(){
   const root = $('modalRoot');
-  const billsOptions = (state.bills||[]).map(b=>`<option value="${b.id}">${escapeHtml(b.name||'(bez nosaukuma)')}</option>`).join('');
-  const hasBills = (state.bills||[]).length>0;
+  const linkableBills = (state.bills||[]).filter(b=>b.type!=='summing');
+  const billsOptions = linkableBills.map(b=>`<option value="${b.id}">${escapeHtml(b.name||'(bez nosaukuma)')}</option>`).join('');
+  const hasBills = linkableBills.length>0;
   root.innerHTML = `
     <div class="modal-back" id="arBack">
       <div class="modal" style="max-width:440px;">

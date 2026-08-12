@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.34.0', date:'2026-08-13', notes:[
+    'Ar rēķinu saistīts atgādinājums vairs nerādās "Šodien/Nokavēts" sarakstā (ne sarkanajā nozīmītē, ne banerī), kad piesaistītais rēķins atzīmēts "Samaksāts" — pāriet uz "Gaidāmie" ar norādi "✓ Samaksāts — nākamreiz [datums]"; atgriežas "Nokavēts" statusā automātiski, kad sākas jauns mēnesis (rēķina "paid" atiestatās uz false) un pienāk nākamā termiņa diena',
+    'Summējošie rēķini (bez "Samaksāts" ķeksīša, piem. "Pārtika") vairs nav izvēlami, veidojot jaunu ar rēķinu saistītu atgādinājumu — šis atgādinājumu veids loģiski der tikai rēķiniem ar fiksētu termiņu un samaksas statusu',
+    'Native paziņojumi (ieplānoti native OS pusē) turpina sūtīt neatkarīgi no "Samaksāts" statusa — tas ir tikai in-app saraksta/nozīmītes/banera izmaiņa',
+  ]},
   { v:'1.33.1', date:'2026-08-12', notes:[
     'Pievienots jauns iestatījums "Atgādinājumu laiks" (Iestatījumi, redzams tikai native lietotnē) — ļauj izvēlēties, cikos dienā parādās native paziņojumi par atgādinājumiem; noklusējums 09:00, saglabājas lokāli šajā ierīcē',
     'Labots gadījums, kad brīvam atgādinājumam ar šodienas datumu izvēlētais paziņojuma laiks jau bija pagājis — iepriekš paziņojums klusi netika ieplānots vispār, tagad tiek nosūtīts tuvākajā minūtē',

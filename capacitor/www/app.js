@@ -15,6 +15,7 @@ import { CHANGELOG } from './changelog.js';
 // WebView, where window.open() based popups do not work.
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 /* ═══════════════════════════════════════════════════════════════
    1. KONFIGURĀCIJA — Firebase, App Check, versija, changelog
@@ -117,6 +118,59 @@ function billById(id){ return (state.bills||[]).find(b=>b.id===id); }
 function reminderDisplayName(r){
   if(r.billId){ const b = billById(r.billId); return b ? (b.name||'(bez nosaukuma)') : (r.name || '(dzēsts rēķins)'); }
   return r.name || '(bez nosaukuma)';
+}
+
+// ---- Native paziņojumi priekš atgādinājumiem (tikai Android/iOS, ne web/PWA) ----
+// LocalNotifications prasa skaitlisku id, bet mūsu genId() ģenerē teksta virkni —
+// šī ir stabila 32-bit hash funkcija, kas no viena un tā paša r.id vienmēr atgriež
+// to pašu skaitli (vajadzīgs, lai varētu atcelt/pārrakstīt konkrētu paziņojumu).
+function reminderNotifId(id){
+  let h = 0;
+  const s = String(id);
+  for(let i=0;i<s.length;i++){ h = ((h<<5)-h + s.charCodeAt(i))|0; }
+  return Math.abs(h) || 1;
+}
+
+// Pieprasa paziņojumu atļauju vienreiz (ja vēl nav lūgta/atteikta) un pēc tam
+// pilnībā pārplāno visus native paziņojumus atbilstoši pašreizējam state.reminders.
+// Ar rēķinu saistīti atgādinājumi (billId+day) → atkārtojas katru mēnesi tajā
+// pašā dienā (schedule.on), tāpat kā UI aprēķina due date pret reālo kalendāru.
+// Brīvie atgādinājumi (date) → vienreizējs paziņojums tajā datumā.
+async function scheduleReminderNotifications(){
+  if(!IS_NATIVE) return;
+  try {
+    let perm = await LocalNotifications.checkPermissions();
+    if(perm.display === 'prompt' || perm.display === 'prompt-with-rationale'){
+      perm = await LocalNotifications.requestPermissions();
+    }
+    if(perm.display !== 'granted') return;
+
+    const pending = await LocalNotifications.getPending();
+    if(pending.notifications.length){
+      await LocalNotifications.cancel({ notifications: pending.notifications.map(n=>({ id:n.id })) });
+    }
+
+    const notifications = [];
+    (state.reminders||[]).filter(r=>r.active).forEach(r=>{
+      const id = reminderNotifId(r.id);
+      const title = 'Atgādinājums';
+      const body = reminderDisplayName(r);
+      if(r.billId){
+        const day = Math.min(Math.max(parseInt(r.day,10)||1,1),31);
+        notifications.push({ id, title, body, schedule: { on: { day, hour:9, minute:0 }, allowWhileIdle:true } });
+      } else if(r.date){
+        const at = new Date(r.date + 'T09:00:00');
+        if(!isNaN(at) && at.getTime() > Date.now()){
+          notifications.push({ id, title, body, schedule: { at, allowWhileIdle:true } });
+        }
+      }
+    });
+    if(notifications.length){
+      await LocalNotifications.schedule({ notifications });
+    }
+  } catch(e){
+    console.warn('Atgādinājumu paziņojumu plānošana neizdevās:', e);
+  }
 }
 // Time-based credit progress from start/end dates. Returns null if dates missing/invalid.
 function creditProgress(c){
@@ -331,6 +385,7 @@ function applyRemote(incoming){
   applyingRemote = false;
   pendingSnapshot = null;
   setSync('ok','Sinhronizēts');
+  scheduleReminderNotifications();
 }
 
 // Permanently deletes all Firestore data for a user: the archive subcollection
@@ -466,6 +521,7 @@ async function pushNow(){
     
     localDirty = false;
     setSync('ok','Sinhronizēts');
+    scheduleReminderNotifications();
     
     if(pendingSnapshot && !isEditingActive()){
       applyRemote(pendingSnapshot);

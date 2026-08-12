@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
  * Skatīt LICENSE failu repozitorija saknē.
  */
-const CACHE_NAME = 'finanses-shell-v48';
+const CACHE_NAME = 'finanses-shell-v49';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -16,7 +16,10 @@ const SHELL_FILES = [
   './js/capacitor-core.js',
   './js/firebase-auth/index.js',
   './js/firebase-auth/web.js',
-  './js/firebase-auth/definitions.js'
+  './js/firebase-auth/definitions.js',
+  './js/local-notifications/index.js',
+  './js/local-notifications/web.js',
+  './js/local-notifications/definitions.js'
 ];
 
 self.addEventListener('install', event => {

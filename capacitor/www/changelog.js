@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.33.0', date:'2026-08-11', notes:[
+    'Pievienoti native Android paziņojumi (push-style) priekš Atgādinājumiem — ar rēķinu saistīti atgādinājumi atkārtojas katru mēnesi tajā pašā dienā (plkst. 9:00), brīvie atgādinājumi paziņo vienreiz izvēlētajā datumā (plkst. 9:00); darbojas tikai native lietotnē (Android/iOS), web/PWA versiju neskar',
+    'Pieprasa paziņojumu atļauju automātiski pēc pieteikšanās native lietotnē; paziņojumi tiek pārplānoti pēc katras atgādinājuma izmaiņas (pievienošana, dzēšana, pauzēšana, sinhronizācija starp ierīcēm)',
+    'Papildus: pievienota RECEIVE_BOOT_COMPLETED atļauja AndroidManifest.xml, lai ieplānotie paziņojumi izdzīvotu pēc ierīces restarta',
+  ]},
   { v:'1.32.5', date:'2026-08-10', notes:[
     'Pievienota rēķinu un kredītu datu sanitizācija pirms katras saglabāšanas (tāpat kā jau bija kategorijām un atgādinājumiem) — pasargā pret iespējamu UI kļūdu, kas varētu nosūtīt nepareiza tipa datus (piem., summu kā tekstu), nesabojājot "nav iestatīts" nozīmi neobligātiem laukiem (piem., kredīta mēneša maksājums)',
   ]},

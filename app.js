@@ -272,16 +272,11 @@ const $ = id => document.getElementById(id);
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
 
-// App Check PAGAIDĀM IZSLĒGTS (2026-08-09/10) — root cause apstiprināts: reCAPTCHA
-// Enterprise "GetPolicy" prasība servera pusē kļūdojas (IAM/billing, sk. instrukciju
-// failu sadaļu 9), un initializeAppCheck() zemāk (kaut arī try/catch ietverts) aiz kadra
-// piesaista tokena pieprasījumu KATRAM Firestore izsaukumam — tā kā tokens nekad
-// neienāk, PIEPRASĪJUMI VISPĀR NEAIZIET UZ TĪKLU. Tas bloķēja PILNĪGI VISU saglabāšanu
-// klusi, bez redzamas kļūdas. Rules līmeņa appChecked() noņemšana (08-08/09) šo
-// nefiksēja, jo problēma bija šeit, klienta pusē, nevis serverī.
-// ATJAUNOT TIKAI pēc GetPolicy problēmas atrisināšanas (sk. instrukciju sadaļu 9),
-// un vispirms testēt uz localhost ar debug token, PIRMS ieslēgt produkcijā.
-/*
+// App Check IESLĒGTS KLIENTA PUSĒ (2026-08-13, Fāze 1) — pēc Billing konta pievienošanas
+// un reCAPTCHA Enterprise API/IAM lomu apstiprināšanas Google Cloud Console. Rules līmeņa
+// appChecked() PAGAIDĀM APZINĀTI NAV pievienots (Fāze 2, atsevišķs solis) — vispirms
+// jāapstiprina vairāku dienu garumā, ka App Check → Requests Firebase konsolē rāda
+// stabilu "verified" pieprasījumu plūsmu (gan web, gan native), pirms enforcement ieslēgšanas.
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
@@ -294,7 +289,6 @@ try {
   // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
   console.warn('App Check inicializācija neizdevās:', e);
 }
-*/
 
 db = getFirestore(fbApp);
 // True inside the Capacitor WebView; false on the public web.

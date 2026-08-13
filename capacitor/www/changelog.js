@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.35.0', date:'2026-08-13', notes:[
+    'App Check IESLĒGTS klienta pusē (Fāze 1) — pēc Billing konta pievienošanas Firebase projektam un IAM/reCAPTCHA Enterprise API apstiprināšanas Google Cloud Console. Firestore rules līmeņa enforcement (appChecked()) APZINĀTI VĒL NAV pievienots — tas ir atsevišķs, vēlāks solis (Fāze 2), kas seko tikai pēc vairāku dienu stabila "verified" pieprasījumu apstiprinājuma Firebase konsolē',
+  ]},
   { v:'1.34.1', date:'2026-08-13', notes:[
     'Labots: apmaksātam, ar rēķinu saistītam atgādinājumam sadaļā "Gaidāmie" rādītais "nākamreiz [datums]" vairs nerāda šī mēneša (jau pagājušo/šodienas) datumu, bet gan korekti pareizu nākamā mēneša termiņu tajā pašā dienā',
   ]},

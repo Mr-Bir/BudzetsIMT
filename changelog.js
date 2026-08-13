@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.34.1', date:'2026-08-13', notes:[
+    'Labots: apmaksātam, ar rēķinu saistītam atgādinājumam sadaļā "Gaidāmie" rādītais "nākamreiz [datums]" vairs nerāda šī mēneša (jau pagājušo/šodienas) datumu, bet gan korekti pareizu nākamā mēneša termiņu tajā pašā dienā',
+  ]},
   { v:'1.34.0', date:'2026-08-13', notes:[
     'Ar rēķinu saistīts atgādinājums vairs nerādās "Šodien/Nokavēts" sarakstā (ne sarkanajā nozīmītē, ne banerī), kad piesaistītais rēķins atzīmēts "Samaksāts" — pāriet uz "Gaidāmie" ar norādi "✓ Samaksāts — nākamreiz [datums]"; atgriežas "Nokavēts" statusā automātiski, kad sākas jauns mēnesis (rēķina "paid" atiestatās uz false) un pienāk nākamā termiņa diena',
     'Summējošie rēķini (bez "Samaksāts" ķeksīša, piem. "Pārtika") vairs nav izvēlami, veidojot jaunu ar rēķinu saistītu atgādinājumu — šis atgādinājumu veids loģiski der tikai rēķiniem ar fiksētu termiņu un samaksas statusu',

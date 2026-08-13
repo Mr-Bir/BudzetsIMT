@@ -105,6 +105,16 @@ function reminderDueDate(r){
   }
   return r.date || '';
 }
+// Nākamā mēneša termiņš tam pašam day — izmanto, lai parādītu korektu "nākamreiz" datumu
+// jau atrisinātam (apmaksātam) atgādinājumam, kura reminderDueDate() vēl rāda šo mēnesi.
+function reminderNextMonthDueDate(r){
+  if(!r.billId) return reminderDueDate(r);
+  const day = Math.min(Math.max(parseInt(r.day,10)||1,1),31);
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  const clamped = Math.min(day, daysInMonth(next.getFullYear(), next.getMonth()));
+  return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-'+String(clamped).padStart(2,'0');
+}
 // 'overdue' | 'today' | 'upcoming' | null (no valid date)
 function reminderStatus(r){
   const due = reminderDueDate(r);
@@ -737,7 +747,10 @@ function renderReminders(){
       const name = reminderDisplayName(r);
       let subHtml;
       if(paused) subHtml = `<span class="rem-sub">Pauzēts${r.billId?' — rēķins vairs nav aktīvs':''}</span>`;
-      else if(resolved) subHtml = `<span class="rem-sub">✓ Samaksāts — nākamreiz ${formatDateLv(due)}</span>`;
+      else if(resolved){
+        const nextDue = (status==='overdue'||status==='today') ? reminderNextMonthDueDate(r) : due;
+        subHtml = `<span class="rem-sub">✓ Samaksāts — nākamreiz ${formatDateLv(nextDue)}</span>`;
+      }
       else if(status==='today') subHtml = `<span class="rem-sub due-text">Šodien jāmaksā</span>`;
       else if(status==='overdue') subHtml = `<span class="rem-sub due-text">Nokavēts — bija ${formatDateLv(due)}</span>`;
       else if(r.billId) subHtml = `<span class="rem-sub">Katru mēnesi ap ${Math.min(Math.max(parseInt(r.day,10)||1,1),31)}. · nākamreiz ${formatDateLv(due)}</span>`;

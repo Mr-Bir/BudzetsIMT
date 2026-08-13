@@ -6,7 +6,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, initializeAuth, indexedDBLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, onTokenChanged, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { CHANGELOG } from './changelog.js';
 
 // Capacitor runtime + native Firebase Authentication plugin (bundler-free copies
@@ -277,14 +277,36 @@ const fbApp = initializeApp(FIREBASE_CONFIG);
 // appChecked() PAGAIDĀM APZINĀTI NAV pievienots (Fāze 2, atsevišķs solis) — vispirms
 // jāapstiprina vairāku dienu garumā, ka App Check → Requests Firebase konsolē rāda
 // stabilu "verified" pieprasījumu plūsmu (gan web, gan native), pirms enforcement ieslēgšanas.
+// 2026-08-13: Fāze 2 TIKA izmēģināta un UZREIZ ATGRIEZTA (sk. firestore.rules komentāru) —
+// App Check → Requests rādīja 68-94% "verified", tomēr reāla Firestore saglabāšana ar
+// enforcement salūza. Diagnostikas kods zemāk (onTokenChanged + window.__diagAppCheck)
+// pievienots, lai nākamajā mēģinājumā redzētu PRECĪZI, kas notiek ar tokenu no klienta
+// puses, nevis paļautos tikai uz Firebase Console apkopoto statistiku.
+let appCheckInstance = null;
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   }
-  initializeAppCheck(fbApp, {
+  appCheckInstance = initializeAppCheck(fbApp, {
     provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
     isTokenAutoRefreshEnabled: true
   });
+  onTokenChanged(appCheckInstance, {
+    next: (result)=> console.log('[AppCheck] Tokens atjaunināts veiksmīgi. Tokena garums:', result?.token?.length || 0),
+    error: (err)=> console.error('[AppCheck] Tokena atjaunināšana NEIZDEVĀS:', err?.code, err?.message, err)
+  });
+  // Manuāla pārbaude jebkurā brīdī no pārlūka Console: window.__diagAppCheck()
+  // Piespiedu kārtā (forceRefresh=true) pieprasa jaunu tokenu un rāda pilnu rezultātu.
+  window.__diagAppCheck = async ()=>{
+    try {
+      const r = await getAppCheckToken(appCheckInstance, true);
+      console.log('[AppCheck DIAG] Veiksmīgi:', { tokenLength: r.token?.length, tokenStart: r.token?.slice(0,20) });
+      return r;
+    } catch(e){
+      console.error('[AppCheck DIAG] Kļūda:', e?.code, e?.message, e);
+      return e;
+    }
+  };
 } catch(e){
   // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
   console.warn('App Check inicializācija neizdevās:', e);
@@ -398,6 +420,7 @@ function connectForUser(uid){
       render(); pushNow();
     }
   }, err=>{
+    console.error('[Firestore onSnapshot] Pilna kļūda:', err.code, err.message, err);
     setSync('err','Kļūda: ' + err.code);
   });
 }

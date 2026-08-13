@@ -8,6 +8,10 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.35.1', date:'2026-08-13', notes:[
+    'App Check diagnostikas kods pievienots (onTokenChanged listener + window.__diagAppCheck() konsoles funkcija) — palīdzēs noskaidrot, kāpēc Fāzes 2 (Firestore rules appChecked() enforcement) mēģinājums 2026-08-13 salauza reālu saglabāšanu, neskatoties uz "verified" App Check metriku Firebase Console',
+    'firestore.rules ATGRIEZTS uz Fāzi 1 (bez enforcement) — sk. rules faila komentāru pilnam aprakstam',
+  ]},
   { v:'1.35.0', date:'2026-08-13', notes:[
     'App Check IESLĒGTS klienta pusē (Fāze 1) — pēc Billing konta pievienošanas Firebase projektam un IAM/reCAPTCHA Enterprise API apstiprināšanas Google Cloud Console. Firestore rules līmeņa enforcement (appChecked()) APZINĀTI VĒL NAV pievienots — tas ir atsevišķs, vēlāks solis (Fāze 2), kas seko tikai pēc vairāku dienu stabila "verified" pieprasījumu apstiprinājuma Firebase konsolē',
   ]},

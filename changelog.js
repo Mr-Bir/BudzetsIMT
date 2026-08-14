@@ -8,6 +8,12 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.35.3', date:'2026-08-14', notes:[
+    'Iespējams jauns App Check Fāzes 2 (appChecked() Firestore rules) root cause noskaidrots: initializeAppCheck() app.js netika gaidīts (fire-and-forget) pirms Firestore onSnapshot() klausītāja atvēršanas — ja lietotājam jau bija saglabāta sesija, onAuthStateChanged varēja nostrādāt ātrāk par App Check tokena tīkla pieprasījumu, un pirmais Listen pieprasījums aizgāja bez tokena (request.app == null), ko appChecked() noraidīja. App Check konsoles "Enforce" slēdzis Cloud Firestore rindā pārbaudīts un apstiprināts kā vienmēr izslēgts (Nr.1 aizdomās turamais no 2026-08-13 sesijas — atkrīt)',
+    'connectForUser() tagad gaida App Check tokenu (ar 3s drošības timeout, ja App Check nestrādā) PIRMS Firestore klausītāja atvēršanas',
+    'Jauns pašdziedinošs mehānisms: ja onSnapshot tomēr saņem permission-denied, klausītājs vienu reizi automātiski atjaunojas pēc 2s pauzes (Firestore SDK pats no jauna nepieslēdzas pēc rules noraidījuma) — sk. subscribeSnapshot()',
+    'VĒL NAV atkārtoti testēts ar reāli publicētu appChecked() rules — nākamais solis pirms Fāzes 2 atkārtota mēģinājuma',
+  ]},
   { v:'1.35.2', date:'2026-08-13', notes:[
     'Noņemts pagaidu App Check diagnostikas kods (pievienots v1.35.1: onTokenChanged listener, window.__diagAppCheck(), papildu console.error Firestore kļūdām) — bija paredzēts vienas sesijas izmeklēšanai, tagad noņemts, lai neradītu neskaidrības nākamajā sesijā ar tīru koda bāzi',
     'App Check klienta inicializācija (Fāze 1) PALIEK AKTĪVA un strādā (apstiprināts: tokens veiksmīgi iegūts). Firestore rules PALIEK BEZ appChecked() enforcement — Fāzes 2 mēģinājums 2026-08-13 (appChecked() Firestore rules) izraisīja reālu permission-denied kļūdu, kaut arī App Check → Requests rādīja 68-94% "verified" un klienta tokens tika apstiprināti iegūts; ATGRIEZTS TAJĀ PAŠĀ DIENĀ',

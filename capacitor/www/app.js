@@ -6,7 +6,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, initializeAuth, indexedDBLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { CHANGELOG } from './changelog.js';
 
 // Capacitor runtime + native Firebase Authentication plugin (bundler-free copies
@@ -280,14 +280,26 @@ const fbApp = initializeApp(FIREBASE_CONFIG);
 // un klienta puses tokens tika iegūts veiksmīgi (apstiprināts ar diagnostikas kodu, kas
 // pēc tam noņemts — sk. BUDZETSIMT_MASTER_INSTRUKCIJA.md sadaļu 9 pilnam aprakstam un
 // nākamajiem izmeklēšanas soļiem). Root cause VĒL NAV atrasts.
+// appCheckReady: connectForUser() to nogaida PIRMS Firestore klausītāja atvēršanas.
+// Bez tā initializeAppCheck() ir "fire-and-forget" — ja lietotājam jau ir saglabāta
+// sesija, onAuthStateChanged var nostrādāt ātrāk nekā App Check tokena tīkla
+// pieprasījums, un pirmais onSnapshot() pieprasījums aizceļo BEZ tokena (request.app
+// == null). Ar appChecked() rules pusē tas nozīmētu tūlītēju permission-denied, no kā
+// Firestore SDK pats no jauna nemēģina pieslēgties — sk. instrukciju failu, sadaļu 9.
+// Timeout (3s) nodrošina, ka lietotne netiek bloķēta, ja App Check pats nestrādā.
+let appCheckReady = Promise.resolve();
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   }
-  initializeAppCheck(fbApp, {
+  const appCheckInstance = initializeAppCheck(fbApp, {
     provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
     isTokenAutoRefreshEnabled: true
   });
+  const tokenPromise = getAppCheckToken(appCheckInstance).catch(e=>{
+    console.warn('App Check tokena iegūšana neizdevās:', e);
+  });
+  appCheckReady = Promise.race([tokenPromise, new Promise(resolve=>setTimeout(resolve, 3000))]);
 } catch(e){
   // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
   console.warn('App Check inicializācija neizdevās:', e);
@@ -363,7 +375,7 @@ onAuthStateChanged(auth, user=>{
   }
 });
 
-function connectForUser(uid){
+async function connectForUser(uid){
   roomId = uid;
   docRef = doc(db, 'budgets', uid);
   $('gate').classList.add('hidden');
@@ -374,17 +386,26 @@ function connectForUser(uid){
   setSync('saving','Savienojas…');
   loadArchive();
 
+  await appCheckReady;
+  if(roomId !== uid) return; // lietotājs izgājis/nomainījies, kamēr gaidījām tokenu
+  subscribeSnapshot(uid, false);
+}
+
+// isRetry: true, ja šis ir pašdziedinošais atkārtotais mēģinājums pēc permission-denied
+// (sk. connectForUser augstāk) — ierobežo uz VIENU atkārtojumu, lai reāls piekļuves
+// noraidījums (piem. izlogošanās starplaikā) neradītu bezgalīgu ciklu.
+function subscribeSnapshot(uid, isRetry){
   if(snapshotUnsub){ snapshotUnsub(); }
   snapshotUnsub = onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
-      const incoming = { 
-        income: d.income ?? DEFAULT.income, 
-        periodName: d.periodName || '', 
-        bills: ensureBillIds(d.bills ?? []), 
-        credits: d.credits ?? [], 
-        categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES), 
-        reminders: ensureReminderFields(d.reminders ?? []) 
+      const incoming = {
+        income: d.income ?? DEFAULT.income,
+        periodName: d.periodName || '',
+        bills: ensureBillIds(d.bills ?? []),
+        credits: d.credits ?? [],
+        categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES),
+        reminders: ensureReminderFields(d.reminders ?? [])
       };
       const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
@@ -402,6 +423,12 @@ function connectForUser(uid){
     }
   }, err=>{
     setSync('err','Kļūda: ' + err.code);
+    if(err.code === 'permission-denied' && !isRetry){
+      // Ja App Check tokens paspēja piesaistīties tikai PĒC šī pieprasījuma (sacensība
+      // ar onAuthStateChanged), Firestore klausītājs pats no jauna nepieslēgsies —
+      // vienu reizi mēģinām atjaunot pēc īsas pauzes.
+      setTimeout(()=>{ if(currentUser && currentUser.uid === uid) subscribeSnapshot(uid, true); }, 2000);
+    }
   });
 }
 

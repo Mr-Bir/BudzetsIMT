@@ -38,7 +38,7 @@ Lietotne sadalīta četrās sadaļās (pieejamas caur sānu izvēlni):
 |---|---|
 | **Budžets** | Alga, rēķini, kategoriju sadalījums, mēnešu arhīvs, eksports/imports |
 | **Kredīti** | Kredītu atlikumi, termiņi ar progresu, mēneša maksājumi |
-| **Atgādinājumi** | Maksājumu termiņu atgādinājumi — piesaistīti rēķinam (atkārtojas mēnesi) vai brīvi (vienreizēji); baneris un skaitītājs, kad termiņš tuvojas. *Native paziņojumi ierīcē (Android) vēl top.* |
+| **Atgādinājumi** | Maksājumu termiņu atgādinājumi — piesaistīti rēķinam (atkārtojas mēnesi) vai brīvi (vienreizēji); baneris un skaitītājs, kad termiņš tuvojas. Native Android lietotnē arī īsti telefona paziņojumi konfigurējamā laikā. |
 | **Uzkrājuma mērķi** | Vēl top — uzkrājuma mērķu izvirzīšana un izsekošana |
 
 ## Failu struktūra
@@ -54,7 +54,7 @@ privatuma-politika.html       privātuma politika (arī atveras lietotnē pašā
 lietosanas-noteikumi.html     lietošanas noteikumi (arī atveras lietotnē pašā, Iestatījumos)
 icons/                        lietotnes ikonas
 screenshots/                  ekrānuzņēmumi
-js/                           bundler-free Capacitor/Firebase-Auth palīgmoduļi native Android pieteikšanās atbalstam (uz publiskā tīmekļa neaktīvi)
+js/                           bundler-free Capacitor/Firebase-Auth/Local-Notifications palīgmoduļi native Android atbalstam (uz publiskā tīmekļa neaktīvi)
 capacitor/                    native Android (Capacitor) projekts — atsevišķa, ar web versiju sinhronizēta www/ kopija
 LICENSE                       autortiesību piezīme (visas tiesības paturētas)
 ```
@@ -77,7 +77,7 @@ Rīkjoslas apakšā ir divas eksporta pogas:
 
 ## Versija
 
-Aktuālā versija: **v1.32.0**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
+Aktuālā versija: **v1.35.3**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
 
 ## Licence
 
@@ -88,6 +88,19 @@ Aktuālā versija: **v1.32.0**. Pilna izmaiņu vēsture ir redzama pašā lietot
 ## Nesenās izmaiņas
 
 Pilnu vēsturi kopš v1.0.0 skatīt `changelog.js` vai lietotnē (Iestatījumi → "Kas jauns").
+
+### v1.35.0–v1.35.3 — 2026-08-13/14
+- Sākta Firebase App Check ieviešana (papildu aizsardzība pret automatizētu ļaunprātīgu piekļuvi) — klienta puse aktīva, servera puses pilna izmantošana vēl izmeklēšanā
+
+### v1.34.0–v1.34.1 — 2026-08-13
+- Apmaksāts, ar rēķinu saistīts atgādinājums vairs nerādās "Šodien/Nokavēts" sarakstā — pāriet uz "Gaidāmie" ar korektu nākamā mēneša termiņu
+
+### v1.33.0–v1.33.1 — 2026-08-11/12
+- Pievienoti native Android paziņojumi (īsti telefona push-style paziņojumi) priekš Atgādinājumiem — konfigurējams laiks Iestatījumos
+
+### v1.32.1–v1.32.5 — 2026-08-09/10
+- Rēķinu, kredītu, kategoriju un atgādinājumu dati tagad tiek stingri pārbaudīti pirms katras saglabāšanas — pasargā pret iespējamām UI kļūdām, kas varētu sabojāt datus
+- Salabota kļūda, kad tikko pievienota izmaiņa (piem. atgādinājums) uz īsu brīdi parādījās un tad pazuda
 
 ### v1.32.0 — 2026-08-09
 - Pievienota Atgādinājumu sadaļa — atgādinājumu var piesaistīt esošam rēķinam (atkārtojas katru mēnesi izvēlētajā dienā, automātiski pārdzīvo "Jauns mēnesis") vai izveidot brīvu vienreizēju atgādinājumu ar fiksētu datumu

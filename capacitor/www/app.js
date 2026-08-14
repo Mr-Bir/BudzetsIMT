@@ -278,7 +278,8 @@ const DEFAULT = {
   ],
   categories: structuredClone(DEFAULT_CATEGORIES),
   reminders: [],
-  extraIncome: []
+  extraIncome: [],
+  salaryDay: null
 };
 
 let state = structuredClone(DEFAULT);
@@ -431,9 +432,10 @@ function subscribeSnapshot(uid, isRetry){
         credits: d.credits ?? [],
         categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES),
         reminders: ensureReminderFields(d.reminders ?? []),
-        extraIncome: ensureExtraIncomeFields(d.extraIncome ?? [])
+        extraIncome: ensureExtraIncomeFields(d.extraIncome ?? []),
+        salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders, extraIncome: incoming.extraIncome });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders, extraIncome: incoming.extraIncome, salaryDay: incoming.salaryDay });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -444,7 +446,7 @@ function subscribeSnapshot(uid, isRetry){
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data)
-      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [], extraIncome: [] };
+      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [], extraIncome: [], salaryDay: null };
       render(); pushNow();
     }
   }, err=>{
@@ -595,6 +597,11 @@ async function pushNow(){
       extraIncome: safeExtraIncome,
       updated: Date.now()
     };
+    // salaryDay ir neobligāts (analoģiski periodName/reminders) — ja nav iestatīts,
+    // lauku VISPĀR nesūtām, nevis sūtām null (Firestore rules validē to kā skaitli 1-31).
+    if(state.salaryDay !== undefined && state.salaryDay !== null && state.salaryDay !== ''){
+      payload.salaryDay = Math.min(Math.max(parseInt(state.salaryDay,10)||1, 1), 31);
+    }
 
     lastSentJSON = JSON.stringify({
       income: payload.income,
@@ -603,7 +610,8 @@ async function pushNow(){
       credits: payload.credits,
       categories: payload.categories,
       reminders: payload.reminders,
-      extraIncome: payload.extraIncome
+      extraIncome: payload.extraIncome,
+      salaryDay: payload.salaryDay ?? null
     });
     
     // 2. SŪTĀM UZ MĀKONI
@@ -943,9 +951,25 @@ function updateTotals(){
   updatePace();
 }
 
+// Cik dienu atlicis LĪDZ NĀKAMAJAI ALGAS DIENAI. Algas datums VIENMĒR nozīmē šo
+// dienu NĀKAMAJĀ mēnesī (nekad aktuālajā, pat ja diena šomēnes vēl nav pienākusi) —
+// tā lietotājs to definējis. Precīzāk par "līdz mēneša beigām", jo pēc mēneša
+// beigām vēl jānodzīvo līdz algai.
+function daysUntilNextSalary(day){
+  const d = parseInt(day, 10);
+  if(!d || d<1 || d>31) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const ny = now.getFullYear() + (now.getMonth()===11 ? 1 : 0);
+  const nm = (now.getMonth()+1) % 12;
+  const candidate = new Date(ny, nm, Math.min(d, daysInMonth(ny, nm)));
+  return Math.max(Math.round((candidate - today) / 86400000), 1);
+}
+
 // Spending-pace indicator: PaceDaily rāda ŠODIEN reāli iztērēto (nevis vidējo/dienā),
-// PaceAvailable — cik nauda pieejama TAGAD, PaceSafe — droša summa/dienā atlikušajām
-// mēneša dienām. Dot salīdzina šodienas tēriņu pret šo drošo dienas apjomu.
+// PaceAvailable — cik nauda pieejama TAGAD, PaceSafe — droša summa/dienā līdz nākamajai
+// algai (ja "Algas datums" iestatīts iestatījumos) vai līdz mēneša beigām (ja nav).
+// Dot salīdzina šodienas tēriņu pret šo drošo dienas apjomu.
 function updatePace(){
   const group = $('topbarPace');
   if(!group) return;
@@ -954,9 +978,11 @@ function updatePace(){
   const spentSoFar = bills.filter(isBillPaid).reduce((s,b)=>s+billSpent(b),0);
   const spentTodayAmt = spentToday();
   const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const daysElapsed = Math.min(now.getDate(), daysInMonth);
-  const daysRemaining = Math.max(daysInMonth - daysElapsed, 1);
+  const daysInMonthNow = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const daysElapsed = Math.min(now.getDate(), daysInMonthNow);
+  const daysRemaining = state.salaryDay
+    ? daysUntilNextSalary(state.salaryDay)
+    : Math.max(daysInMonthNow - daysElapsed, 1);
   const available = income - spentSoFar;
   const safeDaily = available / daysRemaining;
 
@@ -2288,6 +2314,17 @@ $('settingsBtn').addEventListener('click', ()=>{
           </div>
         </div>
 
+        <div class="set-row">
+          <div>
+            <div class="set-label">Algas datums</div>
+            <div class="set-hint">"Droša summa/dienā" rēķinās līdz šai dienai, nevis līdz mēneša beigām</div>
+          </div>
+          <select id="salaryDaySelect" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">
+            <option value="">Nav iestatīts</option>
+            ${Array.from({length:31}, (_,i)=>i+1).map(n=>`<option value="${n}" ${state.salaryDay===n?'selected':''}>${n}.</option>`).join('')}
+          </select>
+        </div>
+
         ${IS_NATIVE ? `
         <div class="set-row">
           <div>
@@ -2343,6 +2380,12 @@ $('settingsBtn').addEventListener('click', ()=>{
     $('themeSwitch').querySelectorAll('.ts-opt').forEach(b=>{
       b.classList.toggle('active', b.dataset.themeOpt === opt.dataset.themeOpt);
     });
+  });
+  $('salaryDaySelect').addEventListener('change', e=>{
+    const val = e.target.value;
+    state.salaryDay = val ? parseInt(val,10) : null;
+    updatePace();
+    scheduleSave();
   });
   $('setChangelog').addEventListener('click', openChangelog);
   $('privacyPolicyBtn').addEventListener('click', ()=> openDocModal('Privātuma politika', 'privatuma-politika.html'));

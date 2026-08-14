@@ -8,6 +8,10 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.37.0', date:'2026-08-14', notes:[
+    'Jauns iestatījums "Algas datums" (Iestatījumi, vienkārša izvēlne 1.–31.) — ja iestatīts, "Droša summa/dienā" (topbar) rēķinās dienas LĪDZ NĀKAMĀ MĒNEŠA algas datumam (šis datums vienmēr nozīmē nākamo mēnesi, nekad aktuālo), nevis līdz kārtējā mēneša beigām, kas precīzāk atspoguļo, cik ilgi nauda reāli jāizstiepj',
+    'Ja "Algas datums" nav iestatīts, aprēķins paliek kā iepriekš (līdz kārtējā mēneša beigām)',
+  ]},
   { v:'1.36.1', date:'2026-08-14', notes:[
     'Topbar "tēriņa tempa" rādītāji vienkāršoti: pirmais lauciņš tagad rāda "Iztērēts šodien" (tieši šīsdienas apmaksātie rēķini + šīsdienas summējošo rēķinu epizodes), nevis vidējo tēriņu/dienā kopš mēneša sākuma — tas iepriekš izskatījās nereāli sagrozīts, ja lielu rēķinu apmaksā uzreiz mēneša sākumā',
     'Jauns rēķina lauks "paidDate" — fiksē datumu, kad rēķins atzīmēts kā "Samaksāts" (notīrīts, ja atzīmējums noņemts vai sākas "Jauns mēnesis")',

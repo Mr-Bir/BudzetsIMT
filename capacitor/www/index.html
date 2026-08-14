@@ -159,6 +159,7 @@
 
       <div class="drawer-section drawer-nav" id="drawerNav">
         <button class="drawer-nav-item active" data-section="budget" type="button">Budžets</button>
+        <button class="drawer-nav-item" data-section="extra-income" type="button">Papildus ienākumi</button>
         <button class="drawer-nav-item" data-section="credits" type="button">Kredīti</button>
         <button class="drawer-nav-item" data-section="reminders" type="button">Atgādinājumi<span class="nav-badge hidden" id="remindersBadge">0</span></button>
         <button class="drawer-nav-item" data-section="savings" type="button">Uzkrājuma mērķi</button>
@@ -194,8 +195,9 @@
       </button>
       <div class="summary">
         <div class="stat">
-          <div class="label">Prognozējamā alga</div>
+          <div class="label">Ienākumi</div>
           <div class="value input-val">€ <input id="income" type="number" step="0.01" inputmode="decimal"></div>
+          <div class="sub hidden" id="incomeBreakdown"></div>
         </div>
         <div class="stat">
           <div class="label">Kopā rēķini</div>
@@ -253,6 +255,16 @@
       <span class="saved-note" id="savedNote"></span>
     </div>
     </div><!-- /panel-budget -->
+
+    <!-- ============ PANEL: EXTRA INCOME ============ -->
+    <div class="panel hidden" id="panel-extra-income">
+      <section>
+        <div class="sec-head"><h2>Papildus ienākumi</h2><button class="btn" id="addExtraIncomeBtn">+ Pievienot ienākumu</button></div>
+        <div class="extra-income-list" id="extraIncomeList"></div>
+        <div class="extra-income-foot"><span class="lbl">Kopā papildus</span><span class="total" id="extraIncomeFootTotal">€ 0.00</span></div>
+        <div class="empty-note hidden" id="extraIncomeEmptyNote">Vēl nav neviena papildus ienākuma šomēnes. Pievieno pirmo ar pogu augšā — piemēram, gadījuma darbu vai dāvanu. Tas pieskaitīsies kopējiem ienākumiem un pazudīs, sākot jaunu mēnesi (tāpat kā rēķini).</div>
+      </section>
+    </div><!-- /panel-extra-income -->
 
     <!-- ============ PANEL: CREDITS ============ -->
     <div class="panel hidden" id="panel-credits">

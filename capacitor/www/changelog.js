@@ -8,6 +8,12 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.36.0', date:'2026-08-14', notes:[
+    'Jauna sadaļa "Papildus ienākumi" (izvēlnē zem "Budžets") — neregulāru, neprognozējamu ienākumu epizožu (datums, nosaukums, summa) žurnāls šim mēnesim. Summa pieskaitās bāzes ienākumam visos aprēķinos (Paliek, Vēl jāmaksā, procenti, tēriņu temps u.c.)',
+    '"Ienākumi" lauciņā parādās neliela apakšrindiņa ar sadalījumu "Bāze ... + papildus ..." tad, kad ir kāds papildus ienākums',
+    'Papildus ienākumi ir piesaistīti konkrētajam mēnesim — tāpat kā rēķini, tie tiek notīrīti ar "Jauns mēnesis" (un saglabāti arhīvā, ja izvēlēts arhivēt)',
+    'Firestore rules (Firebase Console pusē) JĀPAPILDINA ar jaunu lauku "extraIncome" (struktūras/izmēru validācija, pēc "reminders" parauga) — BEZ tā šis lauks netiks saglabāts mākonī',
+  ]},
   { v:'1.35.3', date:'2026-08-14', notes:[
     'Iespējams jauns App Check Fāzes 2 (appChecked() Firestore rules) root cause noskaidrots: initializeAppCheck() app.js netika gaidīts (fire-and-forget) pirms Firestore onSnapshot() klausītāja atvēršanas — ja lietotājam jau bija saglabāta sesija, onAuthStateChanged varēja nostrādāt ātrāk par App Check tokena tīkla pieprasījumu, un pirmais Listen pieprasījums aizgāja bez tokena (request.app == null), ko appChecked() noraidīja. App Check konsoles "Enforce" slēdzis Cloud Firestore rindā pārbaudīts un apstiprināts kā vienmēr izslēgts (Nr.1 aizdomās turamais no 2026-08-13 sesijas — atkrīt)',
     'connectForUser() tagad gaida App Check tokenu (ar 3s drošības timeout, ja App Check nestrādā) PIRMS Firestore klausītāja atvēršanas',

@@ -69,6 +69,10 @@ function billAmount(b){
 // Summing bills (fuel etc.) have no single deferred payment — each entry is money already
 // spent at the time it was logged, so they're always treated as "paid" for totals/sorting.
 function isBillPaid(b){ return b && b.type==='summing' ? true : !!b.paid; }
+// Papildus (neregulāri, neprognozējami) ienākumi šim mēnesim — summējas klāt bāzes
+// ienākumam (state.income) visos aprēķinos (Paliek, Vēl jāmaksā, tēriņu temps u.c.).
+function extraIncomeTotal(){ return (state.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0); }
+function totalIncome(){ return (Number(state.income)||0) + extraIncomeTotal(); }
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 // Stable random id for bills/reminders — lets reminders reference a bill across
 // reorders, renames, and "Jauns mēnesis" resets (which only touch amount/paid/entries).
@@ -88,6 +92,15 @@ function ensureReminderFields(reminders) {
     date: (r.date !== undefined && r.date !== null) ? String(r.date) : null,
     active: r.active !== undefined ? Boolean(r.active) : true,
     dismissedFor: (r.dismissedFor !== undefined && r.dismissedFor !== null) ? String(r.dismissedFor) : null
+  }));
+}
+
+// Aizpilda trūkstošos laukus papildus ienākumu ierakstiem (analoģiski ensureReminderFields)
+function ensureExtraIncomeFields(items) {
+  return (items || []).map(e => ({
+    name: e.name ? String(e.name) : '',
+    amount: Number(e.amount) || 0,
+    date: (e.date !== undefined && e.date !== null) ? String(e.date) : ''
   }));
 }
 
@@ -253,7 +266,8 @@ const DEFAULT = {
     {name:'Privātpersonas A. Bērziņa aizdevums', amount:1585},
   ],
   categories: structuredClone(DEFAULT_CATEGORIES),
-  reminders: []
+  reminders: [],
+  extraIncome: []
 };
 
 let state = structuredClone(DEFAULT);
@@ -405,9 +419,10 @@ function subscribeSnapshot(uid, isRetry){
         bills: ensureBillIds(d.bills ?? []),
         credits: d.credits ?? [],
         categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES),
-        reminders: ensureReminderFields(d.reminders ?? [])
+        reminders: ensureReminderFields(d.reminders ?? []),
+        extraIncome: ensureExtraIncomeFields(d.extraIncome ?? [])
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders, extraIncome: incoming.extraIncome });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -418,7 +433,7 @@ function subscribeSnapshot(uid, isRetry){
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data)
-      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [] };
+      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [], extraIncome: [] };
       render(); pushNow();
     }
   }, err=>{
@@ -457,7 +472,7 @@ function isEditingActive(){
   const el = document.activeElement;
   if(!el) return false;
   if(el.closest && el.closest('#modalRoot')) return true; // archive editor open
-  return !!(el.closest && el.closest('#billsList, #creditsList')) || el.id==='income';
+  return !!(el.closest && el.closest('#billsList, #creditsList, #extraIncomeList')) || el.id==='income';
 }
 
 // When the user leaves a field, apply any deferred remote update
@@ -513,6 +528,13 @@ async function pushNow(){
       };
     }).slice(0, 50);
 
+    // Papildus ienākumiem jābūt tieši 3 laukiem, pareiziem tipiem (analoģiski reminders)
+    const safeExtraIncome = (Array.isArray(state.extraIncome) ? state.extraIncome : []).slice(0, 100).map(e => ({
+      name: String(e.name || '').slice(0, 120),
+      amount: Math.min(Math.max(Number(e.amount) || 0, 0), 1000000),
+      date: String(e.date || '').slice(0, 10)
+    }));
+
     // Rēķinu un kredītu sanitizācija (2026-08-10) — pēc tā paša principa, kā jau tiek
     // darīts categories/reminders: piespiežam pareizus tipus, lai UI kļūda (piem., amount
     // kā teksts) nevarētu nokļūt Firebase un salauzt aprēķinus. SVARĪGI: limit/monthly ir
@@ -558,16 +580,18 @@ async function pushNow(){
       credits: safeCredits,
       categories: safeCategories,
       reminders: safeReminders,
+      extraIncome: safeExtraIncome,
       updated: Date.now()
     };
 
-    lastSentJSON = JSON.stringify({ 
-      income: payload.income, 
-      periodName: payload.periodName, 
-      bills: payload.bills, 
-      credits: payload.credits, 
-      categories: payload.categories, 
-      reminders: payload.reminders 
+    lastSentJSON = JSON.stringify({
+      income: payload.income,
+      periodName: payload.periodName,
+      bills: payload.bills,
+      credits: payload.credits,
+      categories: payload.categories,
+      reminders: payload.reminders,
+      extraIncome: payload.extraIncome
     });
     
     // 2. SŪTĀM UZ MĀKONI
@@ -632,8 +656,9 @@ $('periodLabelInput').addEventListener('keydown', e=>{
 
 function render(){
   renderPeriodLabel();
-  const income = Number(state.income)||0;
+  const income = totalIncome();
   $('income').value = state.income;
+  renderExtraIncome();
   const list = $('billsList'); list.innerHTML='';
   (state.bills||[]).forEach((b,i)=>{
     const amt = billAmount(b);
@@ -740,6 +765,28 @@ function render(){
   renderReminders();
 }
 
+// Papildus ienākumu saraksts ("Papildus ienākumi" panelis) — epizodes ar datumu,
+// nosaukumu un summu, kas šim mēnesim summējas klāt bāzes ienākumam.
+function renderExtraIncome(){
+  const list = $('extraIncomeList');
+  if(!list) return;
+  list.innerHTML = '';
+  const items = state.extraIncome || [];
+  items.forEach((it,i)=>{
+    const row = document.createElement('div');
+    row.className = 'extra-income-row';
+    row.dataset.idx = i;
+    row.innerHTML = `
+      <input type="date" class="eidate" value="${escapeHtml(it.date||'')}" data-ei="${i}" data-f="date">
+      <input class="einame" value="${escapeHtml(it.name||'')}" data-ei="${i}" data-f="name" placeholder="Nosaukums (piem. Brīvprātīgais darbs)">
+      <div class="eamount-wrap"><span class="eur">€</span><input class="eamount" type="number" step="0.01" inputmode="decimal" value="${(Number(it.amount)||0).toFixed(2)}" data-ei="${i}" data-f="amount"></div>
+      <button class="del" data-eidel="${i}" title="Dzēst">×</button>`;
+    list.appendChild(row);
+  });
+  const empty = $('extraIncomeEmptyNote');
+  if(empty) empty.classList.toggle('hidden', items.length>0);
+}
+
 function formatDateLv(iso){
   if(!iso) return '';
   const parts = iso.split('-');
@@ -822,13 +869,26 @@ function renderReminders(){
 }
 
 function updateTotals(){
-  const income = Number(state.income)||0;
+  const income = totalIncome();
   const bills = state.bills||[];
   const total = bills.reduce((s,b)=>s+billAmount(b),0);
   const ctotal = (state.credits||[]).reduce((s,c)=>s+(Number(c.amount)||0),0);
   const paidSum = bills.filter(isBillPaid).reduce((s,b)=>s+billAmount(b),0);
   const toPay = total - paidSum;
   const paidCount = bills.filter(isBillPaid).length;
+  const extraTotal = extraIncomeTotal();
+  const incomeBreakdown = $('incomeBreakdown');
+  if(incomeBreakdown){
+    if(extraTotal>0){
+      incomeBreakdown.textContent = `Bāze ${fmt(Number(state.income)||0)} + papildus ${fmt(extraTotal)}`;
+      incomeBreakdown.classList.remove('hidden');
+    } else {
+      incomeBreakdown.textContent = '';
+      incomeBreakdown.classList.add('hidden');
+    }
+  }
+  const eFoot = $('extraIncomeFootTotal');
+  if(eFoot) eFoot.textContent = fmt(extraTotal);
   $('sumTotal').textContent = fmt(total);
   $('sumPct').textContent = (income>0?(total/income*100).toFixed(1):'0')+' % no ieņēmumiem';
   // Show "iztērēts" only when it differs from the planned total (i.e. summing bills with limits exist)
@@ -876,7 +936,7 @@ function updateTotals(){
 function updatePace(){
   const group = $('topbarPace');
   if(!group) return;
-  const income = Number(state.income)||0;
+  const income = totalIncome();
   const bills = state.bills||[];
   const spentSoFar = bills.filter(isBillPaid).reduce((s,b)=>s+billSpent(b),0);
   const now = new Date();
@@ -1004,11 +1064,13 @@ function renderArchive(){
   list.innerHTML = '';
   archiveCache.forEach(a=>{
     const total = (a.bills||[]).reduce((s,b)=>s+billAmount(b),0);
-    const remaining = (Number(a.income)||0) - total;
+    const extraTotal = (a.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
+    const archIncome = (Number(a.income)||0) + extraTotal;
+    const remaining = archIncome - total;
     const row = document.createElement('div');
     row.className = 'arch-row';
     row.innerHTML = `
-      <div><div class="arch-month">${escapeHtml(archName(a))}</div><div class="arch-sub">${(a.bills||[]).length} rēķini · alga ${fmt(a.income)}</div></div>
+      <div><div class="arch-month">${escapeHtml(archName(a))}</div><div class="arch-sub">${(a.bills||[]).length} rēķini · ienākumi ${fmt(archIncome)}${extraTotal>0?` (bāze ${fmt(a.income)} + papildus ${fmt(extraTotal)})`:''}</div></div>
       <div class="arch-figure"><span class="lbl">Rēķini</span>${fmt(total)}</div>
       <div class="arch-figure ${remaining>=0?'rem-pos':'rem-neg'}"><span class="lbl">Paliek</span>${fmt(remaining)}</div>
       <div class="arch-actions">
@@ -1034,6 +1096,7 @@ $('closeMonthBtn').addEventListener('click', async ()=>{
       income: state.income,
       bills: structuredClone(state.bills),
       credits: structuredClone(state.credits),
+      extraIncome: structuredClone(state.extraIncome||[]),
       archivedAt: Date.now()
     };
     if(label) snapshot.name = label;
@@ -1058,6 +1121,7 @@ $('archiveList').addEventListener('click', async e=>{
       income: src.income,
       bills: structuredClone(src.bills||[]),
       credits: structuredClone(src.credits||[]),
+      extraIncome: structuredClone(src.extraIncome||[]),
       archivedAt: Date.now()
     };
     e.target.textContent = 'Dublē…';
@@ -1105,7 +1169,7 @@ function openArchiveModal(key){
 
         <div class="mini-summary" id="mMini"></div>
 
-        <h4 style="margin:0 0 4px;font-family:Georgia,serif;">Alga</h4>
+        <h4 style="margin:0 0 4px;font-family:Georgia,serif;">Ienākumi</h4>
         <div class="m-income">€ <input id="mIncome" type="number" step="0.01" inputmode="decimal" value="${Number(draft.income)||0}"></div>
 
         <h4 style="margin:18px 0 4px;font-family:Georgia,serif;display:flex;justify-content:space-between;align-items:baseline;">Rēķini <span id="mPaidInfo" style="font-family:inherit;font-size:12px;font-weight:400;color:var(--muted);"></span></h4>
@@ -1130,11 +1194,12 @@ function openArchiveModal(key){
   function markDirty(){ dirty = true; $('mStatus').textContent = 'Ir nesaglabātas izmaiņas'; $('mStatus').style.color = 'var(--amber)'; }
 
   function renderMini(){
-    const income = Number(draft.income)||0;
+    const extraTotal = (a.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
+    const income = (Number(draft.income)||0) + extraTotal;
     const total = draft.bills.reduce((s,b)=>s+billAmount(b),0);
     const remaining = income - total;
     $('mMini').innerHTML = `
-      <div class="ms"><div class="l">Alga</div><div class="v">${fmt(income)}</div></div>
+      <div class="ms"><div class="l">Ienākumi</div><div class="v">${fmt(income)}</div></div>
       <div class="ms"><div class="l">Rēķini</div><div class="v">${fmt(total)}</div></div>
       <div class="ms"><div class="l">Paliek</div><div class="v" style="color:${remaining>=0?'var(--green)':'var(--red)'}">${fmt(remaining)}</div></div>`;
     const paidCount = draft.bills.filter(isBillPaid).length;
@@ -1276,6 +1341,7 @@ function openArchiveModal(key){
         ? ({ name:b.name||'', type:'summing', limit:Number(b.limit)||0, entries:(b.entries||[]).map(e=>({amount:Number(e.amount)||0, note:e.note||'', date:e.date||''})), cat:b.cat||'cits', paid:!!b.paid })
         : ({ name:b.name||'', amount:Number(b.amount)||0, cat:b.cat||'cits', paid:!!b.paid })),
       credits: draft.credits.map(c=>({ name:c.name||'', amount:Number(c.amount)||0 })),
+      extraIncome: a.extraIncome || [],
       archivedAt: a.archivedAt || Date.now()
     };
     const btn = $('mSave'); btn.textContent='Saglabā…'; btn.disabled=true;
@@ -1464,6 +1530,7 @@ function openNewMonthModal(){
           income: state.income,
           bills: structuredClone(state.bills),
           credits: structuredClone(state.credits),
+          extraIncome: structuredClone(state.extraIncome||[]),
           archivedAt: Date.now()
         };
         if(label) snapshot.name = label;
@@ -1483,6 +1550,9 @@ function openNewMonthModal(){
     // data stays in case the bill reappears later. Reminders on KEPT bills need no
     // change here: their due date is computed live from the real calendar month.
     (state.reminders||[]).forEach(r=>{ if(r.billId && removedIds.includes(r.billId)) r.active=false; });
+    // Papildus ienākumi ir piesaistīti konkrētajam mēnesim (kā rēķinu epizodes) —
+    // arhivēti augstāk, tagad notīrīti jaunajam mēnesim.
+    state.extraIncome = [];
     state.periodName = monthLabel(monthKey());
     close(); render(); updateTotals(); scheduleSave();
     alert('Jauns mēnesis sagatavots ✓');
@@ -1776,6 +1846,31 @@ $('sortBillsBtn').addEventListener('click', ()=>{
   render(); scheduleSave();
 });
 $('addCredit').addEventListener('click', ()=>{ state.credits.push({name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });
+
+// ---- Papildus ienākumi (list edit) ----
+$('extraIncomeList').addEventListener('input', e=>{
+  const i=e.target.dataset.ei, f=e.target.dataset.f; if(i===undefined) return;
+  if(f==='amount') state.extraIncome[i][f]=Math.round((parseFloat(e.target.value)||0)*100)/100;
+  else state.extraIncome[i][f]=e.target.value;
+  if(f==='amount') updateTotals();
+  scheduleSave();
+});
+$('extraIncomeList').addEventListener('click', e=>{
+  const del=e.target.closest('[data-eidel]');
+  if(!del) return;
+  const i=+del.dataset.eidel;
+  const nm=(state.extraIncome[i].name||'').trim();
+  if(confirm(nm?`Dzēst papildus ienākumu "${nm}"?`:'Dzēst šo papildus ienākumu?')){
+    state.extraIncome.splice(i,1); render(); scheduleSave();
+  }
+});
+$('addExtraIncomeBtn').addEventListener('click', ()=>{
+  if(!state.extraIncome) state.extraIncome = [];
+  state.extraIncome.push({name:'', amount:0, date:todayStr()});
+  render(); scheduleSave();
+  const n=document.querySelectorAll('#extraIncomeList .einame'); n[n.length-1]?.focus();
+});
+
 $('exportBtn').addEventListener('click', ()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -1785,6 +1880,7 @@ $('exportCsvBtn')?.addEventListener('click', ()=>{
   const rows = [['Tips','Nosaukums','Summa','Kategorija','Samaksāts']];
   state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', billAmount(b).toFixed(2), catName(b.cat||'cits'), isBillPaid(b)?'Jā':'Nē']));
   state.credits.forEach(c=>rows.push(['Kredīts', c.name||'', (Number(c.amount)||0).toFixed(2), '', '']));
+  (state.extraIncome||[]).forEach(e=>rows.push(['Papildus ienākums', e.name||'', (Number(e.amount)||0).toFixed(2), e.date||'', '']));
   const esc = v => /[";\n]/.test(v) ? '"'+String(v).replace(/"/g,'""')+'"' : v;
   const csv = '\uFEFF' + rows.map(r=>r.map(esc).join(';')).join('\r\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
@@ -1808,7 +1904,8 @@ $('fileIn').addEventListener('change', e=>{
       periodName: (typeof data.periodName==='string') ? data.periodName : (state.periodName||''),
       bills: Array.isArray(data.bills)?data.bills:[],
       credits: Array.isArray(data.credits)?data.credits:[],
-      categories: (Array.isArray(data.categories)&&data.categories.length)?data.categories.map(c=>({ ...c, color:safeColor(c.color) })):structuredClone(DEFAULT_CATEGORIES)
+      categories: (Array.isArray(data.categories)&&data.categories.length)?data.categories.map(c=>({ ...c, color:safeColor(c.color) })):structuredClone(DEFAULT_CATEGORIES),
+      extraIncome: Array.isArray(data.extraIncome)?data.extraIncome:[]
     };
     // Ensure 'cits' fallback category always exists
     if(!state.categories.some(c=>c.key==='cits')) state.categories.push({key:'cits',name:'Cits',color:'#8a8576'});
@@ -2003,7 +2100,7 @@ function setReminderNotifTime(t){
 })();
 
 // ---- Section navigation (inside the drawer) ----
-const SECTIONS = ['budget','credits','reminders','savings'];
+const SECTIONS = ['budget','extra-income','credits','reminders','savings'];
 function showSection(name){
   if(!SECTIONS.includes(name)) return;
   document.querySelectorAll('.panel').forEach(p=>{

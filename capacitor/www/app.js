@@ -274,9 +274,12 @@ const fbApp = initializeApp(FIREBASE_CONFIG);
 
 // App Check IESLĒGTS KLIENTA PUSĒ (2026-08-13, Fāze 1) — pēc Billing konta pievienošanas
 // un reCAPTCHA Enterprise API/IAM lomu apstiprināšanas Google Cloud Console. Rules līmeņa
-// appChecked() PAGAIDĀM APZINĀTI NAV pievienots (Fāze 2, atsevišķs solis) — vispirms
-// jāapstiprina vairāku dienu garumā, ka App Check → Requests Firebase konsolē rāda
-// stabilu "verified" pieprasījumu plūsmu (gan web, gan native), pirms enforcement ieslēgšanas.
+// appChecked() APZINĀTI NAV pievienots (sk. firestore.rules) — 2026-08-13 tika izmēģināts
+// un UZREIZ ATGRIEZTS, jo reāla Firestore saglabāšana salūza ar enforcement ieslēgtu,
+// NESKATOTIES uz to, ka App Check → Requests Firebase konsolē rādīja 68-94% "verified"
+// un klienta puses tokens tika iegūts veiksmīgi (apstiprināts ar diagnostikas kodu, kas
+// pēc tam noņemts — sk. BUDZETSIMT_MASTER_INSTRUKCIJA.md sadaļu 9 pilnam aprakstam un
+// nākamajiem izmeklēšanas soļiem). Root cause VĒL NAV atrasts.
 try {
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;

@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.35.2', date:'2026-08-13', notes:[
+    'Noņemts pagaidu App Check diagnostikas kods (pievienots v1.35.1: onTokenChanged listener, window.__diagAppCheck(), papildu console.error Firestore kļūdām) — bija paredzēts vienas sesijas izmeklēšanai, tagad noņemts, lai neradītu neskaidrības nākamajā sesijā ar tīru koda bāzi',
+    'App Check klienta inicializācija (Fāze 1) PALIEK AKTĪVA un strādā (apstiprināts: tokens veiksmīgi iegūts). Firestore rules PALIEK BEZ appChecked() enforcement — Fāzes 2 mēģinājums 2026-08-13 (appChecked() Firestore rules) izraisīja reālu permission-denied kļūdu, kaut arī App Check → Requests rādīja 68-94% "verified" un klienta tokens tika apstiprināti iegūts; ATGRIEZTS TAJĀ PAŠĀ DIENĀ',
+    'Root cause VĒL NAV atrasts — izmeklēšana pārtraukta un turpināsies jaunā, mierīgā sesijā (nevis šajā). Aizdomās turamais Nr.1: App Check konsoles pašas atsevišķais API-līmeņa "Enforce" slēdzis (Cloud Firestore rindā), kas ir NEATKARĪGS no firestore.rules faila — iespējams nejauši aktivizēts blakus esošās "Enforce" pogas dēļ metrikas panelī. Jāpārbauda un, ja aktīvs, jāpārslēdz atpakaļ uz "Monitoring" PIRMS jebkāda nākamā appChecked() mēģinājuma',
+  ]},
   { v:'1.35.1', date:'2026-08-13', notes:[
     'App Check diagnostikas kods pievienots (onTokenChanged listener + window.__diagAppCheck() konsoles funkcija) — palīdzēs noskaidrot, kāpēc Fāzes 2 (Firestore rules appChecked() enforcement) mēģinājums 2026-08-13 salauza reālu saglabāšanu, neskatoties uz "verified" App Check metriku Firebase Console',
     'firestore.rules ATGRIEZTS uz Fāzi 1 (bez enforcement) — sk. rules faila komentāru pilnam aprakstam',

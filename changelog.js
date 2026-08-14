@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.36.1', date:'2026-08-14', notes:[
+    'Topbar "tēriņa tempa" rādītāji vienkāršoti: pirmais lauciņš tagad rāda "Iztērēts šodien" (tieši šīsdienas apmaksātie rēķini + šīsdienas summējošo rēķinu epizodes), nevis vidējo tēriņu/dienā kopš mēneša sākuma — tas iepriekš izskatījās nereāli sagrozīts, ja lielu rēķinu apmaksā uzreiz mēneša sākumā',
+    'Jauns rēķina lauks "paidDate" — fiksē datumu, kad rēķins atzīmēts kā "Samaksāts" (notīrīts, ja atzīmējums noņemts vai sākas "Jauns mēnesis")',
+    '"Pieejams tagad" un "Droša summa/dienā" aprēķini nemainīti',
+  ]},
   { v:'1.36.0', date:'2026-08-14', notes:[
     'Jauna sadaļa "Papildus ienākumi" (izvēlnē zem "Budžets") — neregulāru, neprognozējamu ienākumu epizožu (datums, nosaukums, summa) žurnāls šim mēnesim. Summa pieskaitās bāzes ienākumam visos aprēķinos (Paliek, Vēl jāmaksā, procenti, tēriņu temps u.c.)',
     '"Ienākumi" lauciņā parādās neliela apakšrindiņa ar sadalījumu "Bāze ... + papildus ..." tad, kad ir kāds papildus ienākums',

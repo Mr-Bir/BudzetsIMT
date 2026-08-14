@@ -73,6 +73,17 @@ function isBillPaid(b){ return b && b.type==='summing' ? true : !!b.paid; }
 // ienākumam (state.income) visos aprēķinos (Paliek, Vēl jāmaksā, tēriņu temps u.c.).
 function extraIncomeTotal(){ return (state.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function totalIncome(){ return (Number(state.income)||0) + extraIncomeTotal(); }
+// Reāli iztērētais TIEŠI šodien: parastam rēķinam — ja apzīmēts "Samaksāts" ŠODIEN
+// (paidDate), summējošam rēķinam — epizodes ar šodienas datumu (tām jau ir savs datums).
+function spentToday(){
+  const today = todayStr();
+  return (state.bills||[]).reduce((total,b)=>{
+    if(b.type==='summing'){
+      return total + (b.entries||[]).filter(e=>e.date===today).reduce((s,e)=>s+(Number(e.amount)||0),0);
+    }
+    return total + (b.paid && b.paidDate===today ? (Number(b.amount)||0) : 0);
+  }, 0);
+}
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 // Stable random id for bills/reminders — lets reminders reference a bill across
 // reorders, renames, and "Jauns mēnesis" resets (which only touch amount/paid/entries).
@@ -558,6 +569,7 @@ async function pushNow(){
         if (b.limit !== undefined && b.limit !== null && b.limit !== '') out.limit = Number(b.limit) || 0;
       } else {
         out.paid = Boolean(b.paid);
+        if (out.paid && b.paidDate) out.paidDate = String(b.paidDate).slice(0, 10);
       }
       return out;
     });
@@ -931,33 +943,33 @@ function updateTotals(){
   updatePace();
 }
 
-// Spending-pace indicator: how fast money is actually going out this month,
-// based on real spending (paid bills + summing-bill entries), not the budgeted/limit total.
+// Spending-pace indicator: PaceDaily rāda ŠODIEN reāli iztērēto (nevis vidējo/dienā),
+// PaceAvailable — cik nauda pieejama TAGAD, PaceSafe — droša summa/dienā atlikušajām
+// mēneša dienām. Dot salīdzina šodienas tēriņu pret šo drošo dienas apjomu.
 function updatePace(){
   const group = $('topbarPace');
   if(!group) return;
   const income = totalIncome();
   const bills = state.bills||[];
   const spentSoFar = bills.filter(isBillPaid).reduce((s,b)=>s+billSpent(b),0);
+  const spentTodayAmt = spentToday();
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
   const daysElapsed = Math.min(now.getDate(), daysInMonth);
   const daysRemaining = Math.max(daysInMonth - daysElapsed, 1);
-  const dailyAvg = spentSoFar / daysElapsed;
   const available = income - spentSoFar;
   const safeDaily = available / daysRemaining;
-  const targetDaily = daysInMonth>0 ? income / daysInMonth : 0;
 
   // Compact topbar values (rounded, no labels — full precision lives in the popover)
-  $('paceDaily').textContent = fmtCompact(dailyAvg);
-  $('paceDaily').title = 'Tēriņš/dienā: ' + fmt(dailyAvg) + ' / d.';
+  $('paceDaily').textContent = fmtCompact(spentTodayAmt);
+  $('paceDaily').title = 'Iztērēts šodien: ' + fmt(spentTodayAmt);
   $('paceAvailable').textContent = fmtCompact(available);
   $('paceAvailable').title = 'Pieejams tagad: ' + fmt(available);
   $('paceSafe').textContent = fmtCompact(safeDaily);
   $('paceSafe').title = 'Droša summa/dienā: ' + fmt(safeDaily) + ' / d.';
 
   // Full-precision popover values
-  $('paceDailyFull').textContent = fmt(dailyAvg) + ' / d.';
+  $('paceDailyFull').textContent = fmt(spentTodayAmt);
   $('paceAvailableFull').textContent = fmt(available);
   $('paceSafeFull').textContent = fmt(safeDaily) + ' / d.';
 
@@ -966,11 +978,11 @@ function updatePace(){
   if(dot){
     dot.classList.remove('under','over');
     if(income>0){
-      const under = dailyAvg<=targetDaily;
+      const under = spentTodayAmt<=safeDaily;
       dot.classList.add(under ? 'under' : 'over');
       const statusText = under
-        ? `Tērē lēnāk nekā drošais temps (${fmt(targetDaily)}/d.)`
-        : `Tērē ātrāk nekā drošais temps (${fmt(targetDaily)}/d.)`;
+        ? `Šodien iztērēts mazāk nekā drošais temps (${fmt(safeDaily)}/d.)`
+        : `Šodien iztērēts vairāk nekā drošais temps (${fmt(safeDaily)}/d.)`;
       dot.title = statusText;
       if(status) status.textContent = statusText;
     } else {
@@ -1396,7 +1408,16 @@ $('billsList').addEventListener('click', e=>{
     }
     return;
   }
-  if(payBtn){ const i=+payBtn.dataset.pay; state.bills[i].paid = !state.bills[i].paid; render(); updateTotals(); scheduleSave(); return; }
+  if(payBtn){
+    const i=+payBtn.dataset.pay;
+    state.bills[i].paid = !state.bills[i].paid;
+    // paidDate: kad rēķins atzīmēts kā samaksāts, fiksējam ŠODIENAS datumu — vienīgais
+    // veids, kā "Iztērēts šodien" (topbar pace) var zināt, kuri (ne-summējošie) rēķini
+    // reāli apmaksāti tieši šodien, nevis kādā citā dienā šomēnes.
+    if(state.bills[i].paid) state.bills[i].paidDate = todayStr();
+    else delete state.bills[i].paidDate;
+    render(); updateTotals(); scheduleSave(); return;
+  }
   if(addEntryBtn){ openAddEntry(+addEntryBtn.dataset.addentry); return; }
   if(limitBtn){ openSetLimit(+limitBtn.dataset.limit); return; }
   if(toggleBtn){
@@ -1545,7 +1566,7 @@ function openNewMonthModal(){
     const removedIds = state.bills.filter((b,i)=>!keepIdx.has(i)).map(b=>b.id);
     state.bills = state.bills
       .filter((b,i)=>keepIdx.has(i))
-      .map(b=> b.type==='summing' ? { ...b, entries: [] } : { ...b, paid: false });
+      .map(b=> b.type==='summing' ? { ...b, entries: [] } : { ...b, paid: false, paidDate: null });
     // Reminders linked to a bill that wasn't kept are paused, not deleted — the
     // data stays in case the bill reappears later. Reminders on KEPT bills need no
     // change here: their due date is computed live from the real calendar month.

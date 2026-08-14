@@ -367,16 +367,16 @@
 
   /* ---- Papildus ienākumi ---- */
   .extra-income-list { display: flex; flex-direction: column; gap: 8px; }
-  .extra-income-row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 10px; display: grid; grid-template-columns: 140px 1fr 120px auto; align-items: center; gap: 12px; box-shadow: var(--shadow); }
-  .extra-income-row input.eidate { border: none; background: transparent; font: inherit; font-size: 14px; color: var(--ink); width: 100%; padding: 6px 0; }
+  .extra-income-row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 8px; display: grid; grid-template-columns: minmax(90px,116px) minmax(0,1fr) minmax(52px,72px) auto; align-items: center; gap: 6px; box-shadow: var(--shadow); }
+  .extra-income-row input.eidate { border: none; background: transparent; font: inherit; font-size: 12.5px; color: var(--ink); width: 100%; min-width: 0; padding: 6px 0; }
   .extra-income-row input.eidate:focus { outline: none; background: var(--surface-sub); border-radius: 4px; padding: 6px; margin: 0 -6px; }
-  .extra-income-row input.einame { border: none; background: transparent; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink); width: 100%; padding: 2px 0; }
+  .extra-income-row input.einame { border: none; background: transparent; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); width: 100%; min-width: 0; padding: 2px 0; overflow: hidden; text-overflow: ellipsis; }
   .extra-income-row input.einame:focus { outline: none; background: var(--surface-sub); border-radius: 4px; padding: 2px 6px; margin: 0 -6px; }
-  .extra-income-row .eamount-wrap { display: flex; align-items: center; gap: 3px; justify-content: flex-end; }
-  .extra-income-row .eamount-wrap .eur { color: var(--muted); }
-  .extra-income-row .eamount { border: none; background: transparent; font: inherit; font-size: 16px; font-weight: 700; width: 75px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; border-bottom: 1px dashed transparent; }
+  .extra-income-row .eamount-wrap { display: flex; align-items: center; gap: 2px; justify-content: flex-end; min-width: 0; }
+  .extra-income-row .eamount-wrap .eur { color: var(--muted); font-size: 12px; }
+  .extra-income-row .eamount { border: none; background: transparent; font: inherit; font-size: 14px; font-weight: 700; width: 100%; min-width: 0; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; border-bottom: 1px dashed transparent; }
   .extra-income-row .eamount:focus { outline: none; border-bottom-color: var(--accent); }
-  .extra-income-row .del { border: none; background: transparent; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
+  .extra-income-row .del { border: none; background: transparent; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; padding: 4px 4px; border-radius: 6px; }
   .extra-income-row .del:hover { background: var(--red-soft); color: var(--red); }
   .extra-income-foot { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 14px 4px; margin-top: 4px; border-top: 2px solid var(--line); }
   .extra-income-foot .lbl, .extra-income-foot span:first-child { font-weight: 700; font-size: 15px; }
@@ -582,9 +582,11 @@
     .bill .pct { grid-column: 3; grid-row: 2; text-align: left; }
     .bill select { grid-column: 4 / 6; grid-row: 2; }
     .stat .value, .stat input { font-size: 22px; }
-    .extra-income-row { grid-template-columns: 1fr auto; row-gap: 6px; column-gap: 10px; }
-    .extra-income-row input.eidate { grid-column: 1; grid-row: 1; }
-    .extra-income-row .del { grid-column: 2; grid-row: 1; }
-    .extra-income-row input.einame { grid-column: 1 / 3; grid-row: 2; }
-    .extra-income-row .eamount-wrap { grid-column: 1 / 3; grid-row: 3; justify-content: flex-start; }
+  }
+
+  @media (max-width: 420px) {
+    .extra-income-row { grid-template-columns: minmax(78px,98px) minmax(0,1fr) minmax(44px,60px) auto; gap: 4px; padding: 4px 6px; }
+    .extra-income-row input.eidate { font-size: 11px; }
+    .extra-income-row input.einame { font-size: 13px; }
+    .extra-income-row .eamount { font-size: 13px; }
   }

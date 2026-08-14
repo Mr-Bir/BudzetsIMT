@@ -8,6 +8,9 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.37.1', date:'2026-08-14', notes:[
+    '"Papildus ienākumi" saraksta rinda pārtaisīta, lai datums, nosaukums, summa un dzēšanas poga vienmēr ietilptu VIENĀ rindā (iepriekš šaurākos ekrānos izlauzās 3 rindās) — garāki nosaukumi tagad tiek nogriezti ar "…", nevis izlauž rindu',
+  ]},
   { v:'1.37.0', date:'2026-08-14', notes:[
     'Jauns iestatījums "Algas datums" (Iestatījumi, vienkārša izvēlne 1.–31.) — ja iestatīts, "Droša summa/dienā" (topbar) rēķinās dienas LĪDZ NĀKAMĀ MĒNEŠA algas datumam (šis datums vienmēr nozīmē nākamo mēnesi, nekad aktuālo), nevis līdz kārtējā mēneša beigām, kas precīzāk atspoguļo, cik ilgi nauda reāli jāizstiepj',
     'Ja "Algas datums" nav iestatīts, aprēķins paliek kā iepriekš (līdz kārtējā mēneša beigām)',

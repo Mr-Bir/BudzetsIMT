@@ -303,8 +303,16 @@
     <!-- ============ PANEL: SAVINGS ============ -->
     <div class="panel hidden" id="panel-savings">
       <section>
-        <div class="sec-head"><h2>Uzkrājuma mērķi</h2></div>
-        <div class="empty-note">Šī sadaļa vēl top. Drīzumā šeit varēsi izvirzīt un sekot līdzi saviem uzkrājuma mērķiem.</div>
+        <div class="sec-head"><h2>Uzkrājuma mērķi</h2><button class="btn" id="addGoalBtn">+ Pievienot jaunu mērķi</button></div>
+
+        <div class="goal-list" id="goalListActive"></div>
+
+        <div class="goal-group hidden" id="goalGroupAchieved">
+          <div class="goal-group-title">Sasniegtie</div>
+          <div class="goal-list" id="goalListAchieved"></div>
+        </div>
+
+        <div class="empty-note hidden" id="goalEmptyNote">Vēl nav neviena uzkrājuma mērķa. Pievieno pirmo ar pogu augšā — izvēlies summu un mēnešu skaitu, un aplikācija pati sadalīs to ikmēneša maksājumos.</div>
       </section>
     </div><!-- /panel-savings -->
   </div>

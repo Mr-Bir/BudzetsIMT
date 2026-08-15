@@ -450,6 +450,27 @@
   .rem-type-btn { flex: 1; border: 1px solid var(--line); background: var(--card); color: var(--muted); font: inherit; font-size: 13.5px; font-weight: 600; padding: 10px; border-radius: 9px; cursor: pointer; }
   .rem-type-btn.active { border-color: var(--accent); color: var(--accent); background: var(--paper); }
 
+  /* ---- Uzkrājuma mērķi section ---- */
+  .goal-list { display: flex; flex-direction: column; gap: 8px; }
+  .goal-group { margin-top: 22px; }
+  .goal-group.hidden { display: none; }
+  .goal-group-title { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .goal-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 40px 12px 14px; box-shadow: var(--shadow); }
+  .goal-card.achieved { opacity: .8; }
+  .goal-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .goal-name { font-size: 14.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .goal-sub { font-size: 12px; color: var(--muted); }
+  .goal-track { height: 6px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 8px 0 6px; }
+  .goal-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width .3s; }
+  .goal-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+  .goal-status.paid { color: var(--green); font-weight: 600; }
+  .goal-del { position: absolute; top: 10px; right: 10px; border: none; background: transparent; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
+  .goal-del:hover { background: var(--red-soft); color: var(--red); }
+  .goal-months-toggle { flex-wrap: wrap; }
+  .goal-months-toggle .rem-type-btn { flex: 1 1 60px; }
+  .goal-ag-preview { font-size: 13px; color: var(--muted); margin-top: 12px; min-height: 18px; }
+  .bill .del-locked, .bill .del-locked:hover { cursor: default; color: var(--muted); background: transparent; font-size: 14px; }
+
   .modal-back { position: fixed; inset: 0; background: rgba(26,29,41,.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
   .modal { background: var(--paper); border-radius: 16px; padding: 28px; max-width: 640px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
   .modal input[type=text], .modal input[type=number], .modal input[type=date], .modal input:not([type]) { color: var(--ink); background: var(--card) !important; border-color: var(--line) !important; }

@@ -8,6 +8,13 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.38.0', date:'2026-08-15', notes:[
+    'Jauna, pilna sadaļa "Uzkrājuma mērķi" — izvēlies mērķa summu un mēnešu skaitu (3/6/12/24/36/48/72, bankas kalkulatora stilā), un aplikācija automātiski izveido ikmēneša maksājuma rēķinu ar jaunu kategoriju "Uzkrājumi"',
+    'Mērķa rēķinu nevar dzēst no Rēķinu saraksta — tikai no "Uzkrājuma mērķi" (tur dzēšana noņem arī saistīto rēķinu)',
+    'Progress (cik maksājumu izdarīts) virzās uz priekšu TIKAI "Jauns mēnesis" solī, un TIKAI ja tā mēneša maksājums bija atzīmēts "Samaksāts" — izlaists maksājums progresu neietekmē, mērķis vienkārši nobīdās uz priekšu',
+    'Pēdējais maksājums vienmēr ir atlikums (nevis vienmērīga daļa), lai noapaļošanas starpība nekrātos',
+    'Sasniegtie mērķi pēc pēdējā maksājuma automātiski pāriet uz atsevišķu "Sasniegtie" grupu sadaļā (rēķins pazūd no Rēķinu saraksta)',
+  ]},
   { v:'1.37.1', date:'2026-08-14', notes:[
     '"Papildus ienākumi" saraksta rinda pārtaisīta, lai datums, nosaukums, summa un dzēšanas poga vienmēr ietilptu VIENĀ rindā (iepriekš šaurākos ekrānos izlauzās 3 rindās) — garāki nosaukumi tagad tiek nogriezti ar "…", nevis izlauž rindu',
   ]},

@@ -115,6 +115,31 @@ function ensureExtraIncomeFields(items) {
   }));
 }
 
+// Aizpilda trūkstošos laukus uzkrājuma mērķu ierakstiem (analoģiski ensureReminderFields)
+function ensureSavingsGoalFields(goals) {
+  return (goals || []).map(g => ({
+    id: g.id ? String(g.id) : genId(),
+    name: g.name ? String(g.name) : '',
+    targetAmount: Number(g.targetAmount) || 0,
+    months: Number(g.months) || 0,
+    monthlyAmount: Number(g.monthlyAmount) || 0,
+    billId: (g.billId !== undefined && g.billId !== null) ? String(g.billId) : null,
+    paidInstallments: Number(g.paidInstallments) || 0,
+    achieved: Boolean(g.achieved),
+    achievedAt: (g.achievedAt !== undefined && g.achievedAt !== null) ? String(g.achievedAt) : null,
+    createdAt: g.createdAt ? String(g.createdAt) : todayStr()
+  }));
+}
+function goalById(id){ return (state.savingsGoals||[]).find(g=>g.id===id); }
+// Aptuvenais atlikušais laiks/datums, balstīts uz ATLIKUŠAJIEM (vēl neapmaksātajiem)
+// maksājumiem no ŠODIENAS — nevis fiksētu, izveides brīdī aprēķinātu datumu, jo izlaists
+// maksājums mērķi nobīda uz priekšu (sk. lēmumu Nr.3 diskusijā par šo funkciju).
+function goalProjectedEndDate(remainingInstallments){
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth()+Math.max(remainingInstallments,0), now.getDate());
+  return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-'+String(next.getDate()).padStart(2,'0');
+}
+
 // ---- Reminder date logic ----
 // Linked reminders (billId set) store only a day-of-month ("day"); the actual due date
 // is always computed against the REAL current calendar month, so it stays correct
@@ -249,6 +274,7 @@ const DEFAULT_CATEGORIES = [
   { key:'kredits', name:'Kredīts', color:'#8d6e8f' },
   { key:'transports', name:'Transports', color:'#c8923a' },
   { key:'abonementi', name:'Abonementi', color:'#5b7a99' },
+  { key:'uzkrajumi', name:'Uzkrājumi', color:'#3f8f7a' },
   { key:'cits', name:'Cits', color:'#8a8576' },
 ];
 // Live lookups derived from state.categories
@@ -279,7 +305,8 @@ const DEFAULT = {
   categories: structuredClone(DEFAULT_CATEGORIES),
   reminders: [],
   extraIncome: [],
-  salaryDay: null
+  salaryDay: null,
+  savingsGoals: []
 };
 
 let state = structuredClone(DEFAULT);
@@ -425,17 +452,23 @@ function subscribeSnapshot(uid, isRetry){
   snapshotUnsub = onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
+      // Kategoriju backfill: lietotājiem, kas sinhronizējuši PIRMS "Uzkrājumi" kategorijas
+      // ieviešanas, state.categories jau ir pilns saraksts BEZ tās — jāpapildina te, nevis
+      // paļauties uz DEFAULT_CATEGORIES fallback (kas nostrādā TIKAI tukšam sarakstam).
+      const incomingCategories = (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES);
+      if(!incomingCategories.some(c=>c.key==='uzkrajumi')) incomingCategories.push({key:'uzkrajumi', name:'Uzkrājumi', color:'#3f8f7a'});
       const incoming = {
         income: d.income ?? DEFAULT.income,
         periodName: d.periodName || '',
         bills: ensureBillIds(d.bills ?? []),
         credits: d.credits ?? [],
-        categories: (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES),
+        categories: incomingCategories,
         reminders: ensureReminderFields(d.reminders ?? []),
         extraIncome: ensureExtraIncomeFields(d.extraIncome ?? []),
-        salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null
+        salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null,
+        savingsGoals: ensureSavingsGoalFields(d.savingsGoals ?? [])
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders, extraIncome: incoming.extraIncome, salaryDay: incoming.salaryDay });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders, extraIncome: incoming.extraIncome, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
       if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -446,7 +479,7 @@ function subscribeSnapshot(uid, isRetry){
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data)
-      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [], extraIncome: [], salaryDay: null };
+      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [], extraIncome: [], salaryDay: null, savingsGoals: [] };
       render(); pushNow();
     }
   }, err=>{
@@ -561,6 +594,7 @@ async function pushNow(){
         amount: Number(b.amount) || 0,
         cat: String(b.cat || 'cits').slice(0, 20)
       };
+      if (b.goalId !== undefined && b.goalId !== null) out.goalId = String(b.goalId).slice(0, 40);
       if (b.type === 'summing') {
         out.type = 'summing';
         out.entries = (Array.isArray(b.entries) ? b.entries : []).slice(0, 200).map(e => ({
@@ -586,6 +620,19 @@ async function pushNow(){
       return out;
     });
 
+    // Uzkrājuma mērķiem jābūt tieši 9 laukiem, pareiziem tipiem (analoģiski reminders/extraIncome)
+    const safeSavingsGoals = (Array.isArray(state.savingsGoals) ? state.savingsGoals : []).slice(0, 50).map(g => ({
+      id: g.id ? String(g.id).slice(0, 40) : genId(),
+      name: String(g.name || '').slice(0, 120),
+      targetAmount: Math.min(Math.max(Number(g.targetAmount) || 0, 0), 1000000),
+      months: Number(g.months) || 0,
+      monthlyAmount: Math.min(Math.max(Number(g.monthlyAmount) || 0, 0), 1000000),
+      billId: (g.billId !== undefined && g.billId !== null) ? String(g.billId).slice(0, 40) : null,
+      paidInstallments: Math.min(Math.max(Number(g.paidInstallments) || 0, 0), 200),
+      achieved: Boolean(g.achieved),
+      achievedAt: (g.achievedAt !== undefined && g.achievedAt !== null) ? String(g.achievedAt).slice(0, 10) : null
+    }));
+
     // Sagatavojam tīru sūtījumu
     const payload = {
       income: safeIncome,
@@ -595,6 +642,7 @@ async function pushNow(){
       categories: safeCategories,
       reminders: safeReminders,
       extraIncome: safeExtraIncome,
+      savingsGoals: safeSavingsGoals,
       updated: Date.now()
     };
     // salaryDay ir neobligāts (analoģiski periodName/reminders) — ja nav iestatīts,
@@ -611,7 +659,8 @@ async function pushNow(){
       categories: payload.categories,
       reminders: payload.reminders,
       extraIncome: payload.extraIncome,
-      salaryDay: payload.salaryDay ?? null
+      salaryDay: payload.salaryDay ?? null,
+      savingsGoals: payload.savingsGoals
     });
     
     // 2. SŪTĀM UZ MĀKONI
@@ -702,7 +751,9 @@ function render(){
       ${amountCell}
       <div class="pct">${pct.toFixed(2)} %</div>
       <select data-i="${i}" data-f="cat">${catOptions(b.cat||'cits')}</select>
-      <button class="del" data-del="${i}" title="Dzēst">×</button>`;
+      ${b.goalId
+        ? `<span class="del del-locked" title="Dzēš sadaļā &quot;Uzkrājuma mērķi&quot;">🔒</span>`
+        : `<button class="del" data-del="${i}" title="Dzēst">×</button>`}`;
     list.appendChild(row);
     // Summing bill detail block: limit progress + entries
     if(isSum){
@@ -783,6 +834,7 @@ function render(){
   });
   updateTotals();
   renderReminders();
+  renderSavingsGoals();
 }
 
 // Papildus ienākumu saraksts ("Papildus ienākumi" panelis) — epizodes ar datumu,
@@ -887,6 +939,141 @@ function renderReminders(){
     }
   }
 }
+
+// Renders the Uzkrājuma mērķi section: aktīvie mērķi (ar progresu) + sasniegtie (arhīva stilā,
+// pēc Atgādinājumu grupu parauga). Katra aktīvā mērķa "šomēnes samaksāts" statuss nāk tieši
+// no saistītā rēķina `paid` lauka — progress pats (paidInstallments) mainās TIKAI "Jauns
+// mēnesis" solī, sk. advanceGoalBill().
+function renderSavingsGoals(){
+  const activeBox = $('goalListActive'), achievedBox = $('goalListAchieved');
+  const achievedGroup = $('goalGroupAchieved'), emptyNote = $('goalEmptyNote');
+  if(!activeBox || !achievedBox) return;
+  const goals = state.savingsGoals || [];
+  const active = goals.filter(g=>!g.achieved);
+  const achieved = goals.filter(g=>g.achieved);
+
+  activeBox.innerHTML = active.map(g=>{
+    const i = goals.indexOf(g);
+    const pct = g.months>0 ? Math.min((g.paidInstallments/g.months)*100, 100) : 0;
+    const bill = g.billId ? billById(g.billId) : null;
+    const paidThisMonth = !!(bill && bill.paid);
+    const remaining = Math.max(g.months - g.paidInstallments, 0);
+    const etaTxt = remaining>0 ? `Atlikuši ${remaining} maksājumi · aptuveni līdz ${formatDateLv(goalProjectedEndDate(remaining))}` : '';
+    const statusTxt = paidThisMonth ? '✓ Šomēnes samaksāts' : (bill ? 'Šomēnes vēl nav samaksāts' : '');
+    return `
+      <div class="goal-card" data-goalidx="${i}">
+        <div class="goal-main">
+          <span class="goal-name">${escapeHtml(g.name||'(bez nosaukuma)')}</span>
+          <span class="goal-sub">${fmt(g.monthlyAmount)} / mēnesī no ${fmt(g.targetAmount)} · ${g.paidInstallments} no ${g.months} maksājumiem</span>
+        </div>
+        <div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div>
+        <div class="goal-foot">
+          <span class="goal-status${paidThisMonth?' paid':''}">${statusTxt}</span>
+          <span class="goal-eta">${etaTxt}</span>
+        </div>
+        <button class="goal-del" data-goaldel="${i}" title="Dzēst mērķi">×</button>
+      </div>`;
+  }).join('') || '';
+
+  achievedBox.innerHTML = achieved.map(g=>{
+    const i = goals.indexOf(g);
+    return `
+      <div class="goal-card achieved" data-goalidx="${i}">
+        <div class="goal-main">
+          <span class="goal-name">${escapeHtml(g.name||'(bez nosaukuma)')}</span>
+          <span class="goal-sub">${fmt(g.targetAmount)} sasniegts${g.achievedAt?' · '+formatDateLv(g.achievedAt):''}</span>
+        </div>
+        <button class="goal-del" data-goaldel="${i}" title="Dzēst no saraksta">×</button>
+      </div>`;
+  }).join('');
+
+  if(achievedGroup) achievedGroup.classList.toggle('hidden', achieved.length===0);
+  if(emptyNote) emptyNote.classList.toggle('hidden', goals.length>0);
+}
+
+['goalListActive','goalListAchieved'].forEach(id=>{
+  $(id)?.addEventListener('click', e=>{
+    const delBtn = e.target.closest('[data-goaldel]');
+    if(!delBtn) return;
+    const i = +delBtn.dataset.goaldel;
+    const g = state.savingsGoals[i];
+    if(!g) return;
+    const msg = g.achieved
+      ? `Dzēst mērķi "${g.name||'(bez nosaukuma)'}" no saraksta?`
+      : `Dzēst mērķi "${g.name||'(bez nosaukuma)'}"? Saistītais rēķins arī tiks dzēsts.`;
+    if(confirm(msg)){
+      if(g.billId){
+        const bi = state.bills.findIndex(b=>b.id===g.billId);
+        if(bi>=0) state.bills.splice(bi,1);
+      }
+      state.savingsGoals.splice(i,1);
+      render(); scheduleSave();
+    }
+  });
+});
+
+function openAddSavingsGoalModal(){
+  const root = $('modalRoot');
+  const MONTH_OPTIONS = [3,6,12,24,36,48,72];
+  root.innerHTML = `
+    <div class="modal-back" id="agBack">
+      <div class="modal" style="max-width:440px;">
+        <button class="modal-close" id="agClose">×</button>
+        <h3>Jauns uzkrājuma mērķis</h3>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Nosaukums</label>
+        <input id="agName" type="text" placeholder="piem. Ceļojums" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Mērķa summa</label>
+        <div class="amount-wrap"><span class="eur">€</span><input id="agAmount" type="number" step="0.01" inputmode="decimal" min="0" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);"></div>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Mēnešu skaits</label>
+        <div class="rem-type-toggle goal-months-toggle" id="agMonths">
+          ${MONTH_OPTIONS.map(m=>`<button class="rem-type-btn" type="button" data-months="${m}">${m}</button>`).join('')}
+        </div>
+        <div class="goal-ag-preview" id="agPreview"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn ghost sm" id="agCancel">Atcelt</button>
+          <button class="btn" id="agSave">Pievienot</button>
+        </div>
+      </div>
+    </div>`;
+  const close = ()=>{ root.innerHTML=''; };
+  $('agBack').addEventListener('click', e=>{ if(e.target.id==='agBack') close(); });
+  $('agClose').addEventListener('click', close);
+  $('agCancel').addEventListener('click', close);
+
+  let selectedMonths = null;
+  const updatePreview = ()=>{
+    const amount = parseFloat($('agAmount').value)||0;
+    const preview = $('agPreview');
+    if(!selectedMonths || amount<=0){ preview.textContent=''; return; }
+    const monthly = Math.round((amount/selectedMonths)*100)/100;
+    preview.textContent = `Mēneša maksājums: ${fmt(monthly)} · pēdējais maksājums ap ${formatDateLv(goalProjectedEndDate(selectedMonths))}`;
+  };
+  $('agMonths').addEventListener('click', e=>{
+    const btn = e.target.closest('[data-months]'); if(!btn) return;
+    selectedMonths = +btn.dataset.months;
+    $('agMonths').querySelectorAll('.rem-type-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    updatePreview();
+  });
+  $('agAmount').addEventListener('input', updatePreview);
+
+  $('agSave').addEventListener('click', ()=>{
+    const name = $('agName').value.trim();
+    const amount = Math.round((parseFloat($('agAmount').value)||0)*100)/100;
+    if(!name){ alert('Ievadi nosaukumu.'); return; }
+    if(amount<=0){ alert('Ievadi derīgu mērķa summu.'); return; }
+    if(!selectedMonths){ alert('Izvēlies mēnešu skaitu.'); return; }
+    const monthlyAmount = Math.round((amount/selectedMonths)*100)/100;
+    const goalId = genId(), billId = genId();
+    if(!state.savingsGoals) state.savingsGoals = [];
+    state.savingsGoals.push({
+      id: goalId, name, targetAmount: amount, months: selectedMonths, monthlyAmount,
+      billId, paidInstallments: 0, achieved: false, achievedAt: null, createdAt: todayStr()
+    });
+    state.bills.push({ id: billId, name, amount: monthlyAmount, cat: 'uzkrajumi', goalId, paid: false });
+    close(); render(); scheduleSave();
+  });
+}
+$('addGoalBtn')?.addEventListener('click', openAddSavingsGoalModal);
 
 function updateTotals(){
   const income = totalIncome();
@@ -1425,7 +1612,9 @@ $('billsList').addEventListener('click', e=>{
   const limitBtn = e.target.closest('[data-limit]');
   const toggleBtn = e.target.closest('[data-toggle]');
   if(delBtn){
-    const i=+delBtn.dataset.del; const nm=(state.bills[i].name||'').trim();
+    const i=+delBtn.dataset.del;
+    if(state.bills[i].goalId){ alert('Šo rēķinu nevar dzēst no Rēķinu saraksta — dzēs mērķi sadaļā "Uzkrājuma mērķi".'); return; }
+    const nm=(state.bills[i].name||'').trim();
     if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){
       const removedId = state.bills[i].id;
       state.bills.splice(i,1);
@@ -1537,10 +1726,39 @@ function openSetLimit(bi){
   $('slAmount').addEventListener('keydown', e=>{ if(e.key==='Enter') doSave(); });
 }
 
+// Progresē vienu uzkrājuma mērķa maksājumu "Jauns mēnesis" solī. Ja saistītais rēķins bija
+// atzīmēts "Samaksāts", palielina paidInstallments — un, ja tas bija pēdējais maksājums,
+// atzīmē mērķi kā sasniegtu un rēķins pazūd no saraksta (atgriež null). Ja NEBIJA samaksāts,
+// progress NEmainās (izlaists maksājums — mērķis nobīdās, nevis turpina pēc kalendāra),
+// rēķins vienkārši atkārtojas nākammēnes ar to pašu summu. Pēdējais maksājums vienmēr ir
+// atlikums (starpība), nevis vienmērīga daļa, lai noapaļošana nekrātos.
+function advanceGoalBill(bill){
+  const goal = goalById(bill.goalId);
+  if(!goal) return null;
+  if(bill.paid){
+    goal.paidInstallments = Math.min(goal.paidInstallments + 1, goal.months);
+    if(goal.paidInstallments >= goal.months){
+      goal.achieved = true;
+      goal.achievedAt = todayStr();
+      goal.billId = null;
+      return null;
+    }
+  }
+  const remaining = goal.months - goal.paidInstallments;
+  const amount = remaining === 1
+    ? Math.round((goal.targetAmount - goal.monthlyAmount * goal.paidInstallments) * 100) / 100
+    : goal.monthlyAmount;
+  return { ...bill, amount, paid: false, paidDate: null };
+}
+
 function openNewMonthModal(){
   if(!state.bills.length){ alert('Nav neviena rēķina, ko atiestatīt.'); return; }
   const root = $('modalRoot');
-  const rowsHtml = state.bills.map((b,i)=>`
+  const hasGoalBills = state.bills.some(b=>b.goalId);
+  // Uzkrājumu mērķu rēķini apzināti IZSLĒGTI no šī checkbox saraksta — tie vienmēr tiek
+  // pārcelti automātiski (sk. advanceGoalBill), lietotājs tos šeit nevar netīšām atzīmēt
+  // dzēšanai. data-i saglabā ORIĢINĀLO indeksu state.bills, lai keepIdx zemāk sakristu.
+  const rowsHtml = state.bills.map((b,i)=> b.goalId ? '' : `
     <label class="nm-row">
       <input type="checkbox" class="nm-keep" data-i="${i}" checked>
       <span class="nm-name">${escapeHtml(b.name||'(bez nosaukuma)')}</span>
@@ -1551,7 +1769,7 @@ function openNewMonthModal(){
       <div class="modal" style="max-width:460px;">
         <button class="modal-close" id="nmClose">×</button>
         <h3>Jauns mēnesis</h3>
-        <div class="msub">Atzīmē rēķinus, kas atkārtojas katru mēnesi un jāpatur. Neatzīmētie tiks izdzēsti. Summējošiem rēķiniem tiks dzēstas epizodes (limits paliks nemainīgs), un visiem paturētajiem rēķiniem "Samaksāts" ķeksīši tiks noņemti.<br><br>Ja saglabāsi arhīvā, tas tiks nosaukts "<strong>${escapeHtml(currentPeriodLabel())}</strong>". Pēc atiestatīšanas darba perioda nosaukums tiks automātiski mainīts uz "<strong>${escapeHtml(monthLabel(monthKey()))}</strong>" — vēlāk to vari pārrakstīt, klikšķinot uz nosaukuma pie "Rēķini".</div>
+        <div class="msub">Atzīmē rēķinus, kas atkārtojas katru mēnesi un jāpatur. Neatzīmētie tiks izdzēsti. Summējošiem rēķiniem tiks dzēstas epizodes (limits paliks nemainīgs), un visiem paturētajiem rēķiniem "Samaksāts" ķeksīši tiks noņemti.<br><br>Ja saglabāsi arhīvā, tas tiks nosaukts "<strong>${escapeHtml(currentPeriodLabel())}</strong>". Pēc atiestatīšanas darba perioda nosaukums tiks automātiski mainīts uz "<strong>${escapeHtml(monthLabel(monthKey()))}</strong>" — vēlāk to vari pārrakstīt, klikšķinot uz nosaukuma pie "Rēķini".${hasGoalBills ? ' Uzkrājumu mērķu maksājumi tiek pārcelti automātiski — tie nav šajā sarakstā.' : ''}</div>
         <div class="nm-list">${rowsHtml}</div>
         <label class="nm-archive-opt"><input type="checkbox" id="nmArchiveFirst" checked> Vispirms saglabāt šo mēnesi arhīvā</label>
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
@@ -1566,7 +1784,7 @@ function openNewMonthModal(){
   $('nmCancel').addEventListener('click', close);
   $('nmConfirm').addEventListener('click', async ()=>{
     const keepIdx = new Set([...root.querySelectorAll('.nm-keep:checked')].map(el=>+el.dataset.i));
-    const removedCount = state.bills.length - keepIdx.size;
+    const removedCount = state.bills.filter(b=>!b.goalId).length - keepIdx.size;
     if(!confirm(`Sākt jaunu mēnesi? ${removedCount} rēķins(-i) tiks izdzēsts(-i) neatgriezeniski.`)) return;
     if($('nmArchiveFirst').checked){
       try {
@@ -1589,10 +1807,11 @@ function openNewMonthModal(){
         return;
       }
     }
-    const removedIds = state.bills.filter((b,i)=>!keepIdx.has(i)).map(b=>b.id);
+    const removedIds = state.bills.filter((b,i)=>!b.goalId && !keepIdx.has(i)).map(b=>b.id);
     state.bills = state.bills
-      .filter((b,i)=>keepIdx.has(i))
-      .map(b=> b.type==='summing' ? { ...b, entries: [] } : { ...b, paid: false, paidDate: null });
+      .filter((b,i)=> b.goalId || keepIdx.has(i))
+      .map(b=> b.goalId ? advanceGoalBill(b) : (b.type==='summing' ? { ...b, entries: [] } : { ...b, paid: false, paidDate: null }))
+      .filter(Boolean);
     // Reminders linked to a bill that wasn't kept are paused, not deleted — the
     // data stays in case the bill reappears later. Reminders on KEPT bills need no
     // change here: their due date is computed live from the real calendar month.

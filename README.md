@@ -4,13 +4,13 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 
 **Lietotne pieejama šeit:** https://mr-bir.github.io/BudzetsIMT/
 
-![Finanšu pārvaldnieks](screenshots/desktop-1.png)
+![Budžets](screenshots/mobile-budget.png)
 
-![Finanšu pārvaldnieks](screenshots/desktop-2.png)
+![Sānu izvēlne](screenshots/mobile-menu.png)
 
-![Sānu izvēlne](screenshots/setmen.png)
+![Uzkrājuma mērķi](screenshots/mobile-goals.png)
 
-![Finanšu pārvaldnieks](screenshots/notific.png)
+![Atgādinājumi](screenshots/mobile-reminders.png)
 
 ## Ko lietotne dara
 
@@ -18,7 +18,9 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 - **Rēķinu un ienākumu pārskats** — redzi uzreiz, cik paliek pāri pēc visiem rēķiniem
 - **Divi rēķinu veidi** — parasti (fiksēta summa) un summējošie (piem. degviela — pievieno epizodes visa mēneša garumā, summa saskaitās automātiski, var iestatīt mēneša limitu)
 - **Kredītu atlikumu izsekošana** — atlikumi, termiņi ar progresu un mēneša maksājumi
+- **Papildus ienākumi** — neregulāru ienākumu (gadījuma darbi, dāvanas) žurnāls, kas pieskaitās bāzes ienākumam visos aprēķinos šim mēnesim
 - **Atgādinājumi** — piesaisti atgādinājumu esošam rēķinam (atkārtojas katru mēnesi izvēlētajā dienā, automātiski pārdzīvo "Jauns mēnesis") vai izveido brīvu vienreizēju atgādinājumu; baneris un sarkans skaitītājs parāda, kad kaut kam termiņš ir šodien vai nokavēts
+- **Uzkrājuma mērķi** — izvēlies summu un mēnešu skaitu (3–72), aplikācija automātiski izveido ikmēneša maksājuma rēķinu, seko līdzi progresam un parāda sasniegtos mērķus
 - **Kategorijas ar krāsu kodējumu** un vizuālu sadalījumu (donut diagramma)
 - **Mēnešu arhīvs** — aizver mēnesi un saglabā to vēsturē, ar rediģējamu perioda nosaukumu
 - **Naudas tērēšanas tempa indikators** — vidējais tēriņš/dienā un droša tēriņa summa līdz mēneša beigām
@@ -32,14 +34,15 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 
 ## Sadaļas
 
-Lietotne sadalīta četrās sadaļās (pieejamas caur sānu izvēlni):
+Lietotne sadalīta piecās sadaļās (pieejamas caur sānu izvēlni):
 
 | Sadaļa | Saturs |
 |---|---|
-| **Budžets** | Alga, rēķini, kategoriju sadalījums, mēnešu arhīvs, eksports/imports |
+| **Budžets** | Ienākumi, rēķini, kategoriju sadalījums, mēnešu arhīvs, eksports/imports |
+| **Papildus ienākumi** | Neregulāru, neprognozējamu ienākumu žurnāls šim mēnesim — pieskaitās bāzes ienākumam visos aprēķinos |
 | **Kredīti** | Kredītu atlikumi, termiņi ar progresu, mēneša maksājumi |
 | **Atgādinājumi** | Maksājumu termiņu atgādinājumi — piesaistīti rēķinam (atkārtojas mēnesi) vai brīvi (vienreizēji); baneris un skaitītājs, kad termiņš tuvojas. Native Android lietotnē arī īsti telefona paziņojumi konfigurējamā laikā. |
-| **Uzkrājuma mērķi** | Vēl top — uzkrājuma mērķu izvirzīšana un izsekošana |
+| **Uzkrājuma mērķi** | Izvēlies mērķa summu un mēnešu skaitu (3–72, bankas kalkulatora stilā) — aplikācija automātiski izveido un uztur ikmēneša maksājuma rēķinu, seko progresam un parāda sasniegtos mērķus |
 
 ## Failu struktūra
 
@@ -77,7 +80,7 @@ Rīkjoslas apakšā ir divas eksporta pogas:
 
 ## Versija
 
-Aktuālā versija: **v1.35.3**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
+Aktuālā versija: **v1.38.0**. Pilna izmaiņu vēsture ir redzama pašā lietotnē — **Iestatījumi → "Kas jauns"** — un `changelog.js` failā, kas ir vienīgais versiju vēstures avots (šis README zemāk rāda tikai nesenās izmaiņas).
 
 ## Licence
 
@@ -88,6 +91,14 @@ Aktuālā versija: **v1.35.3**. Pilna izmaiņu vēsture ir redzama pašā lietot
 ## Nesenās izmaiņas
 
 Pilnu vēsturi kopš v1.0.0 skatīt `changelog.js` vai lietotnē (Iestatījumi → "Kas jauns").
+
+### v1.38.0 — 2026-08-15
+- Jauna, pilna sadaļa "Uzkrājuma mērķi" — izvēlies mērķa summu un mēnešu skaitu (3–72, bankas kalkulatora stilā), aplikācija automātiski izveido ikmēneša maksājuma rēķinu ar jaunu kategoriju "Uzkrājumi" un seko progresam
+
+### v1.36.0–v1.37.1 — 2026-08-14/15
+- Pievienota sadaļa "Papildus ienākumi" — neregulāru ienākumu žurnāls, kas pieskaitās bāzes ienākumam
+- Jauns iestatījums "Algas datums" precīzākam "Drošas summas/dienā" aprēķinam
+- Topbar tēriņa temps vienkāršots — rāda reālu šodienas tēriņu
 
 ### v1.35.0–v1.35.3 — 2026-08-13/14
 - Sākta Firebase App Check ieviešana (papildu aizsardzība pret automatizētu ļaunprātīgu piekļuvi) — klienta puse aktīva, servera puses pilna izmantošana vēl izmeklēšanā

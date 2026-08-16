@@ -2484,11 +2484,14 @@ if('serviceWorker' in navigator){
 // ---- Settings modal ----
 function openChangelog(){
   const root = $('modalRoot');
-  const entries = CHANGELOG.map(c=>`
+  const entries = CHANGELOG.map(c=>{
+    const notes = (getLang()==='en' && c.notesEn) ? c.notesEn : c.notes;
+    return `
     <div class="cl-entry">
       <div><span class="cl-ver">v${c.v}</span><span class="cl-date">${c.date||''}</span></div>
-      <ul class="cl-list">${c.notes.map(n=>`<li>${escapeHtml(n)}</li>`).join('')}</ul>
-    </div>`).join('');
+      <ul class="cl-list">${notes.map(n=>`<li>${escapeHtml(n)}</li>`).join('')}</ul>
+    </div>`;
+  }).join('');
   root.innerHTML = `
     <div class="modal-back" id="clBack">
       <div class="modal">
@@ -2632,8 +2635,8 @@ function renderSettingsModal(){
     scheduleSave();
   });
   $('setChangelog').addEventListener('click', openChangelog);
-  $('privacyPolicyBtn').addEventListener('click', ()=> openDocModal(t('settings.privacy_button'), 'privatuma-politika.html'));
-  $('termsBtn').addEventListener('click', ()=> openDocModal(t('settings.terms_button'), 'lietosanas-noteikumi.html'));
+  $('privacyPolicyBtn').addEventListener('click', ()=> openDocModal(t('settings.privacy_button'), getLang()==='en' ? 'privacy-policy.html' : 'privatuma-politika.html'));
+  $('termsBtn').addEventListener('click', ()=> openDocModal(t('settings.terms_button'), getLang()==='en' ? 'terms-of-use.html' : 'lietosanas-noteikumi.html'));
   $('reminderTimeInput')?.addEventListener('change', e=>{
     const val = e.target.value;
     if(/^\d{2}:\d{2}$/.test(val)){

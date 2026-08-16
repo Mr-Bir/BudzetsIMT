@@ -1,0 +1,159 @@
+<!--
+  Finanšu pārvaldnieks (BudzetsIMT)
+  Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
+  Skatīt LICENSE failu repozitorija saknē.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Use — Finance Manager</title>
+<meta name="description" content="Terms of use for the Finance Manager (BudzetsIMT) app.">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --ink: #1a1d29;
+    --paper: #f7f5f0;
+    --card: #ffffff;
+    --line: #e4e0d6;
+    --muted: #8a8576;
+    --accent: #2d5f4f;
+    --shadow: 0 1px 3px rgba(26,29,41,.06), 0 8px 24px rgba(26,29,41,.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+  .back { display: inline-block; margin-bottom: 20px; color: var(--muted); font-size: 13px; text-decoration: none; }
+  .back:hover { color: var(--accent); }
+  .brand { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; margin: 0 0 6px; }
+  .updated { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 19px; margin: 32px 0 10px; padding-top: 4px; }
+  p, li { color: var(--ink); }
+  ul { padding-left: 20px; }
+  a { color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 16px 0; box-shadow: var(--shadow); }
+  .callout { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 14px 18px; margin: 16px 0; box-shadow: var(--shadow); }
+  .foot-note { color: var(--muted); font-size: 12.5px; margin-top: 40px; border-top: 1px dashed var(--line); padding-top: 16px; }
+  code { background: var(--line); padding: 1px 5px; border-radius: 4px; font-size: 90%; }
+  /* Hide the "back to app" link when this page is embedded in the app's own
+     in-app doc modal (iframe) — following it there would nest the whole SPA
+     inside the iframe. Set by the inline script right after <body>. */
+  html.in-iframe .back { display: none; }
+</style>
+</head>
+<body>
+<script>if (window.self !== window.top) document.documentElement.classList.add('in-iframe');</script>
+<div class="wrap">
+  <a class="back" href="./">← Back to the app</a>
+  <div class="brand">Personal budget</div>
+  <h1>Terms of Use</h1>
+  <div class="updated">Effective from: August 5, 2026</div>
+
+  <p>These terms of use ("Terms") govern your use of the
+  <strong>"Finance Manager"</strong> app (hereinafter — "the app"),
+  available at <a href="https://mr-bir.github.io/BudzetsIMT/">mr-bir.github.io/BudzetsIMT</a>
+  and as an Android app. By using the app, you agree to these Terms.</p>
+
+  <h2>1. About the app and its developer</h2>
+  <div class="card">
+    <strong>Mārtiņš Barons</strong><br>
+    Email: <a href="mailto:birmons@gmail.com">birmons@gmail.com</a>
+  </div>
+
+  <h2>2. Nature of the app — important disclaimer</h2>
+  <p>The app is a <strong>personal budget tracking tool</strong>. It helps
+  you enter, track, and keep an overview of your own bills, credit
+  balances, and spending.</p>
+  <div class="callout">
+    <strong>The app is NOT a financial, investment, tax, or legal
+    advisory tool.</strong> All calculations shown in the app (e.g. the
+    "safe spending amount", the spending pace indicator) are simple
+    reference points based on data you entered yourself — not
+    professional advice. You are solely responsible for your own
+    financial decisions. If you need professional advice, please consult
+    a qualified financial professional.
+  </div>
+
+  <h2>3. Account creation and use</h2>
+  <ul>
+    <li>To use the app, you must sign in with a Google account.</li>
+    <li>You are responsible for the security of your Google account and
+      keeping your access credentials safe.</li>
+    <li>You agree to enter only your own data into the app and not to use
+      it to process other people's data without their consent.</li>
+  </ul>
+
+  <h2>4. Acceptable use</h2>
+  <p>By using the app, you agree:</p>
+  <ul>
+    <li>not to use it for unlawful purposes,</li>
+    <li>not to attempt to bypass or interfere with the app's security
+      mechanisms (such as Firebase App Check) or access other users'
+      data,</li>
+    <li>not to enter content into the app that infringes the rights of
+      third parties.</li>
+  </ul>
+  <p>In the event of a breach of these Terms, we reserve the right to
+  restrict or terminate access to the app.</p>
+
+  <h2>5. Data and privacy</h2>
+  <p>Information about what data is collected and how it is processed can
+  be found in our <a href="privacy-policy.html">Privacy Policy</a>.</p>
+
+  <h2>6. Intellectual property</h2>
+  <p>The app's code, design, and content are protected by copyright —
+  <strong>all rights reserved</strong> (see the <code>LICENSE</code> file
+  in the project repository). Copying, modifying, or distributing it
+  without the author's permission is not allowed.</p>
+
+  <h2>7. Disclaimer of warranties and limitation of liability</h2>
+  <p>The app is provided <strong>"as is"</strong>, without any express or
+  implied warranties, including without warranty of uninterrupted
+  operation, error-free functioning, or fitness for a particular
+  purpose.</p>
+  <p>To the extent permitted by applicable law, the developer <strong>is
+  not liable</strong> for any damages (direct, indirect, incidental, or
+  consequential) arising from:</p>
+  <ul>
+    <li>use of, or inability to use, the app,</li>
+    <li>loss of data,</li>
+    <li>financial decisions made by the user based on information shown
+      in the app.</li>
+  </ul>
+
+  <h2>8. Service availability and changes</h2>
+  <p>The app is maintained as a small, personal project. We reserve the
+  right to change, add to, or discontinue the app's operation (in whole
+  or in part) at any time, providing notice as far in advance as
+  reasonably possible (e.g. via Settings → "What's new").</p>
+
+  <h2>9. Account termination</h2>
+  <p>You may delete your own account and all associated data at any time
+  — Settings → "Delete account". This action is irreversible.</p>
+  <p>In the event of misuse or a breach of these Terms, we may restrict or
+  terminate your access to the app.</p>
+
+  <h2>10. Governing law</h2>
+  <p>These Terms are governed by the laws of the Republic of Latvia.</p>
+
+  <h2>11. Changes to these terms</h2>
+  <p>If these Terms are materially changed, we will announce it in the
+  app (Settings → "What's new") or by email, where possible.</p>
+
+  <h2>12. Contact</h2>
+  <p>For questions about these Terms, you can contact us at
+  <a href="mailto:birmons@gmail.com">birmons@gmail.com</a>.</p>
+
+  <p class="foot-note">These terms of use apply only to the "Finance
+  Manager" (BudzetsIMT) app and do not apply to any other websites or
+  apps by Mārtiņš Barons.</p>
+</div>
+</body>
+</html>

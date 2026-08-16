@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
  * Skatīt LICENSE failu repozitorija saknē.
  */
-const CACHE_NAME = 'finanses-shell-v62';
+const CACHE_NAME = 'finanses-shell-v63';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -13,6 +13,8 @@ const SHELL_FILES = [
   './manifest.json',
   './privatuma-politika.html',
   './lietosanas-noteikumi.html',
+  './privacy-policy.html',
+  './terms-of-use.html',
   './js/i18n.js',
   './js/capacitor-core.js',
   './js/firebase-auth/index.js',

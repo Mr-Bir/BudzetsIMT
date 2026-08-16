@@ -4,13 +4,8 @@ Personīgais budžeta un tēriņu pārvaldnieks — seko līdzi ikdienas rēķin
 
 **Lietotne pieejama šeit:** https://mr-bir.github.io/BudzetsIMT/
 
-![Budžets](screenshots/mobile-budget.png)
-
-![Sānu izvēlne](screenshots/mobile-menu.png)
-
-![Uzkrājuma mērķi](screenshots/mobile-goals.png)
-
-![Atgādinājumi](screenshots/mobile-reminders.png)
+<img src="screenshots/f.png" alt="Face" style="width:50%; height:auto;"><img src="screenshots/f2.png" alt="Face" style="width:50%; height:auto;">
+<img src="screenshots/inc.png" alt="Face" style="width:25%; height:auto;"><img src="screenshots/kr.png" alt="Face" style="width:25%; height:auto;"><img src="screenshots/rem.png" alt="Face" style="width:25%; height:auto;"><img src="screenshots/sav.png" alt="Face" style="width:25%; height:auto;">
 
 ## Ko lietotne dara
 

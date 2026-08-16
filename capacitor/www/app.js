@@ -17,6 +17,11 @@ import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
+import { initI18n, getLang, setLang, t, SUPPORTED_LANGS, applyStaticTranslations, onLangChange, currentLocale } from './js/i18n.js';
+initI18n();
+applyStaticTranslations();
+onLangChange(() => applyStaticTranslations());
+
 /* ═══════════════════════════════════════════════════════════════
    1. KONFIGURĀCIJA — Firebase, App Check, versija, changelog
    Faila augšā glabājas visas galvenās konstantes.
@@ -47,9 +52,9 @@ const VERSION = CHANGELOG[0].v;
    noklusējuma dati un mainīgais `state`, kas tur visu lietotnes info.
    ═══════════════════════════════════════════════════════════════ */
 
-const fmt = n => '€ ' + (Number(n)||0).toLocaleString('lv-LV',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt = n => '€ ' + (Number(n)||0).toLocaleString(currentLocale(),{minimumFractionDigits:2,maximumFractionDigits:2});
 // Rounded, no-decimals version for the compact topbar pace indicator (full precision stays in the popover)
-const fmtCompact = n => '€' + Math.round(Number(n)||0).toLocaleString('lv-LV',{maximumFractionDigits:0});
+const fmtCompact = n => '€' + Math.round(Number(n)||0).toLocaleString(currentLocale(),{maximumFractionDigits:0});
 // Actual spent for a summing bill = sum of entries; for normal bill = its amount
 function billSpent(b){
   if(b && b.type==='summing') return (b.entries||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
@@ -186,8 +191,8 @@ function reminderIsResolved(r){
   return !!(b && b.paid);
 }
 function reminderDisplayName(r){
-  if(r.billId){ const b = billById(r.billId); return b ? (b.name||'(bez nosaukuma)') : (r.name || '(dzēsts rēķins)'); }
-  return r.name || '(bez nosaukuma)';
+  if(r.billId){ const b = billById(r.billId); return b ? (b.name||t('common.no_name')) : (r.name || t('common.deleted_bill')); }
+  return r.name || t('common.no_name');
 }
 
 // ---- Native paziņojumi priekš atgādinājumiem (tikai Android/iOS, ne web/PWA) ----
@@ -224,7 +229,7 @@ async function scheduleReminderNotifications(){
     const notifications = [];
     (state.reminders||[]).filter(r=>r.active).forEach(r=>{
       const id = reminderNotifId(r.id);
-      const title = 'Atgādinājums';
+      const title = t('notif.reminder_title');
       const body = reminderDisplayName(r);
       if(r.billId){
         const day = Math.min(Math.max(parseInt(r.day,10)||1,1),31);
@@ -373,7 +378,7 @@ const provider = new GoogleAuthProvider();
 async function nativeGoogleCredential(){
   const res = await FirebaseAuthentication.signInWithGoogle();
   const idToken = res.credential && res.credential.idToken;
-  if(!idToken) throw new Error('Google neapstiprināja pieteikšanos');
+  if(!idToken) throw new Error(t('auth.google_not_confirmed'));
   return GoogleAuthProvider.credential(idToken);
 }
 
@@ -392,15 +397,15 @@ $('signInBtn').addEventListener('click', async ()=>{
     }
   } catch(e){
     if(IS_NATIVE){
-      $('gateErr').textContent = 'Neizdevās pieteikties: ' + (e?.message || e);
+      $('gateErr').textContent = t('auth.signin_failed', {msg: e?.message || e});
     } else if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/cancelled-popup-request')){
       // Popup blocked or unsupported (e.g. some mobile PWAs) → fall back to redirect
       try { await signInWithRedirect(auth, provider); }
-      catch(e2){ $('gateErr').textContent = 'Neizdevās pieteikties: ' + e2.message; }
+      catch(e2){ $('gateErr').textContent = t('auth.signin_failed', {msg: e2.message}); }
     } else if(e && e.code === 'auth/popup-closed-by-user'){
       // User closed the popup — no error message needed
     } else {
-      $('gateErr').textContent = 'Neizdevās pieteikties: ' + (e?.message || e);
+      $('gateErr').textContent = t('auth.signin_failed', {msg: e?.message || e});
     }
   }
 });
@@ -408,7 +413,7 @@ $('signInBtn').addEventListener('click', async ()=>{
 // Still handle redirect result, in case the fallback redirect flow was used on web
 if(!IS_NATIVE){
   getRedirectResult(auth).catch(e=>{
-    if(e && e.code !== 'auth/no-auth-event'){ $('gateErr').textContent = 'Pieteikšanās kļūda: ' + e.message; }
+    if(e && e.code !== 'auth/no-auth-event'){ $('gateErr').textContent = t('auth.signin_error', {msg: e.message}); }
   });
 }
 
@@ -436,7 +441,7 @@ async function connectForUser(uid){
   const splashEl = $('splash'); if(splashEl) splashEl.classList.add('hidden');
   if(window.__clearSplashWatchdog) window.__clearSplashWatchdog();
   const nameEl = $('userName'); if(nameEl) nameEl.textContent = currentUser?.displayName || currentUser?.email || '';
-  setSync('saving','Savienojas…');
+  setSync('saving', t('drawer.sync_connecting'));
   loadArchive();
 
   await appCheckReady;
@@ -469,13 +474,13 @@ function subscribeSnapshot(uid, isRetry){
         savingsGoals: ensureSavingsGoalFields(d.savingsGoals ?? [])
       };
       const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders, extraIncome: incoming.extraIncome, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
-      if(incomingJSON === lastSentJSON){ setSync('ok','Sinhronizēts'); return; }
+      if(incomingJSON === lastSentJSON){ setSync('ok', t('sync.synced')); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
       // veca datu kopija, kas šo lokālo izmaiņu vēl neredz. Pretējā gadījumā jauns ieraksts
       // (piem. atgādinājums) uzmirgo un momentā pazūd. isEditingActive() vien nepietiek, jo
       // tā pārbauda tikai fokusu — modālis var jau būt aizvērts, kad snapshot pienāk.
-      if(isEditingActive() || localDirty){ pendingSnapshot = incoming; setSync('ok','Sinhronizēts'); return; }
+      if(isEditingActive() || localDirty){ pendingSnapshot = incoming; setSync('ok', t('sync.synced')); return; }
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data)
@@ -483,7 +488,7 @@ function subscribeSnapshot(uid, isRetry){
       render(); pushNow();
     }
   }, err=>{
-    setSync('err','Kļūda: ' + err.code);
+    setSync('err', t('sync.error', {code: err.code}));
     if(err.code === 'permission-denied' && !isRetry){
       // Ja App Check tokens paspēja piesaistīties tikai PĒC šī pieprasījuma (sacensība
       // ar onAuthStateChanged), Firestore klausītājs pats no jauna nepieslēgsies —
@@ -499,7 +504,7 @@ function applyRemote(incoming){
   render();
   applyingRemote = false;
   pendingSnapshot = null;
-  setSync('ok','Sinhronizēts');
+  setSync('ok', t('sync.synced'));
   scheduleReminderNotifications();
 }
 
@@ -542,7 +547,7 @@ function setSync(cls, text){
 function scheduleSave(){
   if(applyingRemote) return;
   localDirty = true;
-  setSync('saving','Saglabā…');
+  setSync('saving', t('sync.saving'));
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushNow, 600);
 }
@@ -667,7 +672,7 @@ async function pushNow(){
     await setDoc(docRef, payload);
     
     localDirty = false;
-    setSync('ok','Sinhronizēts');
+    setSync('ok', t('sync.synced'));
     scheduleReminderNotifications();
     
     if(pendingSnapshot && !isEditingActive()){
@@ -675,7 +680,7 @@ async function pushNow(){
     }
   } catch(e){
     console.error('Kļūda saglabājot datus Firebase:', e); 
-    setSync('err','Saglabāšana neizdevās');
+    setSync('err', t('sync.save_failed'));
   }
 }
 
@@ -738,22 +743,22 @@ function render(){
     const row = document.createElement('div');
     row.className='bill' + (b.paid?' paid':'') + (isSum?' summing':''); row.dataset.cat=b.cat||'cits'; row.dataset.idx=i;
     const amountCell = isSum
-      ? `<div class="amount-wrap"><span class="eur">€</span><span class="amount amount-ro" title="${lim>0?'Plānotais limits':'Kopsumma no epizodēm'}">${amt.toFixed(2)}</span><button class="add-entry" data-addentry="${i}" title="Pievienot epizodi">+</button></div>`
+      ? `<div class="amount-wrap"><span class="eur">€</span><span class="amount amount-ro" title="${lim>0?t('bills.planned_limit_title'):t('bills.sum_from_entries_title')}">${amt.toFixed(2)}</span><button class="add-entry" data-addentry="${i}" title="${t('bills.add_entry_title')}">+</button></div>`
       : `<div class="amount-wrap"><span class="eur">€</span><input class="amount" type="number" step="0.01" inputmode="decimal" value="${Number(b.amount)||0}" data-i="${i}" data-f="amount"></div>`;
     row.innerHTML = `
-      <div class="drag-handle" data-drag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot" style="border-left-color:${catColor(b.cat||'cits')}">
+      <div class="drag-handle" data-drag="${i}" title="${t('bills.drag_title')}" aria-label="${t('bills.move_aria')}" style="border-left-color:${catColor(b.cat||'cits')}">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
       </div>
       ${isSum
-        ? `<div class="pay-check pay-check-auto" title="Summējošs rēķins — katra epizode jau ir apmaksāta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
-        : `<button class="pay-check" data-pay="${i}" title="Atzīmēt kā samaksātu" aria-label="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
-      <input class="name" value="${escapeHtml(b.name)}" data-i="${i}" data-f="name" placeholder="Nosaukums">
+        ? `<div class="pay-check pay-check-auto" title="${t('bills.summing_auto_title')}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+        : `<button class="pay-check" data-pay="${i}" title="${t('bills.mark_paid_title')}" aria-label="${t('bills.paid_aria')}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
+      <input class="name" value="${escapeHtml(b.name)}" data-i="${i}" data-f="name" placeholder="${t('bills.name_placeholder')}">
       ${amountCell}
       <div class="pct">${pct.toFixed(2)} %</div>
       <select data-i="${i}" data-f="cat">${catOptions(b.cat||'cits')}</select>
       ${b.goalId
-        ? `<span class="del del-locked" title="Dzēš sadaļā &quot;Uzkrājuma mērķi&quot;">🔒</span>`
-        : `<button class="del" data-del="${i}" title="Dzēst">×</button>`}`;
+        ? `<span class="del del-locked" title="${t('bills.delete_locked_title')}">🔒</span>`
+        : `<button class="del" data-del="${i}" title="${t('bills.delete_title')}">×</button>`}`;
     list.appendChild(row);
     // Summing bill detail block: limit progress + entries
     if(isSum){
@@ -763,15 +768,15 @@ function render(){
       const ratio = lim>0 ? Math.min(spent/lim,1) : 0;
       const collapsed = collapsedBills.has(i);
       const labelHtml = lim>0
-        ? `Iztērēts <strong>${fmt(spent)}</strong> no ${fmt(lim)}${over?` · <span class="over">pārtērēts ${fmt(spent-lim)}</span>`:''}`
-        : `Iztērēts <strong>${fmt(spent)}</strong> · bez limita`;
+        ? `${t('bills.spent_prefix')} <strong>${fmt(spent)}</strong> ${t('bills.spent_of', {limit: fmt(lim)})}${over?` · <span class="over">${t('bills.overspent',{amount:fmt(spent-lim)})}</span>`:''}`
+        : `${t('bills.spent_prefix')} <strong>${fmt(spent)}</strong> · ${t('bills.no_limit_suffix')}`;
       const limitLine = `
         <div class="limit-row">
-          <button class="entries-toggle" data-toggle="${i}" aria-expanded="${collapsed?'false':'true'}" title="${collapsed?'Rādīt epizodes':'Sakļaut epizodes'}">
+          <button class="entries-toggle" data-toggle="${i}" aria-expanded="${collapsed?'false':'true'}" title="${collapsed?t('bills.show_entries_title'):t('bills.collapse_entries_title')}">
             <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             <span class="limit-label">${labelHtml}</span>
           </button>
-          <button class="limit-edit" data-limit="${i}" title="${lim>0?'Mainīt limitu':'Uzlikt limitu'}">${lim>0?'Mainīt limitu':'Uzlikt limitu'}</button>
+          <button class="limit-edit" data-limit="${i}" title="${lim>0?t('bills.change_limit'):t('bills.set_limit')}">${lim>0?t('bills.change_limit'):t('bills.set_limit')}</button>
         </div>
         ${lim>0 ? `<div class="limit-track"><div class="limit-fill" style="width:${ratio*100}%;background:${over?'var(--red)':'var(--green)'}"></div></div>` : ''}`;
       const entriesHtml = (b.entries||[]).length
@@ -780,9 +785,9 @@ function render(){
             <span class="entry-date">${escapeHtml(e.date||'')}</span>
             <span class="entry-note">${escapeHtml(e.note||'')}</span>
             <span class="entry-amt">${fmt(e.amount)}</span>
-            <button class="entry-del" data-entrydel="${i}" data-entryidx="${ei}" title="Dzēst epizodi">×</button>
+            <button class="entry-del" data-entrydel="${i}" data-entryidx="${ei}" title="${t('bills.delete_entry_title')}">×</button>
           </div>`).join('')
-        : `<div class="entry-empty">Vēl nav epizožu — pievieno ar "+"</div>`;
+        : `<div class="entry-empty">${t('bills.no_entries_yet')}</div>`;
       sub.innerHTML = limitLine + `<div class="entries-list${collapsed?' collapsed':''}">${entriesHtml}</div>`;
       list.appendChild(sub);
     }
@@ -792,10 +797,10 @@ function render(){
     const row = document.createElement('div'); row.className='credit'; row.dataset.idx=i;
     const hasDates = c.start && c.end;
     row.innerHTML = `
-      <div class="cdrag" data-cdrag="${i}" title="Vilkt, lai pārkārtotu" aria-label="Pārvietot"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
-      <input class="cname" value="${escapeHtml(c.name)}" data-ci="${i}" data-f="name" placeholder="Kredīta nosaukums">
+      <div class="cdrag" data-cdrag="${i}" title="${t('credits.drag_title')}" aria-label="${t('credits.move_aria')}"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
+      <input class="cname" value="${escapeHtml(c.name)}" data-ci="${i}" data-f="name" placeholder="${t('credits.name_placeholder')}">
       <div class="camount-wrap"><span class="eur">€</span><input class="camount" type="number" step="0.01" inputmode="decimal" value="${(Number(c.amount)||0).toFixed(2)}" data-ci="${i}" data-f="amount"></div>
-      <button class="del" data-cdel="${i}" title="Dzēst">×</button>`;
+      <button class="del" data-cdel="${i}" title="${t('credits.delete_title')}">×</button>`;
     cl.appendChild(row);
     // Progress block (time-based) when dates are set; otherwise a small "set dates" link
     const prog = creditProgress(c);
@@ -804,29 +809,29 @@ function render(){
     let datesHtml;
     if(prog){
       const pctTxt = prog.pct.toFixed(0);
-      const remTxt = prog.done ? 'nomaksāts' : `atlikuši ${prog.monthsRemaining} mēn.`;
+      const remTxt = prog.done ? t('credits.paid_off') : t('credits.remaining_months', {count: prog.monthsRemaining});
       datesHtml = `
         <div class="cd-row">
-          <span class="cd-label"><strong>${pctTxt}%</strong> nomaksāts · ${remTxt}</span>
-          <button class="cd-edit" data-cdate="${i}">Mainīt datumus</button>
+          <span class="cd-label"><strong>${pctTxt}%</strong> ${t('credits.pct_paid_suffix', {rest: remTxt})}</span>
+          <button class="cd-edit" data-cdate="${i}">${t('credits.change_dates')}</button>
         </div>
         <div class="cd-track"><div class="cd-fill" style="width:${prog.pct}%"></div></div>`;
     } else {
       datesHtml = `
         <div class="cd-row">
-          <span class="cd-label cd-muted">Bez termiņa</span>
-          <button class="cd-edit" data-cdate="${i}">Uzlikt datumus</button>
+          <span class="cd-label cd-muted">${t('credits.no_deadline')}</span>
+          <button class="cd-edit" data-cdate="${i}">${t('credits.set_dates')}</button>
         </div>`;
     }
     // Monthly payment control: [-] [amount] [+]
     const pay = Number(c.monthly)||0;
     const payHtml = `
       <div class="cd-pay-row">
-        <span class="cd-pay-label">Mēneša maksājums</span>
+        <span class="cd-pay-label">${t('credits.monthly_payment_label')}</span>
         <div class="cd-pay-controls">
-          <button class="cd-pay-btn minus" data-cpay-minus="${i}" title="Atņemt no atlikuma" ${pay>0?'':'disabled'}>−</button>
+          <button class="cd-pay-btn minus" data-cpay-minus="${i}" title="${t('credits.minus_title')}" ${pay>0?'':'disabled'}>−</button>
           <div class="cd-pay-amt-wrap"><span class="cd-pay-eur">€</span><input class="cd-pay-amt" type="number" step="0.01" inputmode="decimal" value="${c.monthly!=null?(Number(c.monthly)||0):''}" data-cpay="${i}" placeholder="0.00"></div>
-          <button class="cd-pay-btn plus" data-cpay-plus="${i}" title="Pieskaitīt atlikumam (atsaukt)" ${pay>0?'':'disabled'}>+</button>
+          <button class="cd-pay-btn plus" data-cpay-plus="${i}" title="${t('credits.plus_title')}" ${pay>0?'':'disabled'}>+</button>
         </div>
       </div>`;
     sub.innerHTML = datesHtml + payHtml;
@@ -850,9 +855,9 @@ function renderExtraIncome(){
     row.dataset.idx = i;
     row.innerHTML = `
       <input type="date" class="eidate" value="${escapeHtml(it.date||'')}" data-ei="${i}" data-f="date">
-      <input class="einame" value="${escapeHtml(it.name||'')}" data-ei="${i}" data-f="name" placeholder="Nosaukums (piem. Brīvprātīgais darbs)">
+      <input class="einame" value="${escapeHtml(it.name||'')}" data-ei="${i}" data-f="name" placeholder="${t('extra_income.name_placeholder')}">
       <div class="eamount-wrap"><span class="eur">€</span><input class="eamount" type="number" step="0.01" inputmode="decimal" value="${(Number(it.amount)||0).toFixed(2)}" data-ei="${i}" data-f="amount"></div>
-      <button class="del" data-eidel="${i}" title="Dzēst">×</button>`;
+      <button class="del" data-eidel="${i}" title="${t('extra_income.delete_title')}">×</button>`;
     list.appendChild(row);
   });
   const empty = $('extraIncomeEmptyNote');
@@ -889,28 +894,28 @@ function renderReminders(){
       const due = reminderDueDate(r);
       const name = reminderDisplayName(r);
       let subHtml;
-      if(paused) subHtml = `<span class="rem-sub">Pauzēts${r.billId?' — rēķins vairs nav aktīvs':''}</span>`;
+      if(paused) subHtml = `<span class="rem-sub">${t('reminders.paused_suffix')}${r.billId?t('reminders.paused_bill_inactive'):''}</span>`;
       else if(resolved){
         const nextDue = (status==='overdue'||status==='today') ? reminderNextMonthDueDate(r) : due;
-        subHtml = `<span class="rem-sub">✓ Samaksāts — nākamreiz ${formatDateLv(nextDue)}</span>`;
+        subHtml = `<span class="rem-sub">${t('reminders.paid_next', {date: formatDateLv(nextDue)})}</span>`;
       }
-      else if(status==='today') subHtml = `<span class="rem-sub due-text">Šodien jāmaksā</span>`;
-      else if(status==='overdue') subHtml = `<span class="rem-sub due-text">Nokavēts — bija ${formatDateLv(due)}</span>`;
-      else if(r.billId) subHtml = `<span class="rem-sub">Katru mēnesi ap ${Math.min(Math.max(parseInt(r.day,10)||1,1),31)}. · nākamreiz ${formatDateLv(due)}</span>`;
-      else subHtml = `<span class="rem-sub">Termiņš: ${formatDateLv(due)}</span>`;
+      else if(status==='today') subHtml = `<span class="rem-sub due-text">${t('reminders.due_today')}</span>`;
+      else if(status==='overdue') subHtml = `<span class="rem-sub due-text">${t('reminders.overdue', {date: formatDateLv(due)})}</span>`;
+      else if(r.billId) subHtml = `<span class="rem-sub">${t('reminders.monthly_around', {day: Math.min(Math.max(parseInt(r.day,10)||1,1),31), date: formatDateLv(due)})}</span>`;
+      else subHtml = `<span class="rem-sub">${t('reminders.due_date', {date: formatDateLv(due)})}</span>`;
       return `
         <div class="rem-row${(status==='today'||status==='overdue')&&!paused&&!resolved?' due':''}${paused?' paused':''}" data-remidx="${i}">
           <div class="rem-main">
             <span class="rem-name">${escapeHtml(name)}</span>
             ${subHtml}
           </div>
-          <button class="rem-toggle" data-remtoggle="${i}">${paused?'Atsākt':'Pauzēt'}</button>
-          <button class="rem-del" data-remdel="${i}" title="Dzēst">×</button>
+          <button class="rem-toggle" data-remtoggle="${i}">${paused?t('reminders.resume'):t('reminders.pause')}</button>
+          <button class="rem-del" data-remdel="${i}" title="${t('common.delete_title')}">×</button>
         </div>`;
     };
 
     dueBox.innerHTML = dueRows.map(x=>rowHtml(x.r,x.i,x.status,false,x.resolved)).join('');
-    upBox.innerHTML = upRows.map(x=>rowHtml(x.r,x.i,x.status,false,x.resolved)).join('') || '<div class="empty-note" style="padding:14px;">Nav gaidāmu atgādinājumu.</div>';
+    upBox.innerHTML = upRows.map(x=>rowHtml(x.r,x.i,x.status,false,x.resolved)).join('') || `<div class="empty-note" style="padding:14px;">${t('reminders.none_upcoming')}</div>`;
     pauseBox.innerHTML = pausedRows.map(x=>rowHtml(x.r,x.i,x.status,true,false)).join('');
     if(pauseGroup) pauseGroup.classList.toggle('hidden', pausedRows.length===0);
     if(emptyNote) emptyNote.classList.toggle('hidden', reminders.length>0);
@@ -932,7 +937,7 @@ function renderReminders(){
       const names = undismissed.slice(0,2).map(r=>reminderDisplayName(r)).join(', ');
       const extra = undismissed.length>2 ? ` +${undismissed.length-2}` : '';
       const textEl = $('reminderBannerText');
-      if(textEl) textEl.textContent = undismissed.length===1 ? `Šodien jāmaksā: ${names}` : `${undismissed.length} maksājumi šodien/kavēti: ${names}${extra}`;
+      if(textEl) textEl.textContent = undismissed.length===1 ? t('reminders.due_today_banner', {names}) : t('reminders.due_multi_banner', {count: undismissed.length, names, extra});
       banner.classList.remove('hidden');
     } else {
       banner.classList.add('hidden');
@@ -958,20 +963,20 @@ function renderSavingsGoals(){
     const bill = g.billId ? billById(g.billId) : null;
     const paidThisMonth = !!(bill && bill.paid);
     const remaining = Math.max(g.months - g.paidInstallments, 0);
-    const etaTxt = remaining>0 ? `Atlikuši ${remaining} maksājumi · aptuveni līdz ${formatDateLv(goalProjectedEndDate(remaining))}` : '';
-    const statusTxt = paidThisMonth ? '✓ Šomēnes samaksāts' : (bill ? 'Šomēnes vēl nav samaksāts' : '');
+    const etaTxt = remaining>0 ? t('goals.remaining', {count: remaining, date: formatDateLv(goalProjectedEndDate(remaining))}) : '';
+    const statusTxt = paidThisMonth ? t('goals.paid_this_month') : (bill ? t('goals.not_paid_this_month') : '');
     return `
       <div class="goal-card" data-goalidx="${i}">
         <div class="goal-main">
-          <span class="goal-name">${escapeHtml(g.name||'(bez nosaukuma)')}</span>
-          <span class="goal-sub">${fmt(g.monthlyAmount)} / mēnesī no ${fmt(g.targetAmount)} · ${g.paidInstallments} no ${g.months} maksājumiem</span>
+          <span class="goal-name">${escapeHtml(g.name||t('common.no_name'))}</span>
+          <span class="goal-sub">${t('goals.per_month_of', {monthly: fmt(g.monthlyAmount), target: fmt(g.targetAmount), paid: g.paidInstallments, months: g.months})}</span>
         </div>
         <div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div>
         <div class="goal-foot">
           <span class="goal-status${paidThisMonth?' paid':''}">${statusTxt}</span>
           <span class="goal-eta">${etaTxt}</span>
         </div>
-        <button class="goal-del" data-goaldel="${i}" title="Dzēst mērķi">×</button>
+        <button class="goal-del" data-goaldel="${i}" title="${t('goals.delete_title')}">×</button>
       </div>`;
   }).join('') || '';
 
@@ -980,10 +985,10 @@ function renderSavingsGoals(){
     return `
       <div class="goal-card achieved" data-goalidx="${i}">
         <div class="goal-main">
-          <span class="goal-name">${escapeHtml(g.name||'(bez nosaukuma)')}</span>
-          <span class="goal-sub">${fmt(g.targetAmount)} sasniegts${g.achievedAt?' · '+formatDateLv(g.achievedAt):''}</span>
+          <span class="goal-name">${escapeHtml(g.name||t('common.no_name'))}</span>
+          <span class="goal-sub">${t('goals.achieved_suffix', {amount: fmt(g.targetAmount)})}${g.achievedAt?t('goals.achieved_date_suffix', {date: formatDateLv(g.achievedAt)}):''}</span>
         </div>
-        <button class="goal-del" data-goaldel="${i}" title="Dzēst no saraksta">×</button>
+        <button class="goal-del" data-goaldel="${i}" title="${t('goals.delete_from_list_title')}">×</button>
       </div>`;
   }).join('');
 
@@ -999,8 +1004,8 @@ function renderSavingsGoals(){
     const g = state.savingsGoals[i];
     if(!g) return;
     const msg = g.achieved
-      ? `Dzēst mērķi "${g.name||'(bez nosaukuma)'}" no saraksta?`
-      : `Dzēst mērķi "${g.name||'(bez nosaukuma)'}"? Saistītais rēķins arī tiks dzēsts.`;
+      ? t('goals.confirm_delete_achieved', {name: g.name||t('common.no_name')})
+      : t('goals.confirm_delete', {name: g.name||t('common.no_name')});
     if(confirm(msg)){
       if(g.billId){
         const bi = state.bills.findIndex(b=>b.id===g.billId);
@@ -1019,19 +1024,19 @@ function openAddSavingsGoalModal(){
     <div class="modal-back" id="agBack">
       <div class="modal" style="max-width:440px;">
         <button class="modal-close" id="agClose">×</button>
-        <h3>Jauns uzkrājuma mērķis</h3>
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Nosaukums</label>
-        <input id="agName" type="text" placeholder="piem. Ceļojums" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Mērķa summa</label>
+        <h3>${t('goal_modal.title')}</h3>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">${t('goal_modal.name_label')}</label>
+        <input id="agName" type="text" placeholder="${t('goal_modal.name_placeholder')}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">${t('goal_modal.amount_label')}</label>
         <div class="amount-wrap"><span class="eur">€</span><input id="agAmount" type="number" step="0.01" inputmode="decimal" min="0" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);"></div>
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Mēnešu skaits</label>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">${t('goal_modal.months_label')}</label>
         <div class="rem-type-toggle goal-months-toggle" id="agMonths">
           ${MONTH_OPTIONS.map(m=>`<button class="rem-type-btn" type="button" data-months="${m}">${m}</button>`).join('')}
         </div>
         <div class="goal-ag-preview" id="agPreview"></div>
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
-          <button class="btn ghost sm" id="agCancel">Atcelt</button>
-          <button class="btn" id="agSave">Pievienot</button>
+          <button class="btn ghost sm" id="agCancel">${t('common.cancel')}</button>
+          <button class="btn" id="agSave">${t('common.add')}</button>
         </div>
       </div>
     </div>`;
@@ -1046,7 +1051,7 @@ function openAddSavingsGoalModal(){
     const preview = $('agPreview');
     if(!selectedMonths || amount<=0){ preview.textContent=''; return; }
     const monthly = Math.round((amount/selectedMonths)*100)/100;
-    preview.textContent = `Mēneša maksājums: ${fmt(monthly)} · pēdējais maksājums ap ${formatDateLv(goalProjectedEndDate(selectedMonths))}`;
+    preview.textContent = t('goal_modal.monthly_preview', {amount: fmt(monthly), date: formatDateLv(goalProjectedEndDate(selectedMonths))});
   };
   $('agMonths').addEventListener('click', e=>{
     const btn = e.target.closest('[data-months]'); if(!btn) return;
@@ -1059,9 +1064,9 @@ function openAddSavingsGoalModal(){
   $('agSave').addEventListener('click', ()=>{
     const name = $('agName').value.trim();
     const amount = Math.round((parseFloat($('agAmount').value)||0)*100)/100;
-    if(!name){ alert('Ievadi nosaukumu.'); return; }
-    if(amount<=0){ alert('Ievadi derīgu mērķa summu.'); return; }
-    if(!selectedMonths){ alert('Izvēlies mēnešu skaitu.'); return; }
+    if(!name){ alert(t('goal_modal.name_required')); return; }
+    if(amount<=0){ alert(t('goal_modal.amount_required')); return; }
+    if(!selectedMonths){ alert(t('goal_modal.months_required')); return; }
     const monthlyAmount = Math.round((amount/selectedMonths)*100)/100;
     const goalId = genId(), billId = genId();
     if(!state.savingsGoals) state.savingsGoals = [];
@@ -1087,7 +1092,7 @@ function updateTotals(){
   const incomeBreakdown = $('incomeBreakdown');
   if(incomeBreakdown){
     if(extraTotal>0){
-      incomeBreakdown.textContent = `Bāze ${fmt(Number(state.income)||0)} + papildus ${fmt(extraTotal)}`;
+      incomeBreakdown.textContent = t('summary.base_plus_extra', {base: fmt(Number(state.income)||0), extra: fmt(extraTotal)});
       incomeBreakdown.classList.remove('hidden');
     } else {
       incomeBreakdown.textContent = '';
@@ -1097,11 +1102,11 @@ function updateTotals(){
   const eFoot = $('extraIncomeFootTotal');
   if(eFoot) eFoot.textContent = fmt(extraTotal);
   $('sumTotal').textContent = fmt(total);
-  $('sumPct').textContent = (income>0?(total/income*100).toFixed(1):'0')+' % no ieņēmumiem';
+  $('sumPct').textContent = t('summary.pct_of_income', {pct: income>0?(total/income*100).toFixed(1):'0'});
   // Show "iztērēts" only when it differs from the planned total (i.e. summing bills with limits exist)
   const spentTotal = bills.reduce((s,b)=>s+billSpent(b),0);
   const hasLimits = bills.some(b=>b.type==='summing' && (Number(b.limit)||0)>0);
-  $('sumSpent').textContent = hasLimits ? `iztērēts: ${fmt(spentTotal)}` : '';
+  $('sumSpent').textContent = hasLimits ? t('summary.spent_prefix', {amount: fmt(spentTotal)}) : '';
   $('billsFootTotal').textContent = fmt(total);
   $('creditsFootTotal').textContent = fmt(ctotal);
   const monthlyTotal = (state.credits||[]).reduce((s,c)=>s+(Number(c.monthly)||0),0);
@@ -1111,15 +1116,15 @@ function updateTotals(){
     else { monthlyFoot.style.display='none'; }
   }
   $('toPay').textContent = fmt(toPay);
-  $('paidHint').textContent = `${paidCount} no ${bills.length} samaksāti · ${fmt(paidSum)}`;
+  $('paidHint').textContent = t('summary.paid_count', {paid: paidCount, total: bills.length, sum: fmt(paidSum)});
   const remaining = income-total;
   const rem = $('remaining');
   rem.textContent = fmt(remaining); rem.className='value '+(remaining>=0?'pos':'neg');
-  $('remHint').textContent = remaining>=0?'pāri pēc rēķiniem':'iztrūkums';
+  $('remHint').textContent = remaining>=0?t('summary.remaining_over'):t('summary.remaining_under');
   // Overspend warning: summing bills where actual spending exceeds the set limit
   const overBills = bills.filter(b=>b.type==='summing' && (Number(b.limit)||0)>0 && billSpent(b)>Number(b.limit));
   const overTitle = overBills.length
-    ? 'Pārtērēts: ' + overBills.map(b=>`${b.name||'Rēķins'} (+${fmt(billSpent(b)-Number(b.limit))})`).join(', ')
+    ? t('summary.overspent_prefix') + overBills.map(b=>t('summary.overspent_item', {name: b.name||t('default_bill_name'), amount: fmt(billSpent(b)-Number(b.limit))})).join(', ')
     : '';
   [$('remOverBadge'), $('payOverBadge')].forEach(badge=>{
     if(!badge) return;
@@ -1175,16 +1180,16 @@ function updatePace(){
 
   // Compact topbar values (rounded, no labels — full precision lives in the popover)
   $('paceDaily').textContent = fmtCompact(spentTodayAmt);
-  $('paceDaily').title = 'Iztērēts šodien: ' + fmt(spentTodayAmt);
+  $('paceDaily').title = t('pace.spent_today_title', {amount: fmt(spentTodayAmt)});
   $('paceAvailable').textContent = fmtCompact(available);
-  $('paceAvailable').title = 'Pieejams tagad: ' + fmt(available);
+  $('paceAvailable').title = t('pace.available_now_title', {amount: fmt(available)});
   $('paceSafe').textContent = fmtCompact(safeDaily);
-  $('paceSafe').title = 'Droša summa/dienā: ' + fmt(safeDaily) + ' / d.';
+  $('paceSafe').title = t('pace.safe_per_day_title', {amount: fmt(safeDaily)});
 
   // Full-precision popover values
   $('paceDailyFull').textContent = fmt(spentTodayAmt);
   $('paceAvailableFull').textContent = fmt(available);
-  $('paceSafeFull').textContent = fmt(safeDaily) + ' / d.';
+  $('paceSafeFull').textContent = fmt(safeDaily) + t('pace.per_day_suffix');
 
   const dot = $('paceDot');
   const status = $('pacePopStatus');
@@ -1194,8 +1199,8 @@ function updatePace(){
       const under = spentTodayAmt<=safeDaily;
       dot.classList.add(under ? 'under' : 'over');
       const statusText = under
-        ? `Šodien iztērēts mazāk nekā drošais temps (${fmt(safeDaily)}/d.)`
-        : `Šodien iztērēts vairāk nekā drošais temps (${fmt(safeDaily)}/d.)`;
+        ? t('pace.under_status', {amount: fmt(safeDaily)})
+        : t('pace.over_status', {amount: fmt(safeDaily)});
       dot.title = statusText;
       if(status) status.textContent = statusText;
     } else {
@@ -1231,12 +1236,12 @@ function renderCategories(total){
       offset += frac;
     });
   }
-  $('donutTotal').textContent = '€ ' + Math.round(total).toLocaleString('lv-LV');
+  $('donutTotal').textContent = '€ ' + Math.round(total).toLocaleString(currentLocale());
 
   // Legend with mini bars
   const legend = $('catLegend');
   legend.innerHTML = '';
-  if(entries.length===0){ legend.innerHTML = '<div class="cat-pct">Nav datu</div>'; return; }
+  if(entries.length===0){ legend.innerHTML = `<div class="cat-pct">${t('categories.none')}</div>`; return; }
   entries.forEach(([k,v])=>{
     const pct = total>0 ? v/total*100 : 0;
     const div = document.createElement('div');
@@ -1262,9 +1267,8 @@ let archiveCache = [];
 function monthKey(d=new Date()){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function monthLabel(key){
   const m = /^(\d{4})-(\d{2})$/.exec(key||'');
-  if(!m) return 'Arhīva ieraksts';
-  const names = ['Janvāris','Februāris','Marts','Aprīlis','Maijs','Jūnijs','Jūlijs','Augusts','Septembris','Oktobris','Novembris','Decembris'];
-  return names[+m[2]-1] + ' ' + m[1];
+  if(!m) return t('archive.default_entry_name');
+  return t('months.'+(+m[2])) + ' ' + m[1];
 }
 function archName(a){ return (a.name && a.name.trim()) ? a.name.trim() : monthLabel(a.id); }
 
@@ -1276,14 +1280,14 @@ async function loadArchive(){
     archiveCache.sort((a,b)=> (b.archivedAt||0) - (a.archivedAt||0) || String(b.id).localeCompare(String(a.id)));
     renderArchive();
   } catch(e){
-    $('archiveList').innerHTML = '<div class="empty-note">Neizdevās ielādēt arhīvu: '+e.code+'</div>';
+    $('archiveList').innerHTML = `<div class="empty-note">${t('archive.load_failed', {code: e.code})}</div>`;
   }
 }
 
 function renderArchive(){
   const list = $('archiveList');
   if(archiveCache.length===0){
-    list.innerHTML = '<div class="empty-note">Vēl nav arhivētu mēnešu. Mēneša beigās spied "Aizvērt mēnesi → arhīvā".</div>';
+    list.innerHTML = `<div class="empty-note">${t('archive.empty')}</div>`;
     return;
   }
   list.innerHTML = '';
@@ -1295,12 +1299,12 @@ function renderArchive(){
     const row = document.createElement('div');
     row.className = 'arch-row';
     row.innerHTML = `
-      <div><div class="arch-month">${escapeHtml(archName(a))}</div><div class="arch-sub">${(a.bills||[]).length} rēķini · ienākumi ${fmt(archIncome)}${extraTotal>0?` (bāze ${fmt(a.income)} + papildus ${fmt(extraTotal)})`:''}</div></div>
-      <div class="arch-figure"><span class="lbl">Rēķini</span>${fmt(total)}</div>
-      <div class="arch-figure ${remaining>=0?'rem-pos':'rem-neg'}"><span class="lbl">Paliek</span>${fmt(remaining)}</div>
+      <div><div class="arch-month">${escapeHtml(archName(a))}</div><div class="arch-sub">${t('archive.bills_count', {count: (a.bills||[]).length, income: fmt(archIncome)})}${extraTotal>0?t('archive.income_breakdown', {base: fmt(a.income), extra: fmt(extraTotal)}):''}</div></div>
+      <div class="arch-figure"><span class="lbl">${t('archive.bills_label')}</span>${fmt(total)}</div>
+      <div class="arch-figure ${remaining>=0?'rem-pos':'rem-neg'}"><span class="lbl">${t('archive.remaining_label')}</span>${fmt(remaining)}</div>
       <div class="arch-actions">
-        <button class="btn ghost sm" data-view="${a.id}">Skatīt</button>
-        <button class="btn ghost sm" data-adup="${a.id}">Dublēt</button>
+        <button class="btn ghost sm" data-view="${a.id}">${t('archive.view')}</button>
+        <button class="btn ghost sm" data-adup="${a.id}">${t('archive.duplicate')}</button>
         <button class="btn ghost sm" data-adel="${a.id}">×</button>
       </div>`;
     list.appendChild(row);
@@ -1313,8 +1317,8 @@ $('closeMonthBtn').addEventListener('click', async ()=>{
   const label = (state.periodName||'').trim();
   const displayLabel = label || monthLabel(key);
   const msg = existing
-    ? `Mēnesis ${displayLabel} jau ir arhīvā. Pārrakstīt to ar pašreizējiem datiem?`
-    : `Saglabāt ${displayLabel} arhīvā? Pašreizējie dati paliks aktuālajā mēnesī, un arhīvā izveidosies momentuzņēmums.`;
+    ? t('archive.confirm_overwrite', {label: displayLabel})
+    : t('archive.confirm_save', {label: displayLabel});
   if(!confirm(msg)) return;
   try {
     const snapshot = {
@@ -1328,9 +1332,9 @@ $('closeMonthBtn').addEventListener('click', async ()=>{
     else if(existing && existing.name) snapshot.name = existing.name;
     await setDoc(doc(db, 'budgets', roomId, 'archive', key), snapshot);
     await loadArchive();
-    alert(`${displayLabel} saglabāts arhīvā ✓`);
+    alert(t('archive.saved', {label: displayLabel}));
   } catch(e){
-    alert('Neizdevās saglabāt: ' + e.message);
+    alert(t('archive.save_failed', {msg: e.message}));
   }
 });
 
@@ -1342,29 +1346,29 @@ $('archiveList').addEventListener('click', async e=>{
     const newId = 'kopija-' + Date.now();
     const baseName = archName(src);
     const copy = {
-      name: baseName + ' (kopija)',
+      name: baseName + t('archive.duplicate_suffix'),
       income: src.income,
       bills: structuredClone(src.bills||[]),
       credits: structuredClone(src.credits||[]),
       extraIncome: structuredClone(src.extraIncome||[]),
       archivedAt: Date.now()
     };
-    e.target.textContent = 'Dublē…';
+    e.target.textContent = t('archive.duplicating');
     try {
       await setDoc(doc(db, 'budgets', roomId, 'archive', newId), copy);
       await loadArchive();
       openArchiveModal(newId);
     } catch(err){
-      e.target.textContent = 'Dublēt';
-      alert('Neizdevās dublēt: ' + err.message);
+      e.target.textContent = t('archive.duplicate');
+      alert(t('archive.duplicate_failed', {msg: err.message}));
     }
   }
   if(e.target.dataset.adel){
     const key = e.target.dataset.adel;
     const label = archName(archiveCache.find(x=>x.id===key)||{id:key});
-    if(confirm(`Dzēst "${label}" no arhīva? To nevar atsaukt.`)){
+    if(confirm(t('archive.confirm_delete', {label}))){
       try { await deleteDoc(doc(db, 'budgets', roomId, 'archive', key)); await loadArchive(); }
-      catch(err){ alert('Neizdevās dzēst: ' + err.message); }
+      catch(err){ alert(t('archive.delete_failed', {msg: err.message})); }
     }
   }
 });
@@ -1390,33 +1394,33 @@ function openArchiveModal(key){
         <div class="arch-name-edit">
           <input id="archNameInput" value="${escapeHtml(archName(a))}" placeholder="${escapeHtml(monthLabel(key))}">
         </div>
-        <div class="msub">${/^\d{4}-\d{2}$/.test(key) ? monthLabel(key)+' · ' : ''}Arhivēts ${a.archivedAt ? new Date(a.archivedAt).toLocaleDateString('lv-LV') : ''}</div>
+        <div class="msub">${/^\d{4}-\d{2}$/.test(key) ? monthLabel(key)+' · ' : ''}${t('archive_modal.archived_on', {date: a.archivedAt ? new Date(a.archivedAt).toLocaleDateString(currentLocale()) : ''})}</div>
 
         <div class="mini-summary" id="mMini"></div>
 
-        <h4 style="margin:0 0 4px;font-family:Georgia,serif;">Ienākumi</h4>
+        <h4 style="margin:0 0 4px;font-family:Georgia,serif;">${t('archive_modal.income_title')}</h4>
         <div class="m-income">€ <input id="mIncome" type="number" step="0.01" inputmode="decimal" value="${Number(draft.income)||0}"></div>
 
-        <h4 style="margin:18px 0 4px;font-family:Georgia,serif;display:flex;justify-content:space-between;align-items:baseline;">Rēķini <span id="mPaidInfo" style="font-family:inherit;font-size:12px;font-weight:400;color:var(--muted);"></span></h4>
+        <h4 style="margin:18px 0 4px;font-family:Georgia,serif;display:flex;justify-content:space-between;align-items:baseline;">${t('archive_modal.bills_title')} <span id="mPaidInfo" style="font-family:inherit;font-size:12px;font-weight:400;color:var(--muted);"></span></h4>
         <div id="mBills"></div>
-        <button class="btn ghost sm add-line" id="mAddBill">+ Pievienot rēķinu</button>
+        <button class="btn ghost sm add-line" id="mAddBill">${t('archive_modal.add_bill')}</button>
 
-        <h4 style="margin:18px 0 4px;font-family:Georgia,serif;">Kredītu atlikumi</h4>
+        <h4 style="margin:18px 0 4px;font-family:Georgia,serif;">${t('archive_modal.credits_title')}</h4>
         <div id="mCredits"></div>
-        <button class="btn ghost sm add-line" id="mAddCredit">+ Kredīts</button>
+        <button class="btn ghost sm add-line" id="mAddCredit">${t('archive_modal.add_credit')}</button>
 
         <div class="m-savebar">
-          <span class="status" id="mStatus">Tikai skatīšana</span>
+          <span class="status" id="mStatus">${t('archive_modal.view_only')}</span>
           <span class="spacer"></span>
-          <button class="btn ghost sm" id="mCancel">Aizvērt</button>
-          <button class="btn" id="mSave">Labot</button>
+          <button class="btn ghost sm" id="mCancel">${t('common.close')}</button>
+          <button class="btn" id="mSave">${t('archive_modal.edit')}</button>
         </div>
       </div>
     </div>`;
 
   const catOpts = sel => { let opts = catList().map(c=>`<option value="${c.key}"${c.key===sel?' selected':''}>${escapeHtml(c.name)}</option>`).join(''); if(sel && !catList().some(c=>c.key===sel)) opts = `<option value="${sel}" selected>${escapeHtml(sel)}</option>` + opts; return opts; };
 
-  function markDirty(){ dirty = true; $('mStatus').textContent = 'Ir nesaglabātas izmaiņas'; $('mStatus').style.color = 'var(--amber)'; }
+  function markDirty(){ dirty = true; $('mStatus').textContent = t('archive_modal.unsaved'); $('mStatus').style.color = 'var(--amber)'; }
 
   function renderMini(){
     const extraTotal = (a.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
@@ -1424,12 +1428,12 @@ function openArchiveModal(key){
     const total = draft.bills.reduce((s,b)=>s+billAmount(b),0);
     const remaining = income - total;
     $('mMini').innerHTML = `
-      <div class="ms"><div class="l">Ienākumi</div><div class="v">${fmt(income)}</div></div>
-      <div class="ms"><div class="l">Rēķini</div><div class="v">${fmt(total)}</div></div>
-      <div class="ms"><div class="l">Paliek</div><div class="v" style="color:${remaining>=0?'var(--green)':'var(--red)'}">${fmt(remaining)}</div></div>`;
+      <div class="ms"><div class="l">${t('budget.income_label')}</div><div class="v">${fmt(income)}</div></div>
+      <div class="ms"><div class="l">${t('archive_modal.bills_title')}</div><div class="v">${fmt(total)}</div></div>
+      <div class="ms"><div class="l">${t('budget.remaining_label')}</div><div class="v" style="color:${remaining>=0?'var(--green)':'var(--red)'}">${fmt(remaining)}</div></div>`;
     const paidCount = draft.bills.filter(isBillPaid).length;
     const paidSum = draft.bills.filter(isBillPaid).reduce((s,b)=>s+billAmount(b),0);
-    $('mPaidInfo').textContent = `${paidCount} no ${draft.bills.length} samaksāti · ${fmt(paidSum)}`;
+    $('mPaidInfo').textContent = t('archive_modal.paid_count', {paid: paidCount, total: draft.bills.length, sum: fmt(paidSum)});
   }
 
   function renderBills(){
@@ -1439,16 +1443,16 @@ function openArchiveModal(key){
       const isSumB = b.type==='summing';
       row.className = 'ebill' + (b.paid?' paid':''); row.dataset.cat = b.cat||'cits'; row.dataset.idx = i;
       row.innerHTML = `
-        <div class="ehandle" data-edrag="${i}" title="Vilkt" style="border-left-color:${catColor(b.cat||'cits')}"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
+        <div class="ehandle" data-edrag="${i}" title="${t('archive_modal.drag_title')}" style="border-left-color:${catColor(b.cat||'cits')}"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
         ${isSumB
-          ? `<div class="echk echk-auto" title="Summējošs rēķins — katra epizode jau ir apmaksāta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
-          : `<button class="echk" data-echk="${i}" title="Samaksāts"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
-        <input class="ename" value="${escapeHtml(b.name||'')}" data-ei="${i}" data-ef="name" placeholder="Nosaukums">
-        <span class="pay-badge ${isBillPaid(b)?'yes':'no'}">${isSumB?'Apmaksāts (automātiski)':(b.paid?'Samaksāts':'Nav samaksāts')}</span>
-        <div class="eamt-wrap"><span class="e-eur">€</span>${b.type==='summing' ? `<span class="eamt" style="display:inline-block;" title="Kopsumma no ${(b.entries||[]).length} epizodēm">${billAmount(b).toFixed(2)}</span>` : `<input class="eamt" type="number" step="0.01" inputmode="decimal" value="${Number(b.amount)||0}" data-ei="${i}" data-ef="amount">`}</div>
+          ? `<div class="echk echk-auto" title="${t('archive_modal.summing_auto_title')}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+          : `<button class="echk" data-echk="${i}" title="${t('archive_modal.paid_title')}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
+        <input class="ename" value="${escapeHtml(b.name||'')}" data-ei="${i}" data-ef="name" placeholder="${t('bills.name_placeholder')}">
+        <span class="pay-badge ${isBillPaid(b)?'yes':'no'}">${isSumB?t('archive_modal.auto_paid_badge'):(b.paid?t('archive_modal.paid_badge'):t('archive_modal.unpaid_badge'))}</span>
+        <div class="eamt-wrap"><span class="e-eur">€</span>${b.type==='summing' ? `<span class="eamt" style="display:inline-block;" title="${t('archive_modal.sum_from_entries_title', {count: (b.entries||[]).length})}">${billAmount(b).toFixed(2)}</span>` : `<input class="eamt" type="number" step="0.01" inputmode="decimal" value="${Number(b.amount)||0}" data-ei="${i}" data-ef="amount">`}</div>
         <div style="display:flex;gap:4px;align-items:center;">
           <select class="ecat" data-ei="${i}" data-ef="cat">${catOpts(b.cat||'cits')}</select>
-          <button class="edel" data-edel="${i}" title="Dzēst">×</button>
+          <button class="edel" data-edel="${i}" title="${t('common.delete_title')}">×</button>
         </div>`;
       c.appendChild(row);
     });
@@ -1460,16 +1464,16 @@ function openArchiveModal(key){
       const row = document.createElement('div');
       row.className = 'ecredit';
       row.innerHTML = `
-        <input class="ec-name" value="${escapeHtml(cr.name||'')}" data-ci="${i}" data-cf="name" placeholder="Kredīta nosaukums">
+        <input class="ec-name" value="${escapeHtml(cr.name||'')}" data-ci="${i}" data-cf="name" placeholder="${t('credits.name_placeholder')}">
         <div class="eamt-wrap"><span class="e-eur">€</span><input class="ec-amt" type="number" step="0.01" inputmode="decimal" value="${Number(cr.amount)||0}" data-ci="${i}" data-cf="amount"></div>
-        <button class="edel" data-cdel="${i}" title="Dzēst">×</button>`;
+        <button class="edel" data-cdel="${i}" title="${t('common.delete_title')}">×</button>`;
       c.appendChild(row);
     });
     if(draft.credits.length){
       const ctotal = draft.credits.reduce((s,cr)=>s+(Number(cr.amount)||0),0);
       const foot = document.createElement('div');
       foot.className = 'ecredit-foot';
-      foot.innerHTML = `<span>Atlikums kopā</span><span class="ec-total">${fmt(ctotal)}</span>`;
+      foot.innerHTML = `<span>${t('archive_modal.total_label')}</span><span class="ec-total">${fmt(ctotal)}</span>`;
       c.appendChild(foot);
     }
   }
@@ -1497,7 +1501,7 @@ function openArchiveModal(key){
   });
   $('mBills').addEventListener('click', e=>{
     const del=e.target.closest('[data-edel]'); const chk=e.target.closest('[data-echk]');
-    if(del){ const i=+del.dataset.edel; const nm=(draft.bills[i].name||'').trim(); if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){ draft.bills.splice(i,1); renderAll(); markDirty(); } return; }
+    if(del){ const i=+del.dataset.edel; const nm=(draft.bills[i].name||'').trim(); if(confirm(nm?t('archive_modal.confirm_delete_bill_named',{name:nm}):t('archive_modal.confirm_delete_bill'))){ draft.bills.splice(i,1); renderAll(); markDirty(); } return; }
     if(chk){ const i=+chk.dataset.echk; draft.bills[i].paid=!draft.bills[i].paid; renderAll(); markDirty(); }
   });
   $('mAddBill').addEventListener('click', ()=>{ draft.bills.push({name:'',amount:0,cat:'cits'}); renderAll(); markDirty(); });
@@ -1510,7 +1514,7 @@ function openArchiveModal(key){
   });
   $('mCredits').addEventListener('click', e=>{
     const del=e.target.closest('[data-cdel]');
-    if(del){ const i=+del.dataset.cdel; const nm=(draft.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ draft.credits.splice(i,1); renderCredits(); markDirty(); } }
+    if(del){ const i=+del.dataset.cdel; const nm=(draft.credits[i].name||'').trim(); if(confirm(nm?t('archive_modal.confirm_delete_credit_named',{name:nm}):t('archive_modal.confirm_delete_credit'))){ draft.credits.splice(i,1); renderCredits(); markDirty(); } }
   });
   $('mAddCredit').addEventListener('click', ()=>{ draft.credits.push({name:'',amount:0}); renderCredits(); markDirty(); });
 
@@ -1537,7 +1541,7 @@ function openArchiveModal(key){
 
   // Close / cancel with dirty guard
   function tryClose(){
-    if(dirty && !confirm('Ir nesaglabātas izmaiņas. Aizvērt bez saglabāšanas?')) return;
+    if(dirty && !confirm(t('archive_modal.discard_confirm'))) return;
     root.innerHTML='';
   }
   $('modalBack').addEventListener('click', e=>{ if(e.target.id==='modalBack') tryClose(); });
@@ -1550,8 +1554,8 @@ function openArchiveModal(key){
     if(locked){
       locked = false;
       applyLock();
-      $('mSave').textContent = 'Saglabāt izmaiņas';
-      $('mStatus').textContent = 'Rediģēšanas režīms';
+      $('mSave').textContent = t('archive_modal.save_changes');
+      $('mStatus').textContent = t('archive_modal.edit_mode');
       $('mStatus').style.color = 'var(--muted)';
       $('mIncome')?.focus();
       return;
@@ -1569,7 +1573,7 @@ function openArchiveModal(key){
       extraIncome: a.extraIncome || [],
       archivedAt: a.archivedAt || Date.now()
     };
-    const btn = $('mSave'); btn.textContent='Saglabā…'; btn.disabled=true;
+    const btn = $('mSave'); btn.textContent=t('archive_modal.saving'); btn.disabled=true;
     try {
       await setDoc(doc(db, 'budgets', roomId, 'archive', key), payload);
       const cached = archiveCache.find(x=>x.id===key);
@@ -1579,11 +1583,11 @@ function openArchiveModal(key){
       // Return to view-only mode
       locked = true;
       applyLock();
-      $('mStatus').textContent='Saglabāts ✓'; $('mStatus').style.color='var(--green)';
-      btn.textContent='Labot'; btn.disabled=false;
+      $('mStatus').textContent=t('archive_modal.saved'); $('mStatus').style.color='var(--green)';
+      btn.textContent=t('archive_modal.edit'); btn.disabled=false;
     } catch(err){
-      btn.textContent='Saglabāt izmaiņas'; btn.disabled=false;
-      alert('Neizdevās saglabāt: ' + err.message);
+      btn.textContent=t('archive_modal.save_changes'); btn.disabled=false;
+      alert(t('archive_modal.save_failed', {msg: err.message}));
     }
   });
 }
@@ -1613,9 +1617,9 @@ $('billsList').addEventListener('click', e=>{
   const toggleBtn = e.target.closest('[data-toggle]');
   if(delBtn){
     const i=+delBtn.dataset.del;
-    if(state.bills[i].goalId){ alert('Šo rēķinu nevar dzēst no Rēķinu saraksta — dzēs mērķi sadaļā "Uzkrājuma mērķi".'); return; }
+    if(state.bills[i].goalId){ alert(t('bills.cant_delete_goal_linked')); return; }
     const nm=(state.bills[i].name||'').trim();
-    if(confirm(nm?`Dzēst rēķinu "${nm}"?`:'Dzēst šo rēķinu?')){
+    if(confirm(nm?t('bills.confirm_delete_named',{name:nm}):t('bills.confirm_delete'))){
       const removedId = state.bills[i].id;
       state.bills.splice(i,1);
       (state.reminders||[]).forEach(r=>{ if(r.billId===removedId) r.active=false; });
@@ -1642,13 +1646,13 @@ $('billsList').addEventListener('click', e=>{
     const entriesListEl = toggleBtn.closest('.entries').querySelector('.entries-list');
     if(entriesListEl) entriesListEl.classList.toggle('collapsed', nowCollapsed);
     toggleBtn.setAttribute('aria-expanded', String(!nowCollapsed));
-    toggleBtn.title = nowCollapsed ? 'Rādīt epizodes' : 'Sakļaut epizodes';
+    toggleBtn.title = nowCollapsed ? t('bills.show_entries_title') : t('bills.collapse_entries_title');
     return;
   }
   if(entryDelBtn){
     const bi=+entryDelBtn.dataset.entrydel, ei=+entryDelBtn.dataset.entryidx;
     const ent = state.bills[bi].entries[ei];
-    if(confirm(`Dzēst epizodi ${fmt(ent.amount)}${ent.date?' ('+ent.date+')':''}?`)){
+    if(confirm(t('bills.confirm_delete_entry', {amount: fmt(ent.amount), date: ent.date?' ('+ent.date+')':''}))){
       state.bills[bi].entries.splice(ei,1); render(); scheduleSave();
     }
     return;
@@ -1662,17 +1666,17 @@ function openAddEntry(bi){
     <div class="modal-back" id="aeBack">
       <div class="modal" style="max-width:420px;">
         <button class="modal-close" id="aeClose">×</button>
-        <h3>Pievienot epizodi</h3>
-        <div class="msub">${escapeHtml(b.name||'Rēķins')} — pašreiz ${fmt(billAmount(b))}</div>
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Summa €</label>
+        <h3>${t('entry_modal.title')}</h3>
+        <div class="msub">${t('entry_modal.subtitle', {name: escapeHtml(b.name||t('default_bill_name')), amount: fmt(billAmount(b))})}</div>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">${t('entry_modal.amount_label')}</label>
         <input id="aeAmount" type="number" step="0.01" inputmode="decimal" placeholder="0.00" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Piezīme (nav obligāta)</label>
-        <input id="aeNote" type="text" placeholder="piem. degvielas uzpilde" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Datums</label>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">${t('entry_modal.note_label')}</label>
+        <input id="aeNote" type="text" placeholder="${t('entry_modal.note_placeholder')}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">${t('entry_modal.date_label')}</label>
         <input id="aeDate" type="date" value="${todayStr()}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
-          <button class="btn ghost sm" id="aeCancel">Atcelt</button>
-          <button class="btn" id="aeSave">Pievienot</button>
+          <button class="btn ghost sm" id="aeCancel">${t('common.cancel')}</button>
+          <button class="btn" id="aeSave">${t('common.add')}</button>
         </div>
       </div>
     </div>`;
@@ -1683,7 +1687,7 @@ function openAddEntry(bi){
   setTimeout(()=>$('aeAmount')?.focus(), 50);
   const doSave = ()=>{
     const amt = parseFloat($('aeAmount').value);
-    if(!amt || amt<=0){ alert('Ievadi summu, kas lielāka par 0.'); return; }
+    if(!amt || amt<=0){ alert(t('entry_modal.amount_required')); return; }
     if(!state.bills[bi].entries) state.bills[bi].entries = [];
     state.bills[bi].entries.push({ amount: amt, note: $('aeNote').value.trim(), date: $('aeDate').value || todayStr() });
     close(); render(); scheduleSave();
@@ -1700,14 +1704,14 @@ function openSetLimit(bi){
     <div class="modal-back" id="slBack">
       <div class="modal" style="max-width:420px;">
         <button class="modal-close" id="slClose">×</button>
-        <h3>Mēneša limits</h3>
-        <div class="msub">${escapeHtml(b.name||'Rēķins')} — plānotais maksimums mēnesī</div>
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Limits € (atstāj tukšu, lai noņemtu)</label>
+        <h3>${t('limit_modal.title')}</h3>
+        <div class="msub">${t('limit_modal.subtitle', {name: escapeHtml(b.name||t('default_bill_name'))})}</div>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">${t('limit_modal.amount_label')}</label>
         <input id="slAmount" type="number" step="0.01" inputmode="decimal" value="${cur>0?cur:''}" placeholder="piem. 100" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
-        <div style="font-size:12px;color:var(--muted);margin-top:8px;">Ja uzliec limitu, "Kopā rēķini" izmantos šo summu (plānoto), nevis reāli iztērēto.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">${t('limit_modal.hint')}</div>
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
-          <button class="btn ghost sm" id="slCancel">Atcelt</button>
-          <button class="btn" id="slSave">Saglabāt</button>
+          <button class="btn ghost sm" id="slCancel">${t('common.cancel')}</button>
+          <button class="btn" id="slSave">${t('common.save')}</button>
         </div>
       </div>
     </div>`;
@@ -1719,7 +1723,7 @@ function openSetLimit(bi){
   const doSave = ()=>{
     const val = $('slAmount').value.trim();
     if(val===''){ delete state.bills[bi].limit; }
-    else { const n=parseFloat(val); if(isNaN(n)||n<0){ alert('Ievadi derīgu summu.'); return; } state.bills[bi].limit = n; }
+    else { const n=parseFloat(val); if(isNaN(n)||n<0){ alert(t('limit_modal.invalid_amount')); return; } state.bills[bi].limit = n; }
     close(); render(); scheduleSave();
   };
   $('slSave').addEventListener('click', doSave);
@@ -1752,7 +1756,7 @@ function advanceGoalBill(bill){
 }
 
 function openNewMonthModal(){
-  if(!state.bills.length){ alert('Nav neviena rēķina, ko atiestatīt.'); return; }
+  if(!state.bills.length){ alert(t('new_month.no_bills')); return; }
   const root = $('modalRoot');
   const hasGoalBills = state.bills.some(b=>b.goalId);
   // Uzkrājumu mērķu rēķini apzināti IZSLĒGTI no šī checkbox saraksta — tie vienmēr tiek
@@ -1761,20 +1765,24 @@ function openNewMonthModal(){
   const rowsHtml = state.bills.map((b,i)=> b.goalId ? '' : `
     <label class="nm-row">
       <input type="checkbox" class="nm-keep" data-i="${i}" checked>
-      <span class="nm-name">${escapeHtml(b.name||'(bez nosaukuma)')}</span>
+      <span class="nm-name">${escapeHtml(b.name||t('common.no_name'))}</span>
       <span class="nm-amt">${fmt(billAmount(b))}</span>
     </label>`).join('');
+  const hintHtml = t('new_month.hint') + '<br><br>'
+    + t('new_month.hint_archive', {label: `<strong>${escapeHtml(currentPeriodLabel())}</strong>`}) + ' '
+    + t('new_month.hint_rename', {label: `<strong>${escapeHtml(monthLabel(monthKey()))}</strong>`})
+    + (hasGoalBills ? t('new_month.hint_goals') : '');
   root.innerHTML = `
     <div class="modal-back" id="nmBack">
       <div class="modal" style="max-width:460px;">
         <button class="modal-close" id="nmClose">×</button>
-        <h3>Jauns mēnesis</h3>
-        <div class="msub">Atzīmē rēķinus, kas atkārtojas katru mēnesi un jāpatur. Neatzīmētie tiks izdzēsti. Summējošiem rēķiniem tiks dzēstas epizodes (limits paliks nemainīgs), un visiem paturētajiem rēķiniem "Samaksāts" ķeksīši tiks noņemti.<br><br>Ja saglabāsi arhīvā, tas tiks nosaukts "<strong>${escapeHtml(currentPeriodLabel())}</strong>". Pēc atiestatīšanas darba perioda nosaukums tiks automātiski mainīts uz "<strong>${escapeHtml(monthLabel(monthKey()))}</strong>" — vēlāk to vari pārrakstīt, klikšķinot uz nosaukuma pie "Rēķini".${hasGoalBills ? ' Uzkrājumu mērķu maksājumi tiek pārcelti automātiski — tie nav šajā sarakstā.' : ''}</div>
+        <h3>${t('new_month.title')}</h3>
+        <div class="msub">${hintHtml}</div>
         <div class="nm-list">${rowsHtml}</div>
-        <label class="nm-archive-opt"><input type="checkbox" id="nmArchiveFirst" checked> Vispirms saglabāt šo mēnesi arhīvā</label>
+        <label class="nm-archive-opt"><input type="checkbox" id="nmArchiveFirst" checked> ${t('new_month.archive_first')}</label>
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
-          <button class="btn ghost sm" id="nmCancel">Atcelt</button>
-          <button class="btn" id="nmConfirm">Sākt jaunu mēnesi</button>
+          <button class="btn ghost sm" id="nmCancel">${t('common.cancel')}</button>
+          <button class="btn" id="nmConfirm">${t('new_month.confirm_btn')}</button>
         </div>
       </div>
     </div>`;
@@ -1785,7 +1793,7 @@ function openNewMonthModal(){
   $('nmConfirm').addEventListener('click', async ()=>{
     const keepIdx = new Set([...root.querySelectorAll('.nm-keep:checked')].map(el=>+el.dataset.i));
     const removedCount = state.bills.filter(b=>!b.goalId).length - keepIdx.size;
-    if(!confirm(`Sākt jaunu mēnesi? ${removedCount} rēķins(-i) tiks izdzēsts(-i) neatgriezeniski.`)) return;
+    if(!confirm(t('new_month.confirm_removal', {count: removedCount}))) return;
     if($('nmArchiveFirst').checked){
       try {
         const key = monthKey();
@@ -1803,7 +1811,7 @@ function openNewMonthModal(){
         await setDoc(doc(db, 'budgets', roomId, 'archive', key), snapshot);
         await loadArchive();
       } catch(e){
-        alert('Neizdevās saglabāt arhīvā: ' + e.message + ' — mēneša atiestatīšana pārtraukta, lai nezaudētu datus.');
+        alert(t('new_month.archive_failed', {msg: e.message}));
         return;
       }
     }
@@ -1821,7 +1829,7 @@ function openNewMonthModal(){
     state.extraIncome = [];
     state.periodName = monthLabel(monthKey());
     close(); render(); updateTotals(); scheduleSave();
-    alert('Jauns mēnesis sagatavots ✓');
+    alert(t('new_month.done'));
   });
 }
 
@@ -1837,36 +1845,36 @@ $('newMonthBtn').addEventListener('click', openNewMonthModal);
 function openAddReminderModal(){
   const root = $('modalRoot');
   const linkableBills = (state.bills||[]).filter(b=>b.type!=='summing');
-  const billsOptions = linkableBills.map(b=>`<option value="${b.id}">${escapeHtml(b.name||'(bez nosaukuma)')}</option>`).join('');
+  const billsOptions = linkableBills.map(b=>`<option value="${b.id}">${escapeHtml(b.name||t('common.no_name'))}</option>`).join('');
   const hasBills = linkableBills.length>0;
   root.innerHTML = `
     <div class="modal-back" id="arBack">
       <div class="modal" style="max-width:440px;">
         <button class="modal-close" id="arClose">×</button>
-        <h3>Pievienot atgādinājumu</h3>
+        <h3>${t('reminder_modal.title')}</h3>
         <div class="rem-type-toggle">
-          <button class="rem-type-btn${hasBills?' active':''}" id="arTypeLinked" type="button" ${hasBills?'':'disabled'}>Piesaistīts rēķinam</button>
-          <button class="rem-type-btn${hasBills?'':' active'}" id="arTypeFree" type="button">Brīvs atgādinājums</button>
+          <button class="rem-type-btn${hasBills?' active':''}" id="arTypeLinked" type="button" ${hasBills?'':'disabled'}>${t('reminder_modal.linked_tab')}</button>
+          <button class="rem-type-btn${hasBills?'':' active'}" id="arTypeFree" type="button">${t('reminder_modal.free_tab')}</button>
         </div>
 
         <div id="arLinkedFields" class="${hasBills?'':'hidden'}">
-          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Rēķins</label>
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">${t('reminder_modal.bill_label')}</label>
           <select id="arBillSelect" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">${billsOptions}</select>
-          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Diena mēnesī (1–31)</label>
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">${t('reminder_modal.day_label')}</label>
           <input id="arDay" type="number" min="1" max="31" step="1" value="15" style="width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
-          <div style="font-size:12px;color:var(--muted);margin-top:8px;">Atgādinājums automātiski atkārtojas katru mēnesi šajā dienā — arī pēc "Jauns mēnesis".</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;">${t('reminder_modal.day_hint')}</div>
         </div>
 
         <div id="arFreeFields" class="${hasBills?'hidden':''}">
-          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Nosaukums</label>
-          <input id="arName" type="text" placeholder="piem. Auto tehniskā apskate" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
-          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Datums</label>
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">${t('reminder_modal.name_label')}</label>
+          <input id="arName" type="text" placeholder="${t('reminder_modal.name_placeholder')}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
+          <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">${t('reminder_modal.date_label')}</label>
           <input id="arDate" type="date" value="${todayStr()}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
         </div>
 
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
-          <button class="btn ghost sm" id="arCancel">Atcelt</button>
-          <button class="btn" id="arSave">Pievienot</button>
+          <button class="btn ghost sm" id="arCancel">${t('common.cancel')}</button>
+          <button class="btn" id="arSave">${t('common.add')}</button>
         </div>
       </div>
     </div>`;
@@ -1892,13 +1900,13 @@ function openAddReminderModal(){
       const billId = $('arBillSelect').value;
       const bill = billById(billId);
       let day = parseInt($('arDay').value,10);
-      if(!day || day<1 || day>31){ alert('Ievadi derīgu dienu (1–31).'); return; }
+      if(!day || day<1 || day>31){ alert(t('reminder_modal.invalid_day')); return; }
       state.reminders.push({ id: genId(), billId, name: bill?bill.name:'', day, date:null, active:true, dismissedFor:null });
     } else {
       const name = $('arName').value.trim();
       const date = $('arDate').value;
-      if(!name){ alert('Ievadi nosaukumu.'); return; }
-      if(!date){ alert('Izvēlies datumu.'); return; }
+      if(!name){ alert(t('reminder_modal.name_required')); return; }
+      if(!date){ alert(t('reminder_modal.date_required')); return; }
       state.reminders.push({ id: genId(), billId:null, name, day:null, date, active:true, dismissedFor:null });
     }
     close(); render(); scheduleSave();
@@ -1920,7 +1928,7 @@ $('addReminderBtn')?.addEventListener('click', openAddReminderModal);
     if(delBtn){
       const i = +delBtn.dataset.remdel;
       const r = state.reminders[i];
-      if(r && confirm(`Dzēst atgādinājumu "${reminderDisplayName(r)}"?`)){
+      if(r && confirm(t('reminders.confirm_delete', {name: reminderDisplayName(r)}))){
         state.reminders.splice(i,1); render(); scheduleSave();
       }
       return;
@@ -2001,7 +2009,7 @@ $('creditsList').addEventListener('click', e=>{
   const dateBtn=e.target.closest('[data-cdate]');
   const minusBtn=e.target.closest('[data-cpay-minus]');
   const plusBtn=e.target.closest('[data-cpay-plus]');
-  if(del){ const i=+del.dataset.cdel; const nm=(state.credits[i].name||'').trim(); if(confirm(nm?`Dzēst kredīta atlikumu "${nm}"?`:'Dzēst šo kredīta atlikumu?')){ state.credits.splice(i,1); render(); scheduleSave(); } return; }
+  if(del){ const i=+del.dataset.cdel; const nm=(state.credits[i].name||'').trim(); if(confirm(nm?t('credits.confirm_delete_named',{name:nm}):t('credits.confirm_delete'))){ state.credits.splice(i,1); render(); scheduleSave(); } return; }
   if(dateBtn){ openCreditDates(+dateBtn.dataset.cdate); return; }
   if(minusBtn){ const i=+minusBtn.dataset.cpayMinus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=Math.round(Math.max((Number(state.credits[i].amount)||0)-pay,0)*100)/100; render(); scheduleSave(); } return; }
   if(plusBtn){ const i=+plusBtn.dataset.cpayPlus; const pay=Number(state.credits[i].monthly)||0; if(pay>0){ state.credits[i].amount=Math.round(((Number(state.credits[i].amount)||0)+pay)*100)/100; render(); scheduleSave(); } return; }
@@ -2014,16 +2022,16 @@ function openCreditDates(ci){
     <div class="modal-back" id="cdBack">
       <div class="modal" style="max-width:420px;">
         <button class="modal-close" id="cdClose">×</button>
-        <h3>Kredīta termiņš</h3>
-        <div class="msub">${escapeHtml(c.name||'Kredīts')} — sākuma un beigu datums parāda nomaksas progresu</div>
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">Sākuma datums</label>
+        <h3>${t('credit_dates_modal.title')}</h3>
+        <div class="msub">${t('credit_dates_modal.subtitle', {name: escapeHtml(c.name||t('default_credit_name'))})}</div>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0;">${t('credit_dates_modal.start_label')}</label>
         <input id="cdStart" type="date" value="${c.start||''}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
-        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">Beigu datums</label>
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;">${t('credit_dates_modal.end_label')}</label>
         <input id="cdEnd" type="date" value="${c.end||''}" style="width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);">
-        <div style="font-size:12px;color:var(--muted);margin-top:8px;">Progress tiek rēķināts pēc laika (cik no termiņa pagājis). Atstāj tukšu, lai noņemtu termiņu.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">${t('credit_dates_modal.hint')}</div>
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
-          <button class="btn ghost sm" id="cdCancel">Atcelt</button>
-          <button class="btn" id="cdSave">Saglabāt</button>
+          <button class="btn ghost sm" id="cdCancel">${t('common.cancel')}</button>
+          <button class="btn" id="cdSave">${t('common.save')}</button>
         </div>
       </div>
     </div>`;
@@ -2033,7 +2041,7 @@ function openCreditDates(ci){
   $('cdCancel').addEventListener('click', close);
   $('cdSave').addEventListener('click', ()=>{
     const s = $('cdStart').value, e = $('cdEnd').value;
-    if(s && e && new Date(e) <= new Date(s)){ alert('Beigu datumam jābūt pēc sākuma datuma.'); return; }
+    if(s && e && new Date(e) <= new Date(s)){ alert(t('credit_dates_modal.end_before_start')); return; }
     if(s){ state.credits[ci].start = s; } else { delete state.credits[ci].start; }
     if(e){ state.credits[ci].end = e; } else { delete state.credits[ci].end; }
     close(); render(); scheduleSave();
@@ -2083,15 +2091,15 @@ $('addBill').addEventListener('click', ()=>{
     <div class="modal-back" id="nbBack">
       <div class="modal" style="max-width:440px;">
         <button class="modal-close" id="nbClose">×</button>
-        <h3>Jauns rēķins</h3>
-        <div class="msub">Izvēlies rēķina veidu</div>
+        <h3>${t('bills.new_bill_title')}</h3>
+        <div class="msub">${t('bills.new_bill_subtitle')}</div>
         <button class="btn ghost" id="nbNormal" style="width:100%;text-align:left;padding:14px;margin-top:8px;display:block;">
-          <strong style="display:block;color:var(--ink);">Parasts rēķins</strong>
-          <span style="font-size:13px;color:var(--muted);">Fiksēta summa mēnesī (piem. īre, komunālie)</span>
+          <strong style="display:block;color:var(--ink);">${t('bills.normal_title')}</strong>
+          <span style="font-size:13px;color:var(--muted);">${t('bills.normal_desc')}</span>
         </button>
         <button class="btn ghost" id="nbSumming" style="width:100%;text-align:left;padding:14px;margin-top:10px;display:block;">
-          <strong style="display:block;color:var(--ink);">Summējošs rēķins</strong>
-          <span style="font-size:13px;color:var(--muted);">Krājas visu mēnesi, pievieno epizodes ar "+" (piem. degviela)</span>
+          <strong style="display:block;color:var(--ink);">${t('bills.summing_title')}</strong>
+          <span style="font-size:13px;color:var(--muted);">${t('bills.summing_desc')}</span>
         </button>
       </div>
     </div>`;
@@ -2126,7 +2134,7 @@ $('extraIncomeList').addEventListener('click', e=>{
   if(!del) return;
   const i=+del.dataset.eidel;
   const nm=(state.extraIncome[i].name||'').trim();
-  if(confirm(nm?`Dzēst papildus ienākumu "${nm}"?`:'Dzēst šo papildus ienākumu?')){
+  if(confirm(nm?t('extra_income.confirm_delete_named',{name:nm}):t('extra_income.confirm_delete'))){
     state.extraIncome.splice(i,1); render(); scheduleSave();
   }
 });
@@ -2143,10 +2151,10 @@ $('exportBtn').addEventListener('click', ()=>{
   a.download='finanses-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
 });
 $('exportCsvBtn')?.addEventListener('click', ()=>{
-  const rows = [['Tips','Nosaukums','Summa','Kategorija','Samaksāts']];
-  state.bills.forEach(b=>rows.push(['Rēķins', b.name||'', billAmount(b).toFixed(2), catName(b.cat||'cits'), isBillPaid(b)?'Jā':'Nē']));
-  state.credits.forEach(c=>rows.push(['Kredīts', c.name||'', (Number(c.amount)||0).toFixed(2), '', '']));
-  (state.extraIncome||[]).forEach(e=>rows.push(['Papildus ienākums', e.name||'', (Number(e.amount)||0).toFixed(2), e.date||'', '']));
+  const rows = [[t('export.csv_header_type'),t('export.csv_header_name'),t('export.csv_header_amount'),t('export.csv_header_category'),t('export.csv_header_paid')]];
+  state.bills.forEach(b=>rows.push([t('export.csv_type_bill'), b.name||'', billAmount(b).toFixed(2), catName(b.cat||'cits'), isBillPaid(b)?t('export.csv_yes'):t('export.csv_no')]));
+  state.credits.forEach(c=>rows.push([t('export.csv_type_credit'), c.name||'', (Number(c.amount)||0).toFixed(2), '', '']));
+  (state.extraIncome||[]).forEach(e=>rows.push([t('export.csv_type_extra_income'), e.name||'', (Number(e.amount)||0).toFixed(2), e.date||'', '']));
   const esc = v => /[";\n]/.test(v) ? '"'+String(v).replace(/"/g,'""')+'"' : v;
   const csv = '\uFEFF' + rows.map(r=>r.map(esc).join(';')).join('\r\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
@@ -2160,11 +2168,11 @@ $('fileIn').addEventListener('change', e=>{
   r.onload = ()=>{
     let data;
     try { data = JSON.parse(r.result); }
-    catch(err){ alert('Nederīgs fails — neizdevās nolasīt JSON.'); $('fileIn').value=''; return; }
+    catch(err){ alert(t('import.invalid_json')); $('fileIn').value=''; return; }
     if(typeof data !== 'object' || data===null || !Array.isArray(data.bills)){
-      alert('Šis neizskatās pēc derīga finanšu faila (trūkst rēķinu).'); $('fileIn').value=''; return;
+      alert(t('import.invalid_data')); $('fileIn').value=''; return;
     }
-    if(!confirm('Importēt šos datus? Tas pārrakstīs pašreizējos rēķinus, kredītus un kategorijas — arī mākonī un citās ierīcēs. (Arhīvs netiek skarts.)')){ $('fileIn').value=''; return; }
+    if(!confirm(t('import.confirm'))){ $('fileIn').value=''; return; }
     state = {
       income: Number(data.income)||0,
       periodName: (typeof data.periodName==='string') ? data.periodName : (state.periodName||''),
@@ -2177,18 +2185,18 @@ $('fileIn').addEventListener('change', e=>{
     if(!state.categories.some(c=>c.key==='cits')) state.categories.push({key:'cits',name:'Cits',color:'#8a8576'});
     render(); pushNow();
     $('fileIn').value='';
-    alert('Dati importēti ✓');
+    alert(t('import.done'));
   };
   r.readAsText(file);
 });
 
 $('signOutBtn').addEventListener('click', async ()=>{
-  if(!confirm('Izrakstīties? Nākamreiz atkal būs jāpiesakās ar Google.')) return;
+  if(!confirm(t('auth.signout_confirm'))) return;
   try {
     if(IS_NATIVE) await FirebaseAuthentication.signOut();
     await signOut(auth);
   } catch(e){
-    alert('Neizdevās izrakstīties: '+e.message);
+    alert(t('auth.signout_failed', {msg: e.message}));
   }
 });
 
@@ -2223,9 +2231,9 @@ function openCategoryManager(){
       return `
         <div class="cat-mgr-row" data-i="${i}">
           <input type="color" value="${c.color}" data-cmcolor="${i}" ${isCits?'':''}>
-          <input class="cm-name" value="${escapeHtml(c.name)}" data-cmname="${i}" placeholder="Kategorijas nosaukums">
-          <span class="cm-count">${used} rēķini</span>
-          <button class="cm-del" data-cmdel="${i}" ${isCits?'disabled title="Pamatkategoriju nevar dzēst"':'title="Dzēst"'}>×</button>
+          <input class="cm-name" value="${escapeHtml(c.name)}" data-cmname="${i}" placeholder="${t('categories.name_placeholder')}">
+          <span class="cm-count">${t('categories.usage_count', {count: used})}</span>
+          <button class="cm-del" data-cmdel="${i}" ${isCits?`disabled title="${t('categories.delete_protected_title')}"`:`title="${t('categories.delete_title')}"`}>×</button>
         </div>`;
     }).join('');
   }
@@ -2234,21 +2242,21 @@ function openCategoryManager(){
     <div class="modal-back" id="catBack">
       <div class="modal">
         <button class="modal-close" id="catClose">×</button>
-        <h3>Kategorijas</h3>
-        <div class="msub">Pievieno, pārsauc, maini krāsu vai dzēs. "Cits" ir pamatkategorija — dzēšot citu, tās rēķini pāriet uz to.</div>
+        <h3>${t('categories.manager_title')}</h3>
+        <div class="msub">${t('categories.manager_hint')}</div>
         <div id="catRows">${rowsHtml()}</div>
-        <button class="btn ghost sm add-line" id="catAdd">+ Pievienot kategoriju</button>
+        <button class="btn ghost sm add-line" id="catAdd">${t('categories.add')}</button>
         <div class="m-savebar">
-          <span class="status" id="catStatus">Nesaglabātas izmaiņas netiek pielietotas</span>
+          <span class="status" id="catStatus">${t('categories.unsaved_hint')}</span>
           <span class="spacer"></span>
-          <button class="btn ghost sm" id="catCancel">Aizvērt</button>
-          <button class="btn" id="catSave">Saglabāt</button>
+          <button class="btn ghost sm" id="catCancel">${t('common.close')}</button>
+          <button class="btn" id="catSave">${t('common.save')}</button>
         </div>
       </div>
     </div>`;
 
   let dirty = false;
-  const mark = ()=>{ dirty=true; $('catStatus').textContent='Ir nesaglabātas izmaiņas'; $('catStatus').style.color='var(--amber)'; };
+  const mark = ()=>{ dirty=true; $('catStatus').textContent=t('categories.unsaved_status'); $('catStatus').style.color='var(--amber)'; };
   function rerender(){ $('catRows').innerHTML = rowsHtml(); }
 
   $('catRows').addEventListener('input', e=>{
@@ -2262,8 +2270,8 @@ function openCategoryManager(){
       const i = +del.dataset.cmdel;
       const used = usageCount(draft[i].key);
       const msg = used>0
-        ? `Dzēst "${draft[i].name}"? ${used} rēķini pāries uz "Cits".`
-        : `Dzēst "${draft[i].name}"?`;
+        ? t('categories.confirm_delete_used', {name: draft[i].name, count: used})
+        : t('categories.confirm_delete', {name: draft[i].name});
       if(confirm(msg)){ draft.splice(i,1); rerender(); mark(); }
     }
   });
@@ -2274,7 +2282,7 @@ function openCategoryManager(){
     inputs[inputs.length-1]?.focus();
   });
 
-  function tryClose(){ if(dirty && !confirm('Ir nesaglabātas izmaiņas. Aizvērt bez saglabāšanas?')) return; root.innerHTML=''; }
+  function tryClose(){ if(dirty && !confirm(t('categories.discard_confirm'))) return; root.innerHTML=''; }
   $('catBack').addEventListener('click', e=>{ if(e.target.id==='catBack') tryClose(); });
   $('catClose').addEventListener('click', tryClose);
   $('catCancel').addEventListener('click', tryClose);
@@ -2287,14 +2295,14 @@ function openCategoryManager(){
     if(!cleaned.some(c=>c.key==='cits')){
       cleaned.push({ key:'cits', name:'Cits', color:'#8a8576' });
     }
-    if(cleaned.length===0){ alert('Vismaz vienai kategorijai jābūt.'); return; }
+    if(cleaned.length===0){ alert(t('categories.name_required')); return; }
     // Reassign bills whose category was removed → 'cits'
     const validKeys = new Set(cleaned.map(c=>c.key));
     (state.bills||[]).forEach(b=>{ if(!validKeys.has(b.cat||'cits')) b.cat='cits'; });
     state.categories = cleaned;
     render(); scheduleSave();
     dirty=false;
-    $('catStatus').textContent='Saglabāts ✓'; $('catStatus').style.color='var(--green)';
+    $('catStatus').textContent=t('categories.saved_status'); $('catStatus').style.color='var(--green)';
     setTimeout(()=>{ root.innerHTML=''; }, 500);
   });
 }
@@ -2306,7 +2314,8 @@ function openCategoryManager(){
    ═══════════════════════════════════════════════════════════════ */
 
 // ---- Version ----
-document.title = 'Finanšu pārvaldnieks v' + VERSION;
+document.title = t('app.name') + ' v' + VERSION;
+onLangChange(() => { document.title = t('app.name') + ' v' + VERSION; });
 
 // ---- Theme (light/dark), saved locally per device ----
 function currentTheme(){ return document.documentElement.getAttribute('data-theme')==='dark' ? 'dark' : 'light'; }
@@ -2347,7 +2356,7 @@ function setReminderNotifTime(t){
     wrap.classList.toggle('pinned', pinned);
     btn.classList.toggle('active', pinned);
     btn.setAttribute('aria-pressed', String(pinned));
-    btn.title = pinned ? 'Atspraust kopsavilkumu' : 'Piespraust kopsavilkumu';
+    btn.title = pinned ? t('budget.summary_unpin_title') : t('budget.summary_pin_title');
     try { localStorage.setItem('summaryPinned', pinned ? '1' : '0'); } catch(e){}
   }
 
@@ -2484,8 +2493,8 @@ function openChangelog(){
     <div class="modal-back" id="clBack">
       <div class="modal">
         <button class="modal-close" id="clClose">×</button>
-        <h3>Kas jauns</h3>
-        <div class="msub">Izmaiņu vēsture · pašreizējā versija v${VERSION}</div>
+        <h3>${t('changelog.title')}</h3>
+        <div class="msub">${t('changelog.subtitle', {version: VERSION})}</div>
         ${entries}
       </div>
     </div>`;
@@ -2510,36 +2519,46 @@ function openDocModal(title, url){
   $('docClose').addEventListener('click', ()=>{ root.innerHTML=''; });
 }
 
-$('settingsBtn').addEventListener('click', ()=>{
-  closeDrawer();
+function renderSettingsModal(){
   const root = $('modalRoot');
   const dark = currentTheme()==='dark';
+  const lang = getLang();
   root.innerHTML = `
     <div class="modal-back" id="setBack">
       <div class="modal" style="max-width:460px;">
         <button class="modal-close" id="setClose">×</button>
-        <div class="brand" style="margin-bottom:14px;"><span class="eyebrow">Personīgais budžets</span> · <span class="app-name">Finanšu pārvaldnieks</span></div>
-        <h3>Iestatījumi</h3>
-        <div class="msub">Lietotnes izskats un informācija</div>
+        <div class="brand" style="margin-bottom:14px;"><span class="eyebrow">${t('settings.brand_eyebrow')}</span> · <span class="app-name">${t('app.name')}</span></div>
+        <h3>${t('settings.title')}</h3>
+        <div class="msub">${t('settings.subtitle')}</div>
 
         <div class="set-row">
           <div>
-            <div class="set-label">Krāsu tēma</div>
-            <div class="set-hint">Saglabājas šajā ierīcē</div>
+            <div class="set-label">${t('settings.language')}</div>
+            <div class="set-hint">${t('settings.language_hint')}</div>
           </div>
-          <div class="theme-switch" id="themeSwitch">
-            <button class="ts-opt ${dark?'':'active'}" data-theme-opt="light" type="button">🌙 Gaišā</button>
-            <button class="ts-opt ${dark?'active':''}" data-theme-opt="dark" type="button">☀️ Tumšā</button>
+          <div class="theme-switch" id="langSwitch">
+            ${SUPPORTED_LANGS.map(l=>`<button class="ts-opt ${lang===l?'active':''}" data-lang-opt="${l}" type="button">${t('lang.'+l)}</button>`).join('')}
           </div>
         </div>
 
         <div class="set-row">
           <div>
-            <div class="set-label">Algas datums</div>
-            <div class="set-hint">"Droša summa/dienā" rēķinās līdz šai dienai, nevis līdz mēneša beigām</div>
+            <div class="set-label">${t('settings.theme_label')}</div>
+            <div class="set-hint">${t('settings.theme_hint')}</div>
+          </div>
+          <div class="theme-switch" id="themeSwitch">
+            <button class="ts-opt ${dark?'':'active'}" data-theme-opt="light" type="button">${t('settings.theme_light')}</button>
+            <button class="ts-opt ${dark?'active':''}" data-theme-opt="dark" type="button">${t('settings.theme_dark')}</button>
+          </div>
+        </div>
+
+        <div class="set-row">
+          <div>
+            <div class="set-label">${t('settings.salary_day_label')}</div>
+            <div class="set-hint">${t('settings.salary_day_hint')}</div>
           </div>
           <select id="salaryDaySelect" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">
-            <option value="">Nav iestatīts</option>
+            <option value="">${t('settings.salary_day_none')}</option>
             ${Array.from({length:31}, (_,i)=>i+1).map(n=>`<option value="${n}" ${state.salaryDay===n?'selected':''}>${n}.</option>`).join('')}
           </select>
         </div>
@@ -2547,8 +2566,8 @@ $('settingsBtn').addEventListener('click', ()=>{
         ${IS_NATIVE ? `
         <div class="set-row">
           <div>
-            <div class="set-label">Atgādinājumu laiks</div>
-            <div class="set-hint">Cikos parādās native paziņojumi šajā ierīcē</div>
+            <div class="set-label">${t('settings.reminder_time_label')}</div>
+            <div class="set-hint">${t('settings.reminder_time_hint')}</div>
           </div>
           <input type="time" id="reminderTimeInput" value="${getReminderNotifTime()}" style="font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);">
         </div>
@@ -2556,35 +2575,35 @@ $('settingsBtn').addEventListener('click', ()=>{
 
         <div class="set-row">
           <div>
-            <div class="set-label">Versija</div>
+            <div class="set-label">${t('settings.version_label')}</div>
             <div class="set-hint">v${VERSION}</div>
           </div>
-          <button class="btn ghost sm" id="setChangelog" type="button">Kas jauns</button>
+          <button class="btn ghost sm" id="setChangelog" type="button">${t('settings.changelog_button')}</button>
         </div>
 
         <div class="set-row">
           <div>
-            <div class="set-label">Privātums</div>
-            <div class="set-hint">Kādi dati tiek vākti un kā tos pārvaldīt</div>
+            <div class="set-label">${t('settings.privacy_label')}</div>
+            <div class="set-hint">${t('settings.privacy_hint')}</div>
           </div>
-          <button class="btn ghost sm" id="privacyPolicyBtn" type="button">Privātuma politika</button>
+          <button class="btn ghost sm" id="privacyPolicyBtn" type="button">${t('settings.privacy_button')}</button>
         </div>
 
         <div class="set-row">
           <div>
-            <div class="set-label">Noteikumi</div>
-            <div class="set-hint">Lietotnes lietošanas noteikumi</div>
+            <div class="set-label">${t('settings.terms_label')}</div>
+            <div class="set-hint">${t('settings.terms_hint')}</div>
           </div>
-          <button class="btn ghost sm" id="termsBtn" type="button">Lietošanas noteikumi</button>
+          <button class="btn ghost sm" id="termsBtn" type="button">${t('settings.terms_button')}</button>
         </div>
 
         <div class="set-danger">
           <div class="set-row">
             <div>
-              <div class="set-label">Dzēst kontu</div>
-              <div class="set-hint">Neatgriezeniski dzēš kontu un visus datus</div>
+              <div class="set-label">${t('settings.delete_account_label')}</div>
+              <div class="set-hint">${t('settings.delete_account_hint')}</div>
             </div>
-            <button class="btn danger sm" id="deleteAccountBtn" type="button">Dzēst kontu</button>
+            <button class="btn danger sm" id="deleteAccountBtn" type="button">${t('settings.delete_account_button')}</button>
           </div>
         </div>
       </div>
@@ -2600,6 +2619,12 @@ $('settingsBtn').addEventListener('click', ()=>{
       b.classList.toggle('active', b.dataset.themeOpt === opt.dataset.themeOpt);
     });
   });
+  $('langSwitch').addEventListener('click', e=>{
+    const opt = e.target.closest('[data-lang-opt]');
+    if(!opt || opt.dataset.langOpt === getLang()) return;
+    setLang(opt.dataset.langOpt);
+    renderSettingsModal();
+  });
   $('salaryDaySelect').addEventListener('change', e=>{
     const val = e.target.value;
     state.salaryDay = val ? parseInt(val,10) : null;
@@ -2607,8 +2632,8 @@ $('settingsBtn').addEventListener('click', ()=>{
     scheduleSave();
   });
   $('setChangelog').addEventListener('click', openChangelog);
-  $('privacyPolicyBtn').addEventListener('click', ()=> openDocModal('Privātuma politika', 'privatuma-politika.html'));
-  $('termsBtn').addEventListener('click', ()=> openDocModal('Lietošanas noteikumi', 'lietosanas-noteikumi.html'));
+  $('privacyPolicyBtn').addEventListener('click', ()=> openDocModal(t('settings.privacy_button'), 'privatuma-politika.html'));
+  $('termsBtn').addEventListener('click', ()=> openDocModal(t('settings.terms_button'), 'lietosanas-noteikumi.html'));
   $('reminderTimeInput')?.addEventListener('change', e=>{
     const val = e.target.value;
     if(/^\d{2}:\d{2}$/.test(val)){
@@ -2618,11 +2643,11 @@ $('settingsBtn').addEventListener('click', ()=>{
   });
 
   $('deleteAccountBtn').addEventListener('click', async ()=>{
-    if(!confirm('Vai tiešām vēlies neatgriezeniski dzēst savu kontu? Tiks dzēsti VISI dati — rēķini, kredīti, kategorijas un mēnešu arhīvs.')) return;
-    if(!confirm('Pilnīgi droši? Šo darbību nevar atsaukt, un dati pazudīs no visām ierīcēm.')) return;
+    if(!confirm(t('settings.delete_account_confirm1'))) return;
+    if(!confirm(t('settings.delete_account_confirm2'))) return;
 
     const btn = $('deleteAccountBtn');
-    btn.disabled = true; btn.textContent = 'Dzēš…';
+    btn.disabled = true; btn.textContent = t('settings.deleting');
 
     const uid = currentUser.uid;
     try {
@@ -2632,7 +2657,7 @@ $('settingsBtn').addEventListener('click', ()=>{
     } catch(e){
       if(e && e.code === 'auth/requires-recent-login'){
         // Firebase requires a fresh sign-in for account deletion; re-prompt Google, then retry once.
-        btn.textContent = 'Nepieciešams apstiprināt no jauna…';
+        btn.textContent = t('settings.reauth_required');
         try {
           if(IS_NATIVE){
             // Same flow as the initial sign-in: native chooser, then bridge the
@@ -2644,15 +2669,19 @@ $('settingsBtn').addEventListener('click', ()=>{
           await deleteAllUserData(uid);
           await deleteUser(currentUser);
         } catch(e2){
-          alert('Neizdevās dzēst kontu: ' + (e2?.message || e2));
-          btn.disabled = false; btn.textContent = 'Dzēst kontu';
+          alert(t('settings.delete_account_failed', {msg: e2?.message || e2}));
+          btn.disabled = false; btn.textContent = t('settings.delete_account_button');
         }
       } else {
-        alert('Neizdevās dzēst kontu: ' + (e?.message || e));
-        btn.disabled = false; btn.textContent = 'Dzēst kontu';
+        alert(t('settings.delete_account_failed', {msg: e?.message || e}));
+        btn.disabled = false; btn.textContent = t('settings.delete_account_button');
       }
     }
   });
+}
+$('settingsBtn').addEventListener('click', ()=>{
+  closeDrawer();
+  renderSettingsModal();
 });
 
 // ---- Boot ----

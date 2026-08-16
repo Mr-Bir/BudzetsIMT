@@ -8,6 +8,10 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.0', date:'2026-08-16', notes:[
+    'Lietotne tagad pieejama arī angļu valodā — jauns "Valoda" iestatījums (Iestatījumi), pārslēdz uzreiz, saglabājas šajā ierīcē',
+    'Iztulkots viss lietotnes teksts: visi paneļi, pogas, dinamiskie ziņojumi, apstiprinājumi un kļūdu paziņojumi',
+  ]},
   { v:'1.38.0', date:'2026-08-15', notes:[
     'Jauna, pilna sadaļa "Uzkrājuma mērķi" — izvēlies mērķa summu un mēnešu skaitu (3/6/12/24/36/48/72, bankas kalkulatora stilā), un aplikācija automātiski izveido ikmēneša maksājuma rēķinu ar jaunu kategoriju "Uzkrājumi"',
     'Mērķa rēķinu nevar dzēst no Rēķinu saraksta — tikai no "Uzkrājuma mērķi" (tur dzēšana noņem arī saistīto rēķinu)',

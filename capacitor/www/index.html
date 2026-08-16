@@ -103,12 +103,12 @@
 <!-- ============ SIGN-IN GATE ============ -->
 <div class="wrap">
   <div class="gate" id="gate">
-    <h2>Finanšu pārvaldnieks</h2>
-    <p>Piesakies ar savu Google kontu, lai piekļūtu savam budžetam. Tavi dati ir privāti un pieejami tikai tev.</p>
+    <h2 data-i18n="app.name">Finanšu pārvaldnieks</h2>
+    <p data-i18n="gate.description">Piesakies ar savu Google kontu, lai piekļūtu savam budžetam. Tavi dati ir privāti un pieejami tikai tev.</p>
     <button class="btn full" id="signInBtn">
       <span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.6l-6.6-5.6C29.6 34.5 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.6l6.6 5.6C41.4 36.7 44 31 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
-        Pieteikties ar Google
+        <span data-i18n="gate.signin_button">Pieteikties ar Google</span>
       </span>
     </button>
     <div class="hint" id="gateErr" style="color:var(--red);margin-top:14px;"></div>
@@ -118,7 +118,7 @@
   <div id="app" class="hidden">
     <!-- Compact top bar: hamburger · tēriņa tempa indikators · sync dot -->
     <div class="topbar" id="topbar">
-      <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Atvērt izvēlni">
+      <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-expanded="false" aria-controls="drawer" data-i18n-attr="aria-label:topbar.hamburger_aria" aria-label="Atvērt izvēlni">
         <span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>
       </button>
       <div class="topbar-pace" id="topbarPace">
@@ -128,25 +128,25 @@
         <span class="tp-val" id="paceAvailable"></span>
         <span class="tp-sep"></span>
         <span class="tp-val" id="paceSafe"></span>
-        <button class="tp-info-btn" id="paceInfoBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="pacePopover" aria-label="Par tēriņa tempa rādītājiem">ⓘ</button>
+        <button class="tp-info-btn" id="paceInfoBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="pacePopover" data-i18n-attr="aria-label:topbar.pace_info_aria" aria-label="Par tēriņa tempa rādītājiem">ⓘ</button>
       </div>
       <span class="topbar-spacer"></span>
-      <span class="dot" id="syncDot" title="Sinhronizācijas statuss"></span>
+      <span class="dot" id="syncDot" data-i18n-attr="title:topbar.sync_status_title" title="Sinhronizācijas statuss"></span>
     </div>
 
     <!-- Tēriņa tempa detaļu izlecošais panelis (atveras ar ⓘ pogu topbar) -->
-    <div class="tp-popover hidden" id="pacePopover" role="dialog" aria-label="Tēriņa tempa detaļas">
+    <div class="tp-popover hidden" id="pacePopover" role="dialog" data-i18n-attr="aria-label:popover.aria_label" aria-label="Tēriņa tempa detaļas">
       <div class="tp-pop-item">
-        <span class="tp-pop-label">Iztērēts šodien</span>
+        <span class="tp-pop-label" data-i18n="popover.spent_today">Iztērēts šodien</span>
         <span class="tp-pop-val" id="paceDailyFull">€ 0.00</span>
       </div>
       <div class="tp-pop-item">
-        <span class="tp-pop-label">Pieejams tagad</span>
+        <span class="tp-pop-label" data-i18n="popover.available_now">Pieejams tagad</span>
         <span class="tp-pop-val" id="paceAvailableFull">€ 0.00</span>
       </div>
-      <p class="tp-pop-hint">"Iztērēts šodien" ieskaita tikai šodien apmaksātos rēķinus un šodienas summējošo rēķinu epizodes. "Pieejams tagad" = alga mīnus viss reāli iztērētais (samaksātie rēķini + summējošo rēķinu epizodes) — atšķiras no "Paliek", kas rēķina arī vēl nesamaksātos rēķinus.</p>
+      <p class="tp-pop-hint" data-i18n="popover.hint">"Iztērēts šodien" ieskaita tikai šodien apmaksātos rēķinus un šodienas summējošo rēķinu epizodes. "Pieejams tagad" = alga mīnus viss reāli iztērētais (samaksātie rēķini + summējošo rēķinu epizodes) — atšķiras no "Paliek", kas rēķina arī vēl nesamaksātos rēķinus.</p>
       <div class="tp-pop-item">
-        <span class="tp-pop-label">Droša summa / dienā</span>
+        <span class="tp-pop-label" data-i18n="popover.safe_per_day">Droša summa / dienā</span>
         <span class="tp-pop-val" id="paceSafeFull">€ 0.00</span>
       </div>
       <p class="tp-pop-status" id="pacePopStatus"></p>
@@ -154,28 +154,28 @@
 
     <!-- Side drawer: navigation + account, opened via hamburger -->
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
-    <nav class="drawer" id="drawer" aria-label="Galvenā izvēlne" aria-hidden="true">
-      <button class="drawer-close" id="drawerClose" type="button" aria-label="Aizvērt izvēlni">×</button>
+    <nav class="drawer" id="drawer" data-i18n-attr="aria-label:drawer.nav_aria" aria-label="Galvenā izvēlne" aria-hidden="true">
+      <button class="drawer-close" id="drawerClose" type="button" data-i18n-attr="aria-label:drawer.close_aria" aria-label="Aizvērt izvēlni">×</button>
 
       <div class="drawer-section drawer-nav" id="drawerNav">
-        <button class="drawer-nav-item active" data-section="budget" type="button">Budžets</button>
-        <button class="drawer-nav-item" data-section="extra-income" type="button">Papildus ienākumi</button>
-        <button class="drawer-nav-item" data-section="credits" type="button">Kredīti</button>
-        <button class="drawer-nav-item" data-section="reminders" type="button">Atgādinājumi<span class="nav-badge hidden" id="remindersBadge">0</span></button>
-        <button class="drawer-nav-item" data-section="savings" type="button">Uzkrājuma mērķi</button>
+        <button class="drawer-nav-item active" data-section="budget" type="button"><span data-i18n="nav.budget">Budžets</span></button>
+        <button class="drawer-nav-item" data-section="extra-income" type="button"><span data-i18n="nav.extra_income">Papildus ienākumi</span></button>
+        <button class="drawer-nav-item" data-section="credits" type="button"><span data-i18n="nav.credits">Kredīti</span></button>
+        <button class="drawer-nav-item" data-section="reminders" type="button"><span data-i18n="nav.reminders">Atgādinājumi</span><span class="nav-badge hidden" id="remindersBadge">0</span></button>
+        <button class="drawer-nav-item" data-section="savings" type="button"><span data-i18n="nav.savings">Uzkrājuma mērķi</span></button>
       </div>
 
       <div class="drawer-section">
-        <button class="drawer-link" id="settingsBtn" type="button">Iestatījumi</button>
-        <button class="drawer-link hidden" id="installBtn" type="button">⭳ Instalēt lietotni</button>
+        <button class="drawer-link" id="settingsBtn" type="button" data-i18n="nav.settings">Iestatījumi</button>
+        <button class="drawer-link hidden" id="installBtn" type="button" data-i18n="nav.install">⭳ Instalēt lietotni</button>
       </div>
 
       <div class="drawer-section drawer-account">
         <div class="drawer-user">
           <span class="user-name" id="userName"></span>
-          <span class="sync-status" id="syncText">Savienojas…</span>
+          <span class="sync-status" id="syncText" data-i18n="drawer.sync_connecting">Savienojas…</span>
         </div>
-        <button class="signout-btn" id="signOutBtn">Izrakstīties</button>
+        <button class="signout-btn" id="signOutBtn" data-i18n="drawer.signout">Izrakstīties</button>
       </div>
     </nav>
 
@@ -183,35 +183,35 @@
     <div class="reminder-banner hidden" id="reminderBanner">
       <span class="rb-icon" aria-hidden="true">⏰</span>
       <span class="rb-text" id="reminderBannerText"></span>
-      <button class="rb-view" id="reminderBannerView" type="button">Skatīt</button>
-      <button class="rb-dismiss" id="reminderBannerDismiss" type="button" title="Atzīmēt kā redzētu">✓</button>
+      <button class="rb-view" id="reminderBannerView" type="button" data-i18n="reminder_banner.view">Skatīt</button>
+      <button class="rb-dismiss" id="reminderBannerDismiss" type="button" data-i18n-attr="title:reminder_banner.dismiss_title" title="Atzīmēt kā redzētu">✓</button>
     </div>
 
     <!-- ============ PANEL: BUDGET ============ -->
     <div class="panel" id="panel-budget">
     <div class="summary-wrap">
-      <button class="summary-pin" id="summaryPinBtn" title="Piespraust kopsavilkumu" aria-pressed="false" aria-label="Piespraust kopsavilkumu">
+      <button class="summary-pin" id="summaryPinBtn" data-i18n-attr="title:budget.summary_pin_title|aria-label:budget.summary_pin_title" title="Piespraust kopsavilkumu" aria-pressed="false" aria-label="Piespraust kopsavilkumu">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l1 6 2 2v2H6v-2l2-2 1-6z"/></svg>
       </button>
       <div class="summary">
         <div class="stat">
-          <div class="label">Ienākumi</div>
+          <div class="label" data-i18n="budget.income_label">Ienākumi</div>
           <div class="value input-val">€ <input id="income" type="number" step="0.01" inputmode="decimal"></div>
           <div class="sub hidden" id="incomeBreakdown"></div>
         </div>
         <div class="stat">
-          <div class="label">Kopā rēķini</div>
+          <div class="label" data-i18n="budget.total_bills_label">Kopā rēķini</div>
           <div class="value" id="sumTotal">€ 0.00</div>
           <div class="sub" id="sumPct">0 % no ieņēmumiem</div>
           <div class="sub" id="sumSpent"></div>
         </div>
         <div class="stat">
-          <div class="label">Paliek <span class="over-badge hidden" id="remOverBadge" title="">⚠</span></div>
+          <div class="label"><span data-i18n="budget.remaining_label">Paliek</span> <span class="over-badge hidden" id="remOverBadge" title="">⚠</span></div>
           <div class="value" id="remaining">€ 0.00</div>
           <div class="sub" id="remHint"></div>
         </div>
         <div class="stat">
-          <div class="label">Vēl jāmaksā <span class="over-badge hidden" id="payOverBadge" title="">⚠</span></div>
+          <div class="label"><span data-i18n="budget.to_pay_label">Vēl jāmaksā</span> <span class="over-badge hidden" id="payOverBadge" title="">⚠</span></div>
           <div class="value" id="toPay">€ 0.00</div>
           <div class="sub" id="paidHint">0 no 0 samaksāti</div>
         </div>
@@ -222,18 +222,18 @@
 
     <div class="grid2">
       <section>
-        <div class="sec-head"><h2>Rēķini <span class="period-label" id="periodLabel" tabindex="0" role="button" title="Klikšķini, lai mainītu mēneša nosaukumu"></span><input class="period-label-input hidden" id="periodLabelInput" maxlength="60"></h2><div style="display:flex;gap:8px;"><button class="btn ghost sm" id="sortBillsBtn">Sakārtot</button><button class="btn ghost sm" id="newMonthBtn">🗓 Jauns mēnesis</button><button class="btn" id="addBill">+ Pievienot rēķinu</button></div></div>
+        <div class="sec-head"><h2><span data-i18n="budget.bills_title">Rēķini</span> <span class="period-label" id="periodLabel" tabindex="0" role="button" data-i18n-attr="title:budget.period_label_title" title="Klikšķini, lai mainītu mēneša nosaukumu"></span><input class="period-label-input hidden" id="periodLabelInput" maxlength="60"></h2><div style="display:flex;gap:8px;"><button class="btn ghost sm" id="sortBillsBtn" data-i18n="budget.sort_bills">Sakārtot</button><button class="btn ghost sm" id="newMonthBtn" data-i18n="budget.new_month">🗓 Jauns mēnesis</button><button class="btn" id="addBill" data-i18n="budget.add_bill">+ Pievienot rēķinu</button></div></div>
         <div class="bills" id="billsList"></div>
-        <div class="bills-foot"><span class="lbl">Kopā</span><span class="total" id="billsFootTotal">€ 0.00</span></div>
+        <div class="bills-foot"><span class="lbl" data-i18n="budget.bills_foot_total_label">Kopā</span><span class="total" id="billsFootTotal">€ 0.00</span></div>
       </section>
     </div>
 
     <section>
-      <div class="sec-head"><h2>Sadalījums pa kategorijām</h2><button class="btn ghost sm" id="manageCatBtn">Pārvaldīt kategorijas</button></div>
+      <div class="sec-head"><h2 data-i18n="budget.category_breakdown_title">Sadalījums pa kategorijām</h2><button class="btn ghost sm" id="manageCatBtn" data-i18n="budget.manage_categories">Pārvaldīt kategorijas</button></div>
       <div class="cat-wrap">
         <div class="donut">
           <svg viewBox="0 0 100 100" width="200" height="200" id="donut"></svg>
-          <div class="center"><span class="big" id="donutTotal">€ 0</span><span class="small">kopā</span></div>
+          <div class="center"><span class="big" id="donutTotal">€ 0</span><span class="small" data-i18n="budget.donut_total_label">kopā</span></div>
         </div>
         <div class="cat-legend" id="catLegend"></div>
       </div>
@@ -241,16 +241,16 @@
 
     <section>
       <div class="sec-head">
-        <h2>Mēnešu arhīvs</h2>
-        <button class="btn" id="closeMonthBtn">✓ Saglabāt aktuālo mēnesi → arhīvā</button>
+        <h2 data-i18n="budget.archive_title">Mēnešu arhīvs</h2>
+        <button class="btn" id="closeMonthBtn" data-i18n="budget.close_month">✓ Saglabāt aktuālo mēnesi → arhīvā</button>
       </div>
       <div class="archive-list" id="archiveList"></div>
     </section>
 
     <div class="toolbar">
-      <button class="btn ghost sm" id="exportBtn">↓ Eksportēt (JSON)</button>
-      <button class="btn ghost sm" id="exportCsvBtn">↓ Eksportēt (CSV)</button>
-      <button class="btn ghost sm" id="importBtn">↑ Importēt</button>
+      <button class="btn ghost sm" id="exportBtn" data-i18n="budget.export_json">↓ Eksportēt (JSON)</button>
+      <button class="btn ghost sm" id="exportCsvBtn" data-i18n="budget.export_csv">↓ Eksportēt (CSV)</button>
+      <button class="btn ghost sm" id="importBtn" data-i18n="budget.import">↑ Importēt</button>
       <input type="file" id="fileIn" accept="application/json" hidden>
       <span class="saved-note" id="savedNote"></span>
     </div>
@@ -259,60 +259,60 @@
     <!-- ============ PANEL: EXTRA INCOME ============ -->
     <div class="panel hidden" id="panel-extra-income">
       <section>
-        <div class="sec-head"><h2>Papildus ienākumi</h2><button class="btn" id="addExtraIncomeBtn">+ Pievienot ienākumu</button></div>
+        <div class="sec-head"><h2 data-i18n="extra_income.title">Papildus ienākumi</h2><button class="btn" id="addExtraIncomeBtn" data-i18n="extra_income.add">+ Pievienot ienākumu</button></div>
         <div class="extra-income-list" id="extraIncomeList"></div>
-        <div class="extra-income-foot"><span class="lbl">Kopā papildus</span><span class="total" id="extraIncomeFootTotal">€ 0.00</span></div>
-        <div class="empty-note hidden" id="extraIncomeEmptyNote">Vēl nav neviena papildus ienākuma šomēnes. Pievieno pirmo ar pogu augšā — piemēram, gadījuma darbu vai dāvanu. Tas pieskaitīsies kopējiem ienākumiem un pazudīs, sākot jaunu mēnesi (tāpat kā rēķini).</div>
+        <div class="extra-income-foot"><span class="lbl" data-i18n="extra_income.total_label">Kopā papildus</span><span class="total" id="extraIncomeFootTotal">€ 0.00</span></div>
+        <div class="empty-note hidden" id="extraIncomeEmptyNote" data-i18n="extra_income.empty">Vēl nav neviena papildus ienākuma šomēnes. Pievieno pirmo ar pogu augšā — piemēram, gadījuma darbu vai dāvanu. Tas pieskaitīsies kopējiem ienākumiem un pazudīs, sākot jaunu mēnesi (tāpat kā rēķini).</div>
       </section>
     </div><!-- /panel-extra-income -->
 
     <!-- ============ PANEL: CREDITS ============ -->
     <div class="panel hidden" id="panel-credits">
       <section>
-        <div class="sec-head"><h2>Kredītu atlikumi</h2><button class="btn ghost sm" id="addCredit">+ Kredīts</button></div>
+        <div class="sec-head"><h2 data-i18n="credits.title">Kredītu atlikumi</h2><button class="btn ghost sm" id="addCredit" data-i18n="credits.add">+ Kredīts</button></div>
         <div class="credits" id="creditsList"></div>
-        <div class="credits-foot"><span>Atlikums kopā</span><span class="total" id="creditsFootTotal">€ 0.00</span></div>
-        <div class="credits-foot credits-foot-sub" id="creditsMonthlyFoot"><span>Mēneša maksājumi kopā</span><span class="total" id="creditsMonthlyTotal">€ 0.00</span></div>
+        <div class="credits-foot"><span data-i18n="credits.total_label">Atlikums kopā</span><span class="total" id="creditsFootTotal">€ 0.00</span></div>
+        <div class="credits-foot credits-foot-sub" id="creditsMonthlyFoot"><span data-i18n="credits.monthly_label">Mēneša maksājumi kopā</span><span class="total" id="creditsMonthlyTotal">€ 0.00</span></div>
       </section>
     </div><!-- /panel-credits -->
 
     <!-- ============ PANEL: REMINDERS ============ -->
     <div class="panel hidden" id="panel-reminders">
       <section>
-        <div class="sec-head"><h2>Atgādinājumi</h2><button class="btn" id="addReminderBtn">+ Pievienot atgādinājumu</button></div>
+        <div class="sec-head"><h2 data-i18n="reminders.title">Atgādinājumi</h2><button class="btn" id="addReminderBtn" data-i18n="reminders.add">+ Pievienot atgādinājumu</button></div>
 
         <div class="rem-group" id="remGroupDue">
-          <div class="rem-group-title rem-group-title-due">Šodien / nokavēts</div>
+          <div class="rem-group-title rem-group-title-due" data-i18n="reminders.group_due">Šodien / nokavēts</div>
           <div class="rem-list" id="remListDue"></div>
         </div>
 
         <div class="rem-group" id="remGroupUpcoming">
-          <div class="rem-group-title">Gaidāmie</div>
+          <div class="rem-group-title" data-i18n="reminders.group_upcoming">Gaidāmie</div>
           <div class="rem-list" id="remListUpcoming"></div>
         </div>
 
         <div class="rem-group hidden" id="remGroupPaused">
-          <div class="rem-group-title">Pauzētie</div>
+          <div class="rem-group-title" data-i18n="reminders.group_paused">Pauzētie</div>
           <div class="rem-list" id="remListPaused"></div>
         </div>
 
-        <div class="empty-note hidden" id="remEmptyNote">Vēl nav neviena atgādinājuma. Pievieno pirmo ar pogu augšā.</div>
+        <div class="empty-note hidden" id="remEmptyNote" data-i18n="reminders.empty">Vēl nav neviena atgādinājuma. Pievieno pirmo ar pogu augšā.</div>
       </section>
     </div><!-- /panel-reminders -->
 
     <!-- ============ PANEL: SAVINGS ============ -->
     <div class="panel hidden" id="panel-savings">
       <section>
-        <div class="sec-head"><h2>Uzkrājuma mērķi</h2><button class="btn" id="addGoalBtn">+ Pievienot jaunu mērķi</button></div>
+        <div class="sec-head"><h2 data-i18n="savings.title">Uzkrājuma mērķi</h2><button class="btn" id="addGoalBtn" data-i18n="savings.add">+ Pievienot jaunu mērķi</button></div>
 
         <div class="goal-list" id="goalListActive"></div>
 
         <div class="goal-group hidden" id="goalGroupAchieved">
-          <div class="goal-group-title">Sasniegtie</div>
+          <div class="goal-group-title" data-i18n="savings.group_achieved">Sasniegtie</div>
           <div class="goal-list" id="goalListAchieved"></div>
         </div>
 
-        <div class="empty-note hidden" id="goalEmptyNote">Vēl nav neviena uzkrājuma mērķa. Pievieno pirmo ar pogu augšā — izvēlies summu un mēnešu skaitu, un aplikācija pati sadalīs to ikmēneša maksājumos.</div>
+        <div class="empty-note hidden" id="goalEmptyNote" data-i18n="savings.empty">Vēl nav neviena uzkrājuma mērķa. Pievieno pirmo ar pogu augšā — izvēlies summu un mēnešu skaitu, un aplikācija pati sadalīs to ikmēneša maksājumos.</div>
       </section>
     </div><!-- /panel-savings -->
   </div>

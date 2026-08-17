@@ -119,6 +119,10 @@ dist
 # Firebase cache directory
 .firebase/
 
+# Firestore rules — dzīvo tikai Firebase Console, lokāla kopija tikai konteksta dēļ
+Firebase.rules.txt
+FIREBASE_SUPPORT_REQUEST.txt
+
 # TernJS port file
 .tern-port
 

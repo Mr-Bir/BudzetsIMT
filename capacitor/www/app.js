@@ -4,7 +4,7 @@
  * Skatīt LICENSE failu repozitorija saknē.
  */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, initializeAuth, indexedDBLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, CustomProvider, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { CHANGELOG } from './changelog.js';
@@ -318,7 +318,7 @@ const DEFAULT = {
 let state = structuredClone(DEFAULT);
 let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null, localDirty=false;
 let lastSentJSON = null, pendingSnapshot = null, pendingReload = false;
-let currentUser = null, snapshotUnsub = null;
+let currentUser = null, snapshotUnsub = null, categoriesUnsub = null;
 
 const $ = id => document.getElementById(id);
 
@@ -459,6 +459,7 @@ onAuthStateChanged(auth, user=>{
   } else {
     currentUser = null;
     if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
+    if(categoriesUnsub){ categoriesUnsub(); categoriesUnsub = null; }
     $('app').classList.add('hidden');
     $('gate').classList.remove('hidden');
     $('modalRoot').innerHTML = ''; // close any open modal (e.g. Iestatījumi after account deletion)
@@ -481,6 +482,7 @@ async function connectForUser(uid){
   await appCheckReady;
   if(roomId !== uid) return; // lietotājs izgājis/nomainījies, kamēr gaidījām tokenu
   subscribeSnapshot(uid, false);
+  subscribeCategoriesSnapshot(uid);
 }
 
 // isRetry: true, ja šis ir pašdziedinošais atkārtotais mēģinājums pēc permission-denied
@@ -491,23 +493,18 @@ function subscribeSnapshot(uid, isRetry){
   snapshotUnsub = onSnapshot(docRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
-      // Kategoriju backfill: lietotājiem, kas sinhronizējuši PIRMS "Uzkrājumi" kategorijas
-      // ieviešanas, state.categories jau ir pilns saraksts BEZ tās — jāpapildina te, nevis
-      // paļauties uz DEFAULT_CATEGORIES fallback (kas nostrādā TIKAI tukšam sarakstam).
-      const incomingCategories = (d.categories && d.categories.length) ? d.categories : structuredClone(DEFAULT_CATEGORIES);
-      if(!incomingCategories.some(c=>c.key==='uzkrajumi')) incomingCategories.push({key:'uzkrajumi', name:'Uzkrājumi', color:'#3f8f7a'});
       const incoming = {
         income: d.income ?? DEFAULT.income,
         periodName: d.periodName || '',
         bills: ensureBillIds(d.bills ?? []),
         credits: d.credits ?? [],
-        categories: incomingCategories,
+        categories: state.categories,
         reminders: ensureReminderFields(d.reminders ?? []),
         extraIncome: ensureExtraIncomeFields(d.extraIncome ?? []),
         salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null,
         savingsGoals: ensureSavingsGoalFields(d.savingsGoals ?? [])
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, categories: incoming.categories, reminders: incoming.reminders, extraIncome: incoming.extraIncome, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, reminders: incoming.reminders, extraIncome: incoming.extraIncome, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
       if(incomingJSON === lastSentJSON){ setSync('ok', t('sync.synced')); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -517,8 +514,9 @@ function subscribeSnapshot(uid, isRetry){
       if(isEditingActive() || localDirty){ pendingSnapshot = incoming; setSync('ok', t('sync.synced')); return; }
       applyRemote(incoming);
     } else {
-      // New user: start with empty-ish defaults (no personal data)
-      state = { income: 0, periodName: '', bills: [], credits: [], categories: structuredClone(DEFAULT_CATEGORIES), reminders: [], extraIncome: [], salaryDay: null, savingsGoals: [] };
+      // New user: start with empty-ish defaults (no personal data). `categories` NAV šeit —
+      // to pārvalda subscribeCategoriesSnapshot() (sk. augstāk), kas seko neatkarīgi.
+      state = { income: 0, periodName: '', bills: [], credits: [], categories: state.categories, reminders: [], extraIncome: [], salaryDay: null, savingsGoals: [] };
       render(); pushNow();
     }
   }, err=>{
@@ -531,6 +529,59 @@ function subscribeSnapshot(uid, isRetry){
     }
   });
 }
+
+// Kategoriju subkolekcija (budgets/{uid}/categories/{key}) — atsevišķs klausītājs no
+// galvenā dokumenta. Kategorijas migrētas prom no state.categories masīva uz Firestore
+// apakškolekciju, lai rules varētu validēt katru kategoriju atsevišķi (pa dokumentam),
+// nevis nedrošo masīva-izmēra-tikai pārbaudi. DROŠI BEZ localDirty/pendingSnapshot
+// aizsardzības, kas vajadzīga galvenajam dokumentam: kategoriju redaktors
+// (openCategoriesModal) rediģē LOKĀLU `draft[]` kopiju un commito visu uzreiz TIKAI uz
+// "Saglabāt" klikšķi — ienākošs attālais snapshot nekad neredz pusē-rediģētu stāvokli,
+// tāpēc var droši pārrakstīt state.categories jebkurā brīdī.
+function subscribeCategoriesSnapshot(uid){
+  if(categoriesUnsub){ categoriesUnsub(); }
+  categoriesUnsub = onSnapshot(collection(db, 'budgets', uid, 'categories'), snap=>{
+    let cats = snap.docs.map(d=>({ key: d.id, ...d.data() }));
+    if(cats.length===0){
+      // Jauns lietotājs VAI vēl nemigrēti veci dati — sēj noklusējuma kategorijas.
+      cats = structuredClone(DEFAULT_CATEGORIES);
+      seedCategories(uid, cats);
+    } else if(!cats.some(c=>c.key==='uzkrajumi')){
+      // Backfill lietotājiem, kas sinhronizējuši PIRMS "Uzkrājumi" kategorijas ieviešanas.
+      const extra = {key:'uzkrajumi', name:'Uzkrājumi', color:'#3f8f7a'};
+      cats.push(extra);
+      seedCategories(uid, [extra]);
+    }
+    state.categories = cats;
+    render();
+  }, err=>{
+    console.error('Kļūda ielādējot kategorijas:', err);
+  });
+}
+
+// Vienkāršs batch-raksts jaunām/trūkstošām kategorijām (seed/backfill gadījumi augstāk).
+async function seedCategories(uid, cats){
+  try {
+    const batch = writeBatch(db);
+    cats.forEach(c=>{ batch.set(doc(db, 'budgets', uid, 'categories', c.key), { name: c.name, color: safeColor(c.color) }); });
+    await batch.commit();
+  } catch(e){
+    console.error('Kļūda sējot noklusējuma kategorijas:', e);
+  }
+}
+
+// Batch-raksta pilnu kategoriju saraksta izmaiņu (pievienots/rediģēts/dzēsts) kā vienu
+// atomāru writeBatch — izsaukts TIKAI no apzinātas "Saglabāt" darbības (categoriju
+// redaktors, JSON imports), nevis no scheduleSave() debounce ķēdes.
+async function saveCategoriesBatch(oldList, newList){
+  const batch = writeBatch(db);
+  const oldKeys = new Set((oldList||[]).map(c=>c.key));
+  const newKeys = new Set(newList.map(c=>c.key));
+  oldKeys.forEach(key=>{ if(!newKeys.has(key)) batch.delete(doc(db, 'budgets', roomId, 'categories', key)); });
+  newList.forEach(c=>{ batch.set(doc(db, 'budgets', roomId, 'categories', c.key), { name: c.name, color: safeColor(c.color) }); });
+  await batch.commit();
+}
+
 
 function applyRemote(incoming){
   applyingRemote = true;
@@ -549,6 +600,8 @@ function applyRemote(incoming){
 async function deleteAllUserData(uid){
   const archiveSnap = await getDocs(collection(db, 'budgets', uid, 'archive'));
   await Promise.all(archiveSnap.docs.map(d => deleteDoc(d.ref)));
+  const categoriesSnap = await getDocs(collection(db, 'budgets', uid, 'categories'));
+  await Promise.all(categoriesSnap.docs.map(d => deleteDoc(d.ref)));
   await deleteDoc(doc(db, 'budgets', uid));
 }
 
@@ -592,12 +645,9 @@ async function pushNow(){
     const safeIncome = Math.min(Math.max(Number(state.income) || 0, 0), 1000000);
     const safePeriodName = String(state.periodName || '').slice(0, 60);
 
-    // Kategorijām jābūt tieši 3 laukiem un noteiktos garumos
-    const safeCategories = (state.categories || catList()).map(c => ({
-      key: String(c.key || 'cits').slice(0, 20),
-      name: String(c.name || 'Cits').slice(0, 40),
-      color: safeColor(c.color)
-    })).slice(0, 50);
+    // Kategorijas kopš šīs versijas dzīvo budgets/{uid}/categories/{key} subkolekcijā
+    // (sk. saveCategoriesBatch/subscribeCategoriesSnapshot), NEVIS šī dokumenta laukā —
+    // tāpēc te vairs netiek sanitizētas/sūtītas.
 
     // Atgādinājumiem jābūt tieši 7 laukiem un korektam datumam/dienai
     const safeReminders = (state.reminders || []).map(r => {
@@ -678,7 +728,6 @@ async function pushNow(){
       periodName: safePeriodName,
       bills: safeBills,
       credits: safeCredits,
-      categories: safeCategories,
       reminders: safeReminders,
       extraIncome: safeExtraIncome,
       savingsGoals: safeSavingsGoals,
@@ -695,7 +744,6 @@ async function pushNow(){
       periodName: payload.periodName,
       bills: payload.bills,
       credits: payload.credits,
-      categories: payload.categories,
       reminders: payload.reminders,
       extraIncome: payload.extraIncome,
       salaryDay: payload.salaryDay ?? null,
@@ -2199,7 +2247,7 @@ $('importBtn').addEventListener('click', ()=>$('fileIn').click());
 $('fileIn').addEventListener('change', e=>{
   const file = e.target.files[0]; if(!file) return;
   const r = new FileReader();
-  r.onload = ()=>{
+  r.onload = async ()=>{
     let data;
     try { data = JSON.parse(r.result); }
     catch(err){ alert(t('import.invalid_json')); $('fileIn').value=''; return; }
@@ -2207,16 +2255,26 @@ $('fileIn').addEventListener('change', e=>{
       alert(t('import.invalid_data')); $('fileIn').value=''; return;
     }
     if(!confirm(t('import.confirm'))){ $('fileIn').value=''; return; }
+    const importedCategories = (Array.isArray(data.categories)&&data.categories.length)
+      ? data.categories.map(c=>({ key: String(c.key||'cits').slice(0,20), name: String(c.name||'Cits').slice(0,40), color: safeColor(c.color) }))
+      : structuredClone(DEFAULT_CATEGORIES);
+    // Ensure 'cits' fallback category always exists
+    if(!importedCategories.some(c=>c.key==='cits')) importedCategories.push({key:'cits',name:'Cits',color:'#8a8576'});
+    try {
+      await saveCategoriesBatch(state.categories, importedCategories);
+    } catch(err){
+      console.error('Kļūda importējot kategorijas:', err);
+      alert(t('categories.save_failed', {msg: err?.message || err}));
+      $('fileIn').value=''; return;
+    }
     state = {
       income: Number(data.income)||0,
       periodName: (typeof data.periodName==='string') ? data.periodName : (state.periodName||''),
       bills: Array.isArray(data.bills)?data.bills:[],
       credits: Array.isArray(data.credits)?data.credits:[],
-      categories: (Array.isArray(data.categories)&&data.categories.length)?data.categories.map(c=>({ ...c, color:safeColor(c.color) })):structuredClone(DEFAULT_CATEGORIES),
+      categories: importedCategories,
       extraIncome: Array.isArray(data.extraIncome)?data.extraIncome:[]
     };
-    // Ensure 'cits' fallback category always exists
-    if(!state.categories.some(c=>c.key==='cits')) state.categories.push({key:'cits',name:'Cits',color:'#8a8576'});
     render(); pushNow();
     $('fileIn').value='';
     alert(t('import.done'));
@@ -2321,7 +2379,7 @@ function openCategoryManager(){
   $('catClose').addEventListener('click', tryClose);
   $('catCancel').addEventListener('click', tryClose);
 
-  $('catSave').addEventListener('click', ()=>{
+  $('catSave').addEventListener('click', async ()=>{
     // Validate: names non-empty, ensure 'cits' still present
     const cleaned = draft
       .map(c=>({ key:c.key, name:(c.name||'').trim(), color:safeColor(c.color) }))
@@ -2333,11 +2391,19 @@ function openCategoryManager(){
     // Reassign bills whose category was removed → 'cits'
     const validKeys = new Set(cleaned.map(c=>c.key));
     (state.bills||[]).forEach(b=>{ if(!validKeys.has(b.cat||'cits')) b.cat='cits'; });
-    state.categories = cleaned;
-    render(); scheduleSave();
-    dirty=false;
-    $('catStatus').textContent=t('categories.saved_status'); $('catStatus').style.color='var(--green)';
-    setTimeout(()=>{ root.innerHTML=''; }, 500);
+    const saveBtn = $('catSave'); saveBtn.disabled = true;
+    try {
+      await saveCategoriesBatch(state.categories, cleaned);
+      state.categories = cleaned;
+      render(); scheduleSave(); // scheduleSave šeit tikai priekš bills.cat pārcelšanas augstāk, categories vairs NAV daļa no galvenā dokumenta
+      dirty=false;
+      $('catStatus').textContent=t('categories.saved_status'); $('catStatus').style.color='var(--green)';
+      setTimeout(()=>{ root.innerHTML=''; }, 500);
+    } catch(e){
+      console.error('Kļūda saglabājot kategorijas:', e);
+      $('catStatus').textContent=t('categories.save_failed', {msg: e?.message || e}); $('catStatus').style.color='var(--red)';
+      saveBtn.disabled = false;
+    }
   });
 }
 

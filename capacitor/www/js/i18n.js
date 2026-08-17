@@ -285,6 +285,7 @@ const STRINGS = {
     'categories.confirm_delete': 'Dzēst "{{name}}"?',
     'categories.name_required': 'Vismaz vienai kategorijai jābūt.',
     'categories.discard_confirm': 'Ir nesaglabātas izmaiņas. Aizvērt bez saglabāšanas?',
+    'categories.save_failed': 'Neizdevās saglabāt: {{msg}}',
 
     'archive.load_failed': 'Neizdevās ielādēt arhīvu: {{code}}',
     'archive.empty': 'Vēl nav arhivētu mēnešu. Mēneša beigās spied "Aizvērt mēnesi → arhīvā".',
@@ -649,6 +650,7 @@ const STRINGS = {
     'categories.confirm_delete': 'Delete "{{name}}"?',
     'categories.name_required': 'At least one category is required.',
     'categories.discard_confirm': 'You have unsaved changes. Close without saving?',
+    'categories.save_failed': 'Failed to save: {{msg}}',
 
     'archive.load_failed': 'Failed to load the archive: {{code}}',
     'archive.empty': 'No archived months yet. At the end of the month, press "Close month → archive".',

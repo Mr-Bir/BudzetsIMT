@@ -10,3 +10,4 @@ android/*.iml
 android/.idea/
 *.keystore
 *.jks
+android/keystore.properties

@@ -331,19 +331,21 @@ const $ = id => document.getElementById(id);
 const fbApp = initializeApp(FIREBASE_CONFIG);
 
 // App Check IESLĒGTS KLIENTA PUSĒ (2026-08-13, Fāze 1) — pēc Billing konta pievienošanas
-// un reCAPTCHA Enterprise API/IAM lomu apstiprināšanas Google Cloud Console. Rules līmeņa
-// appChecked() APZINĀTI NAV pievienots (sk. firestore.rules) — 2026-08-13 tika izmēģināts
-// un UZREIZ ATGRIEZTS, jo reāla Firestore saglabāšana salūza ar enforcement ieslēgtu,
-// NESKATOTIES uz to, ka App Check → Requests Firebase konsolē rādīja 68-94% "verified"
-// un klienta puses tokens tika iegūts veiksmīgi (apstiprināts ar diagnostikas kodu, kas
-// pēc tam noņemts — sk. BUDZETSIMT_MASTER_INSTRUKCIJA.md sadaļu 9 pilnam aprakstam un
-// nākamajiem izmeklēšanas soļiem). Root cause VĒL NAV atrasts.
+// un reCAPTCHA Enterprise API/IAM lomu apstiprināšanas Google Cloud Console.
+// ROOT CAUSE ATRASTS UN ATRISINĀTS (2026-08-17, Firebase Support): `request.app` NAV
+// derīgs lauks Firestore Security Rules `request` objektā (tas eksistē TIKAI Cloud
+// Functions Callable kontekstā) — tāpēc rules līmeņa `appChecked()` NEKAD nevarēja
+// strādāt un tika APZINĀTI atstāts neizmantots `firestore.rules`. Pareizais enforcement
+// mehānisms Firestore priekš ir Firebase Console → App Check → APIs → Cloud Firestore
+// "Enforce" poga (infrastruktūras līmenī, PIRMS pieprasījums sasniedz rules) — tas
+// IESLĒGTS 2026-08-17. Sk. BUDZETSIMT_MASTER_INSTRUKCIJA.md faila sākuma 2026-08-17
+// ierakstu pilnam aprakstam.
 // appCheckReady: connectForUser() to nogaida PIRMS Firestore klausītāja atvēršanas.
 // Bez tā initializeAppCheck() ir "fire-and-forget" — ja lietotājam jau ir saglabāta
 // sesija, onAuthStateChanged var nostrādāt ātrāk nekā App Check tokena tīkla
-// pieprasījums, un pirmais onSnapshot() pieprasījums aizceļo BEZ tokena (request.app
-// == null). Ar appChecked() rules pusē tas nozīmētu tūlītēju permission-denied, no kā
-// Firestore SDK pats no jauna nemēģina pieslēgties — sk. instrukciju failu, sadaļu 9.
+// pieprasījums, un pirmais onSnapshot() pieprasījums aizceļo BEZ tokena — ar Enforce
+// ieslēgtu tas nozīmētu tūlītēju noraidījumu Firebase infrastruktūras līmenī, no kā
+// Firestore SDK pats no jauna nemēģina pieslēgties.
 // Timeout (3s) nodrošina, ka lietotne netiek bloķēta, ja App Check pats nestrādā.
 let appCheckReady = Promise.resolve();
 try {

@@ -112,15 +112,6 @@ function ensureReminderFields(reminders) {
   }));
 }
 
-// Aizpilda trūkstošos laukus papildus ienākumu ierakstiem (analoģiski ensureReminderFields)
-function ensureExtraIncomeFields(items) {
-  return (items || []).map(e => ({
-    name: e.name ? String(e.name) : '',
-    amount: Number(e.amount) || 0,
-    date: (e.date !== undefined && e.date !== null) ? String(e.date) : ''
-  }));
-}
-
 // Aizpilda trūkstošos laukus uzkrājuma mērķu ierakstiem (analoģiski ensureReminderFields)
 function ensureSavingsGoalFields(goals) {
   return (goals || []).map(g => ({
@@ -319,6 +310,9 @@ let state = structuredClone(DEFAULT);
 let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null, localDirty=false;
 let lastSentJSON = null, pendingSnapshot = null, pendingReload = false;
 let currentUser = null, snapshotUnsub = null, categoriesUnsub = null;
+let creditsUnsub = null, extraIncomeUnsub = null;
+let lastSyncedCredits = [], lastSyncedExtraIncome = [];
+let pendingCreditsSnapshot = null, pendingExtraIncomeSnapshot = null;
 
 const $ = id => document.getElementById(id);
 
@@ -460,6 +454,8 @@ onAuthStateChanged(auth, user=>{
     currentUser = null;
     if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
     if(categoriesUnsub){ categoriesUnsub(); categoriesUnsub = null; }
+    if(creditsUnsub){ creditsUnsub(); creditsUnsub = null; }
+    if(extraIncomeUnsub){ extraIncomeUnsub(); extraIncomeUnsub = null; }
     $('app').classList.add('hidden');
     $('gate').classList.remove('hidden');
     $('modalRoot').innerHTML = ''; // close any open modal (e.g. Iestatījumi after account deletion)
@@ -483,6 +479,8 @@ async function connectForUser(uid){
   if(roomId !== uid) return; // lietotājs izgājis/nomainījies, kamēr gaidījām tokenu
   subscribeSnapshot(uid, false);
   subscribeCategoriesSnapshot(uid);
+  subscribeCreditsSnapshot(uid);
+  subscribeExtraIncomeSnapshot(uid);
 }
 
 // isRetry: true, ja šis ir pašdziedinošais atkārtotais mēģinājums pēc permission-denied
@@ -497,14 +495,14 @@ function subscribeSnapshot(uid, isRetry){
         income: d.income ?? DEFAULT.income,
         periodName: d.periodName || '',
         bills: ensureBillIds(d.bills ?? []),
-        credits: d.credits ?? [],
+        credits: state.credits,
         categories: state.categories,
         reminders: ensureReminderFields(d.reminders ?? []),
-        extraIncome: ensureExtraIncomeFields(d.extraIncome ?? []),
+        extraIncome: state.extraIncome,
         salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null,
         savingsGoals: ensureSavingsGoalFields(d.savingsGoals ?? [])
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, credits: incoming.credits, reminders: incoming.reminders, extraIncome: incoming.extraIncome, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, reminders: incoming.reminders, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
       if(incomingJSON === lastSentJSON){ setSync('ok', t('sync.synced')); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -514,9 +512,9 @@ function subscribeSnapshot(uid, isRetry){
       if(isEditingActive() || localDirty){ pendingSnapshot = incoming; setSync('ok', t('sync.synced')); return; }
       applyRemote(incoming);
     } else {
-      // New user: start with empty-ish defaults (no personal data). `categories` NAV šeit —
-      // to pārvalda subscribeCategoriesSnapshot() (sk. augstāk), kas seko neatkarīgi.
-      state = { income: 0, periodName: '', bills: [], credits: [], categories: state.categories, reminders: [], extraIncome: [], salaryDay: null, savingsGoals: [] };
+      // New user: start with empty-ish defaults (no personal data). `categories`/`credits`/
+      // `extraIncome` NAV šeit — tos pārvalda savi neatkarīgie subkolekciju klausītāji.
+      state = { income: 0, periodName: '', bills: [], credits: state.credits, categories: state.categories, reminders: [], extraIncome: state.extraIncome, salaryDay: null, savingsGoals: [] };
       render(); pushNow();
     }
   }, err=>{
@@ -559,6 +557,34 @@ function subscribeCategoriesSnapshot(uid){
   });
 }
 
+// credits/extraIncome subkolekcijas — atšķirībā no categories, šie saraksti TIEK dzīvi
+// rediģēti (katra rakstzīme/klikšķis, sk. syncListSubcollection komentāru), tāpēc VAJAG
+// to pašu localDirty/isEditingActive() atliktā-snapshot aizsardzību, kas jau strādā
+// galvenajam dokumentam (subscribeSnapshot augstāk) — pretējā gadījumā cita ierīce/cilne
+// varētu pārrakstīt tikko ievadītu, vēl nenosūtītu izmaiņu. Atliktais snapshot pielietots
+// vai nu nākamajā veiksmīgajā pushNow() (sk. turpat), vai focusout handlerī zemāk.
+function subscribeCreditsSnapshot(uid){
+  if(creditsUnsub){ creditsUnsub(); }
+  creditsUnsub = onSnapshot(collection(db, 'budgets', uid, 'credits'), snap=>{
+    const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    if(isEditingActive() || localDirty){ pendingCreditsSnapshot = list; return; }
+    state.credits = list; render();
+  }, err=>{
+    console.error('Kļūda ielādējot kredītus:', err);
+  });
+}
+
+function subscribeExtraIncomeSnapshot(uid){
+  if(extraIncomeUnsub){ extraIncomeUnsub(); }
+  extraIncomeUnsub = onSnapshot(collection(db, 'budgets', uid, 'extraIncome'), snap=>{
+    const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    if(isEditingActive() || localDirty){ pendingExtraIncomeSnapshot = list; return; }
+    state.extraIncome = list; render();
+  }, err=>{
+    console.error('Kļūda ielādējot papildu ienākumus:', err);
+  });
+}
+
 // Vienkāršs batch-raksts jaunām/trūkstošām kategorijām (seed/backfill gadījumi augstāk).
 async function seedCategories(uid, cats){
   try {
@@ -582,6 +608,26 @@ async function saveCategoriesBatch(oldList, newList){
   await batch.commit();
 }
 
+// Vispārīgs diff-batch sinhronizētājs sarakstiem, kas TIEK dzīvi rediģēti (atšķirībā no
+// categories, kam ir "draft, saglabā uz klikšķi" modelis) — izmanto `pushNow()` katrai
+// debounced saglabāšanai, lai `credits`/`extraIncome` subkolekcijas paliktu sinhronā ar
+// `state.X`. `order` (masīva pozīcija rakstīšanas brīdī) ierakstīts katram dokumentam, lai
+// `credits` vilkšanas-pārkārtošana un `extraIncome` pievienošanas secība saglabātos —
+// subkolekcijai nav iebūvētas secības, tāpēc tā VIENMĒR jāatvasina no pašreizējās
+// `state.X` masīva kārtības, nevis jāuztur atsevišķi.
+async function syncListSubcollection(listName, oldList, newList){
+  const batch = writeBatch(db);
+  const oldIds = new Set((oldList||[]).map(x=>x.id));
+  const newIds = new Set(newList.map(x=>x.id));
+  oldIds.forEach(id=>{ if(!newIds.has(id)) batch.delete(doc(db, 'budgets', roomId, listName, id)); });
+  newList.forEach((item,i)=>{
+    const { id, ...rest } = item;
+    batch.set(doc(db, 'budgets', roomId, listName, id), { ...rest, order: i });
+  });
+  await batch.commit();
+}
+
+
 
 function applyRemote(incoming){
   applyingRemote = true;
@@ -598,10 +644,10 @@ function applyRemote(incoming){
 // that's a separate step (see deleteAccountBtn handler) since it can fail with
 // auth/requires-recent-login and needs its own retry path.
 async function deleteAllUserData(uid){
-  const archiveSnap = await getDocs(collection(db, 'budgets', uid, 'archive'));
-  await Promise.all(archiveSnap.docs.map(d => deleteDoc(d.ref)));
-  const categoriesSnap = await getDocs(collection(db, 'budgets', uid, 'categories'));
-  await Promise.all(categoriesSnap.docs.map(d => deleteDoc(d.ref)));
+  for(const sub of ['archive', 'categories', 'credits', 'extraIncome']){
+    const snap = await getDocs(collection(db, 'budgets', uid, sub));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  }
   await deleteDoc(doc(db, 'budgets', uid));
 }
 
@@ -618,6 +664,12 @@ document.addEventListener('focusout', ()=>{
   setTimeout(()=>{
     if(pendingSnapshot && !isEditingActive() && !localDirty){
       applyRemote(pendingSnapshot);
+    }
+    if(pendingCreditsSnapshot && !isEditingActive() && !localDirty){
+      state.credits = pendingCreditsSnapshot; pendingCreditsSnapshot = null; render();
+    }
+    if(pendingExtraIncomeSnapshot && !isEditingActive() && !localDirty){
+      state.extraIncome = pendingExtraIncomeSnapshot; pendingExtraIncomeSnapshot = null; render();
     }
     if(pendingReload && !isEditingActive()){
       window.location.reload();
@@ -663,8 +715,9 @@ async function pushNow(){
       };
     }).slice(0, 50);
 
-    // Papildus ienākumiem jābūt tieši 3 laukiem, pareiziem tipiem (analoģiski reminders)
+    // Papildus ienākumiem jābūt tieši 4 laukiem, pareiziem tipiem (analoģiski reminders)
     const safeExtraIncome = (Array.isArray(state.extraIncome) ? state.extraIncome : []).slice(0, 100).map(e => ({
+      id: e.id ? String(e.id).slice(0, 40) : genId(),
       name: String(e.name || '').slice(0, 120),
       amount: Math.min(Math.max(Number(e.amount) || 0, 0), 1000000),
       date: String(e.date || '').slice(0, 10)
@@ -700,6 +753,7 @@ async function pushNow(){
     });
     const safeCredits = (Array.isArray(state.credits) ? state.credits : []).slice(0, 100).map(c => {
       const out = {
+        id: c.id ? String(c.id).slice(0, 40) : genId(),
         name: String(c.name || '').slice(0, 120),
         amount: Number(c.amount) || 0
       };
@@ -722,14 +776,14 @@ async function pushNow(){
       achievedAt: (g.achievedAt !== undefined && g.achievedAt !== null) ? String(g.achievedAt).slice(0, 10) : null
     }));
 
-    // Sagatavojam tīru sūtījumu
+    // Sagatavojam tīru sūtījumu. `credits`/`extraIncome` kopš šīs versijas dzīvo
+    // budgets/{uid}/credits|extraIncome/{id} subkolekcijās (sk. syncListSubcollection),
+    // NEVIS šī dokumenta laukos — tāpēc te vairs netiek iekļauti.
     const payload = {
       income: safeIncome,
       periodName: safePeriodName,
       bills: safeBills,
-      credits: safeCredits,
       reminders: safeReminders,
-      extraIncome: safeExtraIncome,
       savingsGoals: safeSavingsGoals,
       updated: Date.now()
     };
@@ -743,22 +797,32 @@ async function pushNow(){
       income: payload.income,
       periodName: payload.periodName,
       bills: payload.bills,
-      credits: payload.credits,
       reminders: payload.reminders,
-      extraIncome: payload.extraIncome,
       salaryDay: payload.salaryDay ?? null,
       savingsGoals: payload.savingsGoals
     });
-    
+
     // 2. SŪTĀM UZ MĀKONI
-    await setDoc(docRef, payload);
-    
+    await Promise.all([
+      setDoc(docRef, payload),
+      syncListSubcollection('credits', lastSyncedCredits, safeCredits),
+      syncListSubcollection('extraIncome', lastSyncedExtraIncome, safeExtraIncome)
+    ]);
+    lastSyncedCredits = safeCredits;
+    lastSyncedExtraIncome = safeExtraIncome;
+
     localDirty = false;
     setSync('ok', t('sync.synced'));
     scheduleReminderNotifications();
-    
+
     if(pendingSnapshot && !isEditingActive()){
       applyRemote(pendingSnapshot);
+    }
+    if(pendingCreditsSnapshot && !isEditingActive()){
+      state.credits = pendingCreditsSnapshot; pendingCreditsSnapshot = null; render();
+    }
+    if(pendingExtraIncomeSnapshot && !isEditingActive()){
+      state.extraIncome = pendingExtraIncomeSnapshot; pendingExtraIncomeSnapshot = null; render();
     }
   } catch(e){
     console.error('Kļūda saglabājot datus Firebase:', e); 
@@ -2201,7 +2265,7 @@ $('sortBillsBtn').addEventListener('click', ()=>{
   state.bills.sort((a,b)=> billAmount(b) - billAmount(a));
   render(); scheduleSave();
 });
-$('addCredit').addEventListener('click', ()=>{ state.credits.push({name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });
+$('addCredit').addEventListener('click', ()=>{ state.credits.push({id:genId(),name:'',amount:0}); render(); scheduleSave(); const n=document.querySelectorAll('#creditsList .cname'); n[n.length-1]?.focus(); });
 
 // ---- Papildus ienākumi (list edit) ----
 $('extraIncomeList').addEventListener('input', e=>{
@@ -2222,7 +2286,7 @@ $('extraIncomeList').addEventListener('click', e=>{
 });
 $('addExtraIncomeBtn').addEventListener('click', ()=>{
   if(!state.extraIncome) state.extraIncome = [];
-  state.extraIncome.push({name:'', amount:0, date:todayStr()});
+  state.extraIncome.push({id:genId(), name:'', amount:0, date:todayStr()});
   render(); scheduleSave();
   const n=document.querySelectorAll('#extraIncomeList .einame'); n[n.length-1]?.focus();
 });

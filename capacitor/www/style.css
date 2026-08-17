@@ -62,9 +62,13 @@
   html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: var(--paper); color: var(--ink); line-height: 1.5; padding: 0 0 80px;
+    background: var(--paper); color: var(--ink); line-height: 1.5;
+    padding: 0 0 calc(80px + env(safe-area-inset-bottom));
   }
-  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+  .wrap {
+    max-width: 1000px; margin: 0 auto;
+    padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+  }
   /* Rezerves variants pārlūkiem bez scrollbar-gutter atbalsta:
      tukšās sadaļas tiek pastieptas, lai ritjosla nepazustu */
   @supports not (scrollbar-gutter: stable) {
@@ -115,7 +119,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Compact top bar: hamburger · tēriņa tempa indikators · sync dot, dashed rule below, sticky */
-  .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--line); position: sticky; top: 0; z-index: 50; background: var(--paper); }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 0 10px; border-bottom: 1px dashed var(--line); position: sticky; top: 0; z-index: 50; background: var(--paper); }
   .topbar-spacer { flex: 1; }
 
   /* Spending-pace mini indicator, lives in the topbar: dot + 3 rounded values + info button.
@@ -157,7 +161,7 @@
   /* Side drawer (navigation + account), slides in from the left */
   .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 90; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .25s ease, visibility .25s ease; }
   .drawer-backdrop.open { opacity: 1; visibility: visible; pointer-events: auto; }
-  .drawer { position: fixed; top: 0; left: 0; height: 100dvh; width: min(300px, 85vw); background: var(--card); z-index: 91; box-shadow: var(--shadow); transform: translateX(-100%); transition: transform .25s ease; display: flex; flex-direction: column; padding: 14px 16px 18px; overflow-y: auto; }
+  .drawer { position: fixed; top: 0; left: 0; height: 100dvh; width: min(300px, 85vw); background: var(--card); z-index: 91; box-shadow: var(--shadow); transform: translateX(-100%); transition: transform .25s ease; display: flex; flex-direction: column; padding: calc(14px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); overflow-y: auto; }
   .drawer.open { transform: translateX(0); }
   @media (prefers-reduced-motion: reduce) { .drawer, .drawer-backdrop { transition: none; } }
   .drawer-close { align-self: flex-end; border: none; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; margin-bottom: 6px; }

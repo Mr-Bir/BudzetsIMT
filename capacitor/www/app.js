@@ -343,16 +343,21 @@ const IS_NATIVE = !!Capacitor.isNativePlatform();
 // "Enforce" poga (infrastruktūras līmenī, PIRMS pieprasījums sasniedz rules) — tas
 // IESLĒGTS 2026-08-17. Sk. BUDZETSIMT_MASTER_INSTRUKCIJA.md faila sākuma 2026-08-17
 // ierakstu pilnam aprakstam.
-// NATIVE (Android/iOS, 2026-08-17): tā vietā, lai izmantotu web-SDK reCAPTCHA Enterprise
-// ceļu ar manuāli reģistrētiem debug tokeniem (kas nekad nestrādātu reāliem Play Store
-// lietotājiem), native platformā App Check iet caur @capacitor-firebase/app-check
-// spraudni (bundler-free kopija js/app-check/, tas pats modelis kā firebase-auth) —
-// tas aktivizē Play Integrity native Android SDK līmenī, un tā iegūtais tokens tiek
-// pievienots Firebase JS SDK App Check instancei caur CustomProvider (oficiāli
-// dokumentēts capawesome-team/capacitor-firebase integrācijas modelis). "BudzetsIMT
-// Android" jau reģistrēta App Check konsolē ar Play Integrity (sk. sadaļu 11, 1. punkts).
-// **VĒL NAV apstiprināts strādājam uz reālas ierīces** — nākamais solis pēc koda
-// izlaišanas ir `npx cap sync android`, pārbūve un tests uz ierīces.
+// NATIVE Play Integrity (2026-08-17, mēģinājums): @capacitor-firebase/app-check
+// spraudnis (bundler-free kopija js/app-check/, tas pats modelis kā firebase-auth,
+// CustomProvider bridge — oficiāli dokumentēts capawesome-team/capacitor-firebase
+// integrācijas modelis) TIKA UZBŪVĒTS un ir kodā, BET reālā ierīces testā
+// (2026-08-17) VIENMĒR atgriež `403 App attestation failed` no
+// `exchangePlayIntegrityToken`, arī pēc pareiza debug keystore SHA-256 pievienošanas
+// App Check konsolē. Hipotēze (NAV apstiprināta): Play Integrity servera puse
+// pilnībā neatpazīst app, kas nekad nav bijis Play Console (reģistrācija vēl nav
+// sākta). Rezultātā šis salauza reālu Firestore piekļuvi native app (App Check
+// enforcement noraidīja placeholder tokenu) — tāpēc PAGAIDĀM IZSLĒGTS ar šo karogu.
+// Atgriezties pie tā, kad sākta Play Console reģistrācija (sk. sadaļu 11, 1. punkts).
+const NATIVE_APP_CHECK_PLAY_INTEGRITY = false;
+// Kamēr karogs ir false, native platforma (Capacitor WebView, kas serverē no
+// https://localhost) izmanto TIEŠI TO PAŠU ceļu, kas zemāk — `location.hostname`
+// pārbaude jau dabiski aptver arī native gadījumu.
 // appCheckReady: connectForUser() to nogaida PIRMS Firestore klausītāja atvēršanas.
 // Bez tā initializeAppCheck() ir "fire-and-forget" — ja lietotājam jau ir saglabāta
 // sesija, onAuthStateChanged var nostrādāt ātrāk nekā App Check tokena tīkla
@@ -362,7 +367,7 @@ const IS_NATIVE = !!Capacitor.isNativePlatform();
 // Timeout (3s) nodrošina, ka lietotne netiek bloķēta, ja App Check pats nestrādā.
 let appCheckReady = Promise.resolve();
 try {
-  if(IS_NATIVE){
+  if(IS_NATIVE && NATIVE_APP_CHECK_PLAY_INTEGRITY){
     const initPromise = FirebaseAppCheck.initialize().then(()=>{
       const provider = new CustomProvider({
         getToken: () => FirebaseAppCheck.getToken()

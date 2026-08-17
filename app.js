@@ -6,7 +6,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, initializeAuth, indexedDBLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, CustomProvider, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { CHANGELOG } from './changelog.js';
 
 // Capacitor runtime + native Firebase Authentication plugin (bundler-free copies
@@ -15,6 +15,7 @@ import { CHANGELOG } from './changelog.js';
 // WebView, where window.open() based popups do not work.
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { FirebaseAppCheck } from '@capacitor-firebase/app-check';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { initI18n, getLang, setLang, t, SUPPORTED_LANGS, applyStaticTranslations, onLangChange, currentLocale } from './js/i18n.js';
@@ -329,6 +330,8 @@ const $ = id => document.getElementById(id);
 
 // ---- Firebase init + Google auth ----
 const fbApp = initializeApp(FIREBASE_CONFIG);
+// True inside the Capacitor WebView; false on the public web.
+const IS_NATIVE = !!Capacitor.isNativePlatform();
 
 // App Check IESLĒGTS KLIENTA PUSĒ (2026-08-13, Fāze 1) — pēc Billing konta pievienošanas
 // un reCAPTCHA Enterprise API/IAM lomu apstiprināšanas Google Cloud Console.
@@ -340,6 +343,16 @@ const fbApp = initializeApp(FIREBASE_CONFIG);
 // "Enforce" poga (infrastruktūras līmenī, PIRMS pieprasījums sasniedz rules) — tas
 // IESLĒGTS 2026-08-17. Sk. BUDZETSIMT_MASTER_INSTRUKCIJA.md faila sākuma 2026-08-17
 // ierakstu pilnam aprakstam.
+// NATIVE (Android/iOS, 2026-08-17): tā vietā, lai izmantotu web-SDK reCAPTCHA Enterprise
+// ceļu ar manuāli reģistrētiem debug tokeniem (kas nekad nestrādātu reāliem Play Store
+// lietotājiem), native platformā App Check iet caur @capacitor-firebase/app-check
+// spraudni (bundler-free kopija js/app-check/, tas pats modelis kā firebase-auth) —
+// tas aktivizē Play Integrity native Android SDK līmenī, un tā iegūtais tokens tiek
+// pievienots Firebase JS SDK App Check instancei caur CustomProvider (oficiāli
+// dokumentēts capawesome-team/capacitor-firebase integrācijas modelis). "BudzetsIMT
+// Android" jau reģistrēta App Check konsolē ar Play Integrity (sk. sadaļu 11, 1. punkts).
+// **VĒL NAV apstiprināts strādājam uz reālas ierīces** — nākamais solis pēc koda
+// izlaišanas ir `npx cap sync android`, pārbūve un tests uz ierīces.
 // appCheckReady: connectForUser() to nogaida PIRMS Firestore klausītāja atvēršanas.
 // Bez tā initializeAppCheck() ir "fire-and-forget" — ja lietotājam jau ir saglabāta
 // sesija, onAuthStateChanged var nostrādāt ātrāk nekā App Check tokena tīkla
@@ -349,25 +362,39 @@ const fbApp = initializeApp(FIREBASE_CONFIG);
 // Timeout (3s) nodrošina, ka lietotne netiek bloķēta, ja App Check pats nestrādā.
 let appCheckReady = Promise.resolve();
 try {
-  if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  if(IS_NATIVE){
+    const initPromise = FirebaseAppCheck.initialize().then(()=>{
+      const provider = new CustomProvider({
+        getToken: () => FirebaseAppCheck.getToken()
+      });
+      const appCheckInstance = initializeAppCheck(fbApp, {
+        provider,
+        isTokenAutoRefreshEnabled: true
+      });
+      return getAppCheckToken(appCheckInstance);
+    }).catch(e=>{
+      console.warn('App Check (native/Play Integrity) inicializācija neizdevās:', e);
+    });
+    appCheckReady = Promise.race([initPromise, new Promise(resolve=>setTimeout(resolve, 3000))]);
+  } else {
+    if(location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
+      self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    }
+    const appCheckInstance = initializeAppCheck(fbApp, {
+      provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
+    const tokenPromise = getAppCheckToken(appCheckInstance).catch(e=>{
+      console.warn('App Check tokena iegūšana neizdevās:', e);
+    });
+    appCheckReady = Promise.race([tokenPromise, new Promise(resolve=>setTimeout(resolve, 3000))]);
   }
-  const appCheckInstance = initializeAppCheck(fbApp, {
-    provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
-    isTokenAutoRefreshEnabled: true
-  });
-  const tokenPromise = getAppCheckToken(appCheckInstance).catch(e=>{
-    console.warn('App Check tokena iegūšana neizdevās:', e);
-  });
-  appCheckReady = Promise.race([tokenPromise, new Promise(resolve=>setTimeout(resolve, 3000))]);
 } catch(e){
   // App Check kļūme nedrīkst apturēt lietotni, kamēr enforcement nav ieslēgts
   console.warn('App Check inicializācija neizdevās:', e);
 }
 
 db = getFirestore(fbApp);
-// True inside the Capacitor WebView; false on the public web.
-const IS_NATIVE = !!Capacitor.isNativePlatform();
 // In the WebView the native plugin performs Google sign-in; the web SDK is then
 // told to persist its session in IndexedDB (sessionStorage/localStorage are
 // unreliable there). On the public web default getAuth() behavior is used.

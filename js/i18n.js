@@ -761,10 +761,20 @@ export function currentLocale() {
 
 // Lasa saglabāto valodu no localStorage un iestata <html lang>. Jāsauc VIENU
 // reizi, cik ātri vien iespējams pēc moduļa ielādes (nav atkarīgs no DOM).
+// Ja lietotājs vēl NEKAD nav pats izvēlējies valodu (nav localStorage ieraksta),
+// mēģina noteikt to no pārlūka/sistēmas valodas (navigator.language) — tas ir
+// vienreizējs pirmā palaišanas brīža uzminējums, ne pastāvīga sekošana sistēmai;
+// tiklīdz lietotājs izvēlas valodu Iestatījumos (setLang()), tā saglabājas
+// localStorage un vienmēr uzvar pār sistēmas valodu turpmāk.
 export function initI18n() {
-  let saved = DEFAULT_LANG;
-  try { saved = localStorage.getItem(LANG_STORAGE_KEY) || DEFAULT_LANG; } catch (e) {}
-  currentLang = SUPPORTED_LANGS.includes(saved) ? saved : DEFAULT_LANG;
+  let saved;
+  try { saved = localStorage.getItem(LANG_STORAGE_KEY); } catch (e) {}
+  if (saved && SUPPORTED_LANGS.includes(saved)) {
+    currentLang = saved;
+  } else {
+    const browserLang = (navigator.language || '').slice(0, 2).toLowerCase();
+    currentLang = SUPPORTED_LANGS.includes(browserLang) ? browserLang : DEFAULT_LANG;
+  }
   document.documentElement.lang = currentLang;
 }
 

@@ -8,6 +8,17 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.2', date:'2026-08-17', notes:[
+    'Lietotnes valoda pirmajā palaišanas reizē tagad tiek noteikta automātiski pēc ierīces/pārlūka valodas (ja angļu — atveras angliski, citādi latviski) — izvēle Iestatījumos joprojām saglabājas un vienmēr uzvar turpmāk',
+    'Android app tagad fiksēta portreta orientācijā (vairs negriežas ainavā)',
+    'Ekrāna izkārtojums pielāgots ierīcēm ar displeja izciļņiem (notch), apaļiem stūriem un žestu navigācijas joslu',
+    'Neliels vizuāls uzlabojums — smalka apmale ap Iestatījumu logu',
+  ], notesEn:[
+    'On first launch, the app\'s language is now detected automatically from the device/browser language (English → opens in English, otherwise Latvian) — your choice in Settings is still saved and always wins afterwards',
+    'The Android app is now locked to portrait orientation (no longer rotates to landscape)',
+    'Layout now adapts to devices with display notches, rounded corners, and gesture navigation bars',
+    'Small visual polish — a subtle border around the Settings window',
+  ]},
   { v:'1.39.1', date:'2026-08-16', notes:[
     'Privātuma politika un Lietošanas noteikumi tagad pieejami arī angļu valodā — Iestatījumos atveras pareizā valodā atbilstoši izvēlētajai lietotnes valodai',
     '"Kas jauns" (changelog) — jaunākie ~15 versiju ieraksti tagad pieejami arī angļu valodā, vecākā vēsture paliek tikai latviski',

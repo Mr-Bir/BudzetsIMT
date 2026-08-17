@@ -98,20 +98,6 @@ function genId(){ return 'id_' + Date.now().toString(36) + '_' + Math.random().t
 // and for cross-device sync where an older app version might still write id-less bills.
 function ensureBillIds(bills){ (bills||[]).forEach(b=>{ if(!b.id) b.id = genId(); }); return bills; }
 
-// Aizpilda trūkstošos laukus un piespiež precīzus datu tipus, lai vienmēr izietu firebase.rules
-function ensureReminderFields(reminders) {
-  return (reminders || []).map(r => ({
-    id: r.id ? String(r.id) : genId(),
-    billId: (r.billId !== undefined && r.billId !== null) ? String(r.billId) : null,
-    name: r.name ? String(r.name) : '',
-    // Pārliecināmies, ka diena vienmēr ir skaitlis, nevis teksts
-    day: (r.day !== undefined && r.day !== null && r.day !== '') ? Number(r.day) : null,
-    date: (r.date !== undefined && r.date !== null) ? String(r.date) : null,
-    active: r.active !== undefined ? Boolean(r.active) : true,
-    dismissedFor: (r.dismissedFor !== undefined && r.dismissedFor !== null) ? String(r.dismissedFor) : null
-  }));
-}
-
 // Aizpilda trūkstošos laukus uzkrājuma mērķu ierakstiem (analoģiski ensureReminderFields)
 function ensureSavingsGoalFields(goals) {
   return (goals || []).map(g => ({
@@ -310,9 +296,9 @@ let state = structuredClone(DEFAULT);
 let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null, localDirty=false;
 let lastSentJSON = null, pendingSnapshot = null, pendingReload = false;
 let currentUser = null, snapshotUnsub = null, categoriesUnsub = null;
-let creditsUnsub = null, extraIncomeUnsub = null;
-let lastSyncedCredits = [], lastSyncedExtraIncome = [];
-let pendingCreditsSnapshot = null, pendingExtraIncomeSnapshot = null;
+let creditsUnsub = null, extraIncomeUnsub = null, remindersUnsub = null;
+let lastSyncedCredits = [], lastSyncedExtraIncome = [], lastSyncedReminders = [];
+let pendingCreditsSnapshot = null, pendingExtraIncomeSnapshot = null, pendingRemindersSnapshot = null;
 
 const $ = id => document.getElementById(id);
 
@@ -456,6 +442,7 @@ onAuthStateChanged(auth, user=>{
     if(categoriesUnsub){ categoriesUnsub(); categoriesUnsub = null; }
     if(creditsUnsub){ creditsUnsub(); creditsUnsub = null; }
     if(extraIncomeUnsub){ extraIncomeUnsub(); extraIncomeUnsub = null; }
+    if(remindersUnsub){ remindersUnsub(); remindersUnsub = null; }
     $('app').classList.add('hidden');
     $('gate').classList.remove('hidden');
     $('modalRoot').innerHTML = ''; // close any open modal (e.g. Iestatījumi after account deletion)
@@ -481,6 +468,7 @@ async function connectForUser(uid){
   subscribeCategoriesSnapshot(uid);
   subscribeCreditsSnapshot(uid);
   subscribeExtraIncomeSnapshot(uid);
+  subscribeRemindersSnapshot(uid);
 }
 
 // isRetry: true, ja šis ir pašdziedinošais atkārtotais mēģinājums pēc permission-denied
@@ -497,12 +485,12 @@ function subscribeSnapshot(uid, isRetry){
         bills: ensureBillIds(d.bills ?? []),
         credits: state.credits,
         categories: state.categories,
-        reminders: ensureReminderFields(d.reminders ?? []),
+        reminders: state.reminders,
         extraIncome: state.extraIncome,
         salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null,
         savingsGoals: ensureSavingsGoalFields(d.savingsGoals ?? [])
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, reminders: incoming.reminders, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
       if(incomingJSON === lastSentJSON){ setSync('ok', t('sync.synced')); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -513,8 +501,8 @@ function subscribeSnapshot(uid, isRetry){
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data). `categories`/`credits`/
-      // `extraIncome` NAV šeit — tos pārvalda savi neatkarīgie subkolekciju klausītāji.
-      state = { income: 0, periodName: '', bills: [], credits: state.credits, categories: state.categories, reminders: [], extraIncome: state.extraIncome, salaryDay: null, savingsGoals: [] };
+      // `extraIncome`/`reminders` NAV šeit — tos pārvalda savi neatkarīgie subkolekciju klausītāji.
+      state = { income: 0, periodName: '', bills: [], credits: state.credits, categories: state.categories, reminders: state.reminders, extraIncome: state.extraIncome, salaryDay: null, savingsGoals: [] };
       render(); pushNow();
     }
   }, err=>{
@@ -585,6 +573,17 @@ function subscribeExtraIncomeSnapshot(uid){
   });
 }
 
+function subscribeRemindersSnapshot(uid){
+  if(remindersUnsub){ remindersUnsub(); }
+  remindersUnsub = onSnapshot(collection(db, 'budgets', uid, 'reminders'), snap=>{
+    const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    if(isEditingActive() || localDirty){ pendingRemindersSnapshot = list; return; }
+    state.reminders = list; render(); scheduleReminderNotifications();
+  }, err=>{
+    console.error('Kļūda ielādējot atgādinājumus:', err);
+  });
+}
+
 // Vienkāršs batch-raksts jaunām/trūkstošām kategorijām (seed/backfill gadījumi augstāk).
 async function seedCategories(uid, cats){
   try {
@@ -644,7 +643,7 @@ function applyRemote(incoming){
 // that's a separate step (see deleteAccountBtn handler) since it can fail with
 // auth/requires-recent-login and needs its own retry path.
 async function deleteAllUserData(uid){
-  for(const sub of ['archive', 'categories', 'credits', 'extraIncome']){
+  for(const sub of ['archive', 'categories', 'credits', 'extraIncome', 'reminders']){
     const snap = await getDocs(collection(db, 'budgets', uid, sub));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
   }
@@ -670,6 +669,9 @@ document.addEventListener('focusout', ()=>{
     }
     if(pendingExtraIncomeSnapshot && !isEditingActive() && !localDirty){
       state.extraIncome = pendingExtraIncomeSnapshot; pendingExtraIncomeSnapshot = null; render();
+    }
+    if(pendingRemindersSnapshot && !isEditingActive() && !localDirty){
+      state.reminders = pendingRemindersSnapshot; pendingRemindersSnapshot = null; render();
     }
     if(pendingReload && !isEditingActive()){
       window.location.reload();
@@ -776,19 +778,18 @@ async function pushNow(){
       achievedAt: (g.achievedAt !== undefined && g.achievedAt !== null) ? String(g.achievedAt).slice(0, 10) : null
     }));
 
-    // Sagatavojam tīru sūtījumu. `credits`/`extraIncome` kopš šīs versijas dzīvo
-    // budgets/{uid}/credits|extraIncome/{id} subkolekcijās (sk. syncListSubcollection),
-    // NEVIS šī dokumenta laukos — tāpēc te vairs netiek iekļauti.
+    // Sagatavojam tīru sūtījumu. `credits`/`extraIncome`/`reminders` kopš šīs versijas dzīvo
+    // budgets/{uid}/{credits,extraIncome,reminders}/{id} subkolekcijās (sk.
+    // syncListSubcollection), NEVIS šī dokumenta laukos — tāpēc te vairs netiek iekļauti.
     const payload = {
       income: safeIncome,
       periodName: safePeriodName,
       bills: safeBills,
-      reminders: safeReminders,
       savingsGoals: safeSavingsGoals,
       updated: Date.now()
     };
-    // salaryDay ir neobligāts (analoģiski periodName/reminders) — ja nav iestatīts,
-    // lauku VISPĀR nesūtām, nevis sūtām null (Firestore rules validē to kā skaitli 1-31).
+    // salaryDay ir neobligāts (analoģiski periodName) — ja nav iestatīts, lauku VISPĀR
+    // nesūtām, nevis sūtām null (Firestore rules validē to kā skaitli 1-31).
     if(state.salaryDay !== undefined && state.salaryDay !== null && state.salaryDay !== ''){
       payload.salaryDay = Math.min(Math.max(parseInt(state.salaryDay,10)||1, 1), 31);
     }
@@ -797,7 +798,6 @@ async function pushNow(){
       income: payload.income,
       periodName: payload.periodName,
       bills: payload.bills,
-      reminders: payload.reminders,
       salaryDay: payload.salaryDay ?? null,
       savingsGoals: payload.savingsGoals
     });
@@ -806,10 +806,12 @@ async function pushNow(){
     await Promise.all([
       setDoc(docRef, payload),
       syncListSubcollection('credits', lastSyncedCredits, safeCredits),
-      syncListSubcollection('extraIncome', lastSyncedExtraIncome, safeExtraIncome)
+      syncListSubcollection('extraIncome', lastSyncedExtraIncome, safeExtraIncome),
+      syncListSubcollection('reminders', lastSyncedReminders, safeReminders)
     ]);
     lastSyncedCredits = safeCredits;
     lastSyncedExtraIncome = safeExtraIncome;
+    lastSyncedReminders = safeReminders;
 
     localDirty = false;
     setSync('ok', t('sync.synced'));
@@ -823,6 +825,9 @@ async function pushNow(){
     }
     if(pendingExtraIncomeSnapshot && !isEditingActive()){
       state.extraIncome = pendingExtraIncomeSnapshot; pendingExtraIncomeSnapshot = null; render();
+    }
+    if(pendingRemindersSnapshot && !isEditingActive()){
+      state.reminders = pendingRemindersSnapshot; pendingRemindersSnapshot = null; render();
     }
   } catch(e){
     console.error('Kļūda saglabājot datus Firebase:', e); 

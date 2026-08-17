@@ -94,25 +94,6 @@ function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.get
 // Stable random id for bills/reminders — lets reminders reference a bill across
 // reorders, renames, and "Jauns mēnesis" resets (which only touch amount/paid/entries).
 function genId(){ return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,9); }
-// Backfills missing bill ids in-place — needed for data saved before reminders existed,
-// and for cross-device sync where an older app version might still write id-less bills.
-function ensureBillIds(bills){ (bills||[]).forEach(b=>{ if(!b.id) b.id = genId(); }); return bills; }
-
-// Aizpilda trūkstošos laukus uzkrājuma mērķu ierakstiem (analoģiski ensureReminderFields)
-function ensureSavingsGoalFields(goals) {
-  return (goals || []).map(g => ({
-    id: g.id ? String(g.id) : genId(),
-    name: g.name ? String(g.name) : '',
-    targetAmount: Number(g.targetAmount) || 0,
-    months: Number(g.months) || 0,
-    monthlyAmount: Number(g.monthlyAmount) || 0,
-    billId: (g.billId !== undefined && g.billId !== null) ? String(g.billId) : null,
-    paidInstallments: Number(g.paidInstallments) || 0,
-    achieved: Boolean(g.achieved),
-    achievedAt: (g.achievedAt !== undefined && g.achievedAt !== null) ? String(g.achievedAt) : null,
-    createdAt: g.createdAt ? String(g.createdAt) : todayStr()
-  }));
-}
 function goalById(id){ return (state.savingsGoals||[]).find(g=>g.id===id); }
 // Aptuvenais atlikušais laiks/datums, balstīts uz ATLIKUŠAJIEM (vēl neapmaksātajiem)
 // maksājumiem no ŠODIENAS — nevis fiksētu, izveides brīdī aprēķinātu datumu, jo izlaists
@@ -297,8 +278,11 @@ let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null, localDirty=f
 let lastSentJSON = null, pendingSnapshot = null, pendingReload = false;
 let currentUser = null, snapshotUnsub = null, categoriesUnsub = null;
 let creditsUnsub = null, extraIncomeUnsub = null, remindersUnsub = null;
+let billsUnsub = null, savingsGoalsUnsub = null;
 let lastSyncedCredits = [], lastSyncedExtraIncome = [], lastSyncedReminders = [];
+let lastSyncedBills = [], lastSyncedSavingsGoals = [];
 let pendingCreditsSnapshot = null, pendingExtraIncomeSnapshot = null, pendingRemindersSnapshot = null;
+let pendingBillsSnapshot = null, pendingSavingsGoalsSnapshot = null;
 
 const $ = id => document.getElementById(id);
 
@@ -443,6 +427,8 @@ onAuthStateChanged(auth, user=>{
     if(creditsUnsub){ creditsUnsub(); creditsUnsub = null; }
     if(extraIncomeUnsub){ extraIncomeUnsub(); extraIncomeUnsub = null; }
     if(remindersUnsub){ remindersUnsub(); remindersUnsub = null; }
+    if(billsUnsub){ billsUnsub(); billsUnsub = null; }
+    if(savingsGoalsUnsub){ savingsGoalsUnsub(); savingsGoalsUnsub = null; }
     $('app').classList.add('hidden');
     $('gate').classList.remove('hidden');
     $('modalRoot').innerHTML = ''; // close any open modal (e.g. Iestatījumi after account deletion)
@@ -469,6 +455,8 @@ async function connectForUser(uid){
   subscribeCreditsSnapshot(uid);
   subscribeExtraIncomeSnapshot(uid);
   subscribeRemindersSnapshot(uid);
+  subscribeBillsSnapshot(uid);
+  subscribeSavingsGoalsSnapshot(uid);
 }
 
 // isRetry: true, ja šis ir pašdziedinošais atkārtotais mēģinājums pēc permission-denied
@@ -482,15 +470,15 @@ function subscribeSnapshot(uid, isRetry){
       const incoming = {
         income: d.income ?? DEFAULT.income,
         periodName: d.periodName || '',
-        bills: ensureBillIds(d.bills ?? []),
+        bills: state.bills,
         credits: state.credits,
         categories: state.categories,
         reminders: state.reminders,
         extraIncome: state.extraIncome,
         salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null,
-        savingsGoals: ensureSavingsGoalFields(d.savingsGoals ?? [])
+        savingsGoals: state.savingsGoals
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, bills: incoming.bills, salaryDay: incoming.salaryDay, savingsGoals: incoming.savingsGoals });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, salaryDay: incoming.salaryDay });
       if(incomingJSON === lastSentJSON){ setSync('ok', t('sync.synced')); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -501,8 +489,9 @@ function subscribeSnapshot(uid, isRetry){
       applyRemote(incoming);
     } else {
       // New user: start with empty-ish defaults (no personal data). `categories`/`credits`/
-      // `extraIncome`/`reminders` NAV šeit — tos pārvalda savi neatkarīgie subkolekciju klausītāji.
-      state = { income: 0, periodName: '', bills: [], credits: state.credits, categories: state.categories, reminders: state.reminders, extraIncome: state.extraIncome, salaryDay: null, savingsGoals: [] };
+      // `extraIncome`/`reminders`/`bills`/`savingsGoals` NAV šeit — tos pārvalda savi
+      // neatkarīgie subkolekciju klausītāji.
+      state = { income: 0, periodName: '', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders, extraIncome: state.extraIncome, salaryDay: null, savingsGoals: state.savingsGoals };
       render(); pushNow();
     }
   }, err=>{
@@ -584,6 +573,28 @@ function subscribeRemindersSnapshot(uid){
   });
 }
 
+function subscribeBillsSnapshot(uid){
+  if(billsUnsub){ billsUnsub(); }
+  billsUnsub = onSnapshot(collection(db, 'budgets', uid, 'bills'), snap=>{
+    const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    if(isEditingActive() || localDirty){ pendingBillsSnapshot = list; return; }
+    state.bills = list; render();
+  }, err=>{
+    console.error('Kļūda ielādējot rēķinus:', err);
+  });
+}
+
+function subscribeSavingsGoalsSnapshot(uid){
+  if(savingsGoalsUnsub){ savingsGoalsUnsub(); }
+  savingsGoalsUnsub = onSnapshot(collection(db, 'budgets', uid, 'savingsGoals'), snap=>{
+    const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    if(isEditingActive() || localDirty){ pendingSavingsGoalsSnapshot = list; return; }
+    state.savingsGoals = list; render();
+  }, err=>{
+    console.error('Kļūda ielādējot uzkrājuma mērķus:', err);
+  });
+}
+
 // Vienkāršs batch-raksts jaunām/trūkstošām kategorijām (seed/backfill gadījumi augstāk).
 async function seedCategories(uid, cats){
   try {
@@ -643,7 +654,7 @@ function applyRemote(incoming){
 // that's a separate step (see deleteAccountBtn handler) since it can fail with
 // auth/requires-recent-login and needs its own retry path.
 async function deleteAllUserData(uid){
-  for(const sub of ['archive', 'categories', 'credits', 'extraIncome', 'reminders']){
+  for(const sub of ['archive', 'categories', 'credits', 'extraIncome', 'reminders', 'bills', 'savingsGoals']){
     const snap = await getDocs(collection(db, 'budgets', uid, sub));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
   }
@@ -672,6 +683,12 @@ document.addEventListener('focusout', ()=>{
     }
     if(pendingRemindersSnapshot && !isEditingActive() && !localDirty){
       state.reminders = pendingRemindersSnapshot; pendingRemindersSnapshot = null; render();
+    }
+    if(pendingBillsSnapshot && !isEditingActive() && !localDirty){
+      state.bills = pendingBillsSnapshot; pendingBillsSnapshot = null; render();
+    }
+    if(pendingSavingsGoalsSnapshot && !isEditingActive() && !localDirty){
+      state.savingsGoals = pendingSavingsGoalsSnapshot; pendingSavingsGoalsSnapshot = null; render();
     }
     if(pendingReload && !isEditingActive()){
       window.location.reload();
@@ -778,14 +795,13 @@ async function pushNow(){
       achievedAt: (g.achievedAt !== undefined && g.achievedAt !== null) ? String(g.achievedAt).slice(0, 10) : null
     }));
 
-    // Sagatavojam tīru sūtījumu. `credits`/`extraIncome`/`reminders` kopš šīs versijas dzīvo
-    // budgets/{uid}/{credits,extraIncome,reminders}/{id} subkolekcijās (sk.
+    // Sagatavojam tīru sūtījumu. `credits`/`extraIncome`/`reminders`/`bills`/`savingsGoals`
+    // kopš šīs versijas dzīvo budgets/{uid}/{list}/{id} subkolekcijās (sk.
     // syncListSubcollection), NEVIS šī dokumenta laukos — tāpēc te vairs netiek iekļauti.
+    // Galvenajā dokumentā tagad paliek TIKAI skalārie lauki.
     const payload = {
       income: safeIncome,
       periodName: safePeriodName,
-      bills: safeBills,
-      savingsGoals: safeSavingsGoals,
       updated: Date.now()
     };
     // salaryDay ir neobligāts (analoģiski periodName) — ja nav iestatīts, lauku VISPĀR
@@ -797,9 +813,7 @@ async function pushNow(){
     lastSentJSON = JSON.stringify({
       income: payload.income,
       periodName: payload.periodName,
-      bills: payload.bills,
-      salaryDay: payload.salaryDay ?? null,
-      savingsGoals: payload.savingsGoals
+      salaryDay: payload.salaryDay ?? null
     });
 
     // 2. SŪTĀM UZ MĀKONI
@@ -807,11 +821,15 @@ async function pushNow(){
       setDoc(docRef, payload),
       syncListSubcollection('credits', lastSyncedCredits, safeCredits),
       syncListSubcollection('extraIncome', lastSyncedExtraIncome, safeExtraIncome),
-      syncListSubcollection('reminders', lastSyncedReminders, safeReminders)
+      syncListSubcollection('reminders', lastSyncedReminders, safeReminders),
+      syncListSubcollection('bills', lastSyncedBills, safeBills),
+      syncListSubcollection('savingsGoals', lastSyncedSavingsGoals, safeSavingsGoals)
     ]);
     lastSyncedCredits = safeCredits;
     lastSyncedExtraIncome = safeExtraIncome;
     lastSyncedReminders = safeReminders;
+    lastSyncedBills = safeBills;
+    lastSyncedSavingsGoals = safeSavingsGoals;
 
     localDirty = false;
     setSync('ok', t('sync.synced'));
@@ -828,6 +846,12 @@ async function pushNow(){
     }
     if(pendingRemindersSnapshot && !isEditingActive()){
       state.reminders = pendingRemindersSnapshot; pendingRemindersSnapshot = null; render();
+    }
+    if(pendingBillsSnapshot && !isEditingActive()){
+      state.bills = pendingBillsSnapshot; pendingBillsSnapshot = null; render();
+    }
+    if(pendingSavingsGoalsSnapshot && !isEditingActive()){
+      state.savingsGoals = pendingSavingsGoalsSnapshot; pendingSavingsGoalsSnapshot = null; render();
     }
   } catch(e){
     console.error('Kļūda saglabājot datus Firebase:', e); 

@@ -241,8 +241,21 @@ const DEFAULT_CATEGORIES = [
   { key:'uzkrajumi', name:'Uzkrājumi', color:'#3f8f7a' },
   { key:'cits', name:'Cits', color:'#8a8576' },
 ];
+const DEFAULT_CATEGORIES_EN = [
+  { key:'partika', name:'Groceries', color:'#c76b5a' },
+  { key:'ire', name:'Rent', color:'#5a8ca8' },
+  { key:'komunalie', name:'Utilities', color:'#4a7c59' },
+  { key:'kredits', name:'Credit', color:'#8d6e8f' },
+  { key:'transports', name:'Transport', color:'#c8923a' },
+  { key:'abonementi', name:'Subscriptions', color:'#5b7a99' },
+  { key:'uzkrajumi', name:'Savings', color:'#3f8f7a' },
+  { key:'cits', name:'Other', color:'#8a8576' },
+];
+// Keys/colors are identical across languages (they're data IDs, not UI text) — only
+// `name` differs, so nothing that matches on `key` needs to know which language seeded it.
+function defaultCategories(){ return structuredClone(getLang()==='en' ? DEFAULT_CATEGORIES_EN : DEFAULT_CATEGORIES); }
 // Live lookups derived from state.categories
-function catList(){ return (state.categories && state.categories.length) ? state.categories : DEFAULT_CATEGORIES; }
+function catList(){ return (state.categories && state.categories.length) ? state.categories : defaultCategories(); }
 function catName(key){ const c = catList().find(x=>x.key===key); return c ? c.name : 'Cits'; }
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
 // Vienots aizsardzības punkts: jebkura kategorijas krāsa, kas nonāk DOM inline style
@@ -272,8 +285,31 @@ const DEFAULT = {
   salaryDay: null,
   savingsGoals: []
 };
+const DEFAULT_EN = {
+  income: 1850,
+  periodName: '',
+  bills: [
+    {id:'bill_partika', name:'Groceries', amount:380, cat:'partika'},
+    {id:'bill_ire', name:'Rent', amount:650, cat:'ire'},
+    {id:'bill_komunalie', name:'Utilities', amount:150, cat:'komunalie'},
+    {id:'bill_degviela', name:'Fuel', type:'summing', entries:[], cat:'transports'},
+  ],
+  credits: [
+    {name:'In Credit', amount:550},
+    {name:'Swedbank consumer loan', amount:2500},
+    {name:'Personal loan – A. Bērziņš', amount:1585},
+  ],
+  categories: structuredClone(DEFAULT_CATEGORIES_EN),
+  reminders: [],
+  extraIncome: [],
+  salaryDay: null,
+  savingsGoals: []
+};
+// Picked fresh at every seed point (not baked into a constant) so it also respects a
+// language change made just before a brand-new account's first sign-in.
+function defaultSeed(){ return structuredClone(getLang()==='en' ? DEFAULT_EN : DEFAULT); }
 
-let state = structuredClone(DEFAULT);
+let state = structuredClone(defaultSeed());
 let db, auth, docRef, roomId, applyingRemote=false, saveTimer=null, localDirty=false;
 let lastSentJSON = null, pendingSnapshot = null, pendingReload = false;
 let currentUser = null, snapshotUnsub = null, categoriesUnsub = null;
@@ -439,7 +475,7 @@ onAuthStateChanged(auth, user=>{
     // tab (no page reload) never inherits the previous account's data — otherwise the
     // "new user, no doc yet" branch in subscribeSnapshot() would push these stale
     // bills/credits/categories/etc. straight into the new account's Firestore document.
-    state = structuredClone(DEFAULT);
+    state = structuredClone(defaultSeed());
     if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
     if(categoriesUnsub){ categoriesUnsub(); categoriesUnsub = null; }
     if(creditsUnsub){ creditsUnsub(); creditsUnsub = null; }
@@ -537,7 +573,7 @@ function subscribeCategoriesSnapshot(uid){
     let cats = snap.docs.map(d=>({ key: d.id, ...d.data() }));
     if(cats.length===0){
       // Jauns lietotājs VAI vēl nemigrēti veci dati — sēj noklusējuma kategorijas.
-      cats = structuredClone(DEFAULT_CATEGORIES);
+      cats = defaultCategories();
       seedCategories(uid, cats);
     } else if(!cats.some(c=>c.key==='uzkrajumi')){
       // Backfill lietotājiem, kas sinhronizējuši PIRMS "Uzkrājumi" kategorijas ieviešanas.
@@ -2368,7 +2404,7 @@ $('fileIn').addEventListener('change', e=>{
     if(!confirm(t('import.confirm'))){ $('fileIn').value=''; return; }
     const importedCategories = (Array.isArray(data.categories)&&data.categories.length)
       ? data.categories.map(c=>({ key: String(c.key||'cits').slice(0,20), name: String(c.name||'Cits').slice(0,40), color: safeColor(c.color) }))
-      : structuredClone(DEFAULT_CATEGORIES);
+      : defaultCategories();
     // Ensure 'cits' fallback category always exists
     if(!importedCategories.some(c=>c.key==='cits')) importedCategories.push({key:'cits',name:'Cits',color:'#8a8576'});
     try {

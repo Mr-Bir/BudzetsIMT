@@ -2863,6 +2863,17 @@ function renderSettingsModal(){
     const btn = $('deleteAccountBtn');
     btn.disabled = true; btn.textContent = t('settings.deleting');
 
+    // Detach every live listener BEFORE deleting anything — otherwise they react to the
+    // deletes in real time (e.g. the categories listener's empty-collection auto-seed)
+    // and silently recreate documents while deleteAllUserData() is still running.
+    if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
+    if(categoriesUnsub){ categoriesUnsub(); categoriesUnsub = null; }
+    if(creditsUnsub){ creditsUnsub(); creditsUnsub = null; }
+    if(extraIncomeUnsub){ extraIncomeUnsub(); extraIncomeUnsub = null; }
+    if(remindersUnsub){ remindersUnsub(); remindersUnsub = null; }
+    if(billsUnsub){ billsUnsub(); billsUnsub = null; }
+    if(savingsGoalsUnsub){ savingsGoalsUnsub(); savingsGoalsUnsub = null; }
+
     const uid = currentUser.uid;
     try {
       await deleteAllUserData(uid);

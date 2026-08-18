@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
  * Skatīt LICENSE failu repozitorija saknē.
  */
-const CACHE_NAME = 'finanses-shell-v68';
+const CACHE_NAME = 'finanses-shell-v69';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -55,9 +55,9 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Only cache same-origin app-shell requests. Firebase/Firestore requests
-// go to a different origin and are left untouched (network only), since
-// the data must always be fresh and synced.
+// Only cache same-origin app-shell requests. Firebase/Firestore requests go to a
+// different origin and are left untouched here — Firestore has its own offline
+// support (persistentLocalCache in app.js), separate from this app-shell cache.
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || event.request.method !== 'GET') return;

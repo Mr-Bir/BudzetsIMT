@@ -4,7 +4,7 @@
  * Skatīt LICENSE failu repozitorija saknē.
  */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, getDocs, deleteDoc, collection, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup, initializeAuth, indexedDBLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, CustomProvider, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { CHANGELOG } from './changelog.js';
@@ -363,7 +363,20 @@ try {
   console.warn('App Check inicializācija neizdevās:', e);
 }
 
-db = getFirestore(fbApp);
+// Offline atbalsts: IndexedDB lokālais kešs ļauj datiem palikt lasāmi/rediģējami
+// bez interneta (SDK automātiski rindo rakstīšanas un nosūta tās, tiklīdz savienojums
+// atgriežas). persistentMultipleTabManager, jo lietotājs var atvērt vairākas cilnes
+// vienā pārlūkā — bez tā persistence strādātu tikai VIENĀ cilnē uzreiz. Ar drošu
+// fallback uz parasto (tikai atmiņas) kešu, ja IndexedDB nav pieejams (piem., dažu
+// pārlūku privātais režīms).
+try {
+  db = initializeFirestore(fbApp, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
+} catch(e){
+  console.warn('Firestore offline persistence neizdevās, izmanto tikai-atmiņas kešu:', e);
+  db = getFirestore(fbApp);
+}
 // In the WebView the native plugin performs Google sign-in; the web SDK is then
 // told to persist its session in IndexedDB (sessionStorage/localStorage are
 // unreliable there). On the public web default getAuth() behavior is used.

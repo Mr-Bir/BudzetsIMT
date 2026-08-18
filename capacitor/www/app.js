@@ -435,6 +435,11 @@ onAuthStateChanged(auth, user=>{
     connectForUser(user.uid);
   } else {
     currentUser = null;
+    // Reset in-memory state on sign-out so a different user signing in within the same
+    // tab (no page reload) never inherits the previous account's data — otherwise the
+    // "new user, no doc yet" branch in subscribeSnapshot() would push these stale
+    // bills/credits/categories/etc. straight into the new account's Firestore document.
+    state = structuredClone(DEFAULT);
     if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
     if(categoriesUnsub){ categoriesUnsub(); categoriesUnsub = null; }
     if(creditsUnsub){ creditsUnsub(); creditsUnsub = null; }

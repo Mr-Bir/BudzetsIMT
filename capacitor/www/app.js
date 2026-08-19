@@ -352,9 +352,11 @@ const IS_NATIVE = !!Capacitor.isNativePlatform();
 // App Check konsolē. Hipotēze (NAV apstiprināta): Play Integrity servera puse
 // pilnībā neatpazīst app, kas nekad nav bijis Play Console (reģistrācija vēl nav
 // sākta). Rezultātā šis salauza reālu Firestore piekļuvi native app (App Check
-// enforcement noraidīja placeholder tokenu) — tāpēc PAGAIDĀM IZSLĒGTS ar šo karogu.
-// Atgriezties pie tā, kad sākta Play Console reģistrācija (sk. sadaļu 11, 1. punkts).
-const NATIVE_APP_CHECK_PLAY_INTEGRITY = false;
+// enforcement noraidīja placeholder tokenu) — tāpēc TAD bija PAGAIDĀM IZSLĒGTS.
+// 2026-08-20: Play Console reģistrācija tagad IR pabeigta (app ieraksts
+// `lv.mrbir.budzetsimt` eksistē), kas bija trūkstošais priekšnoteikums hipotēzei —
+// atkārtoti IESLĒGTS izmēģināšanai internal testing būvējumā.
+const NATIVE_APP_CHECK_PLAY_INTEGRITY = true;
 // Kamēr karogs ir false, native platforma (Capacitor WebView, kas serverē no
 // https://localhost) izmanto TIEŠI TO PAŠU ceļu, kas zemāk — `location.hostname`
 // pārbaude jau dabiski aptver arī native gadījumu.

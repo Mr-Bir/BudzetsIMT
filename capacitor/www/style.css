@@ -277,9 +277,9 @@
   .bill.paid .pay-check { background: var(--green); border-color: var(--green); }
   .bill.paid .pay-check svg { opacity: 1; }
   .bill.paid .name, .bill.paid .amount { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(74,124,89,.5); }
-  .pay-check-auto { background: var(--green); border-color: var(--green); opacity: .6; cursor: default; }
+  .bill .pay-check-auto { background: var(--green); border-color: var(--green); opacity: .6; cursor: default; }
   .pay-check-auto svg { opacity: 1 !important; }
-  .pay-check-auto:hover { border-color: var(--green); }
+  .bill .pay-check-auto:hover { border-color: var(--green); }
   .bill .tag-strip { width: 6px; height: 30px; border-radius: 3px; background: var(--line); align-self: center; }
   .bill[data-cat="komunalie"] .tag-strip { background: var(--green); }
   .bill[data-cat="kredits"] .tag-strip { background: var(--plum); }
@@ -509,7 +509,7 @@
   .ebill .echk svg { width: 12px; height: 12px; opacity: 0; }
   .ebill.paid .echk { background: var(--green); border-color: var(--green); }
   .ebill.paid .echk svg { opacity: 1; }
-  .echk-auto { background: var(--green); border-color: var(--green); opacity: .6; cursor: default; }
+  .ebill .echk-auto { background: var(--green); border-color: var(--green); opacity: .6; cursor: default; }
   .echk-auto svg { opacity: 1 !important; }
   .ebill .ename { border: none; background: transparent; font: inherit; font-size: 14px; width: 100%; color: var(--ink); }
   .ebill .ename:focus { outline: none; background: var(--surface-sub); border-radius: 4px; }

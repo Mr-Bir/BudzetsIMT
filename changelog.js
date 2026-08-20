@@ -8,6 +8,15 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.4', date:'2026-08-20', notes:[
+    'Rēķinu atgādinājumu native paziņojumi tagad pareizi uznāk arī uz 29., 30. un 31. datumu (iepriekš klusi neuznāca mēnešos, kuriem šīs dienas nav)',
+    'Uzkrājuma mērķa dzēšana vai pabeigšana tagad pareizi aptur tam piesaistīto atgādinājumu',
+    'Atgādinājumu un uzkrājumu mērķu datumi angļu valodā tagad rādās pareizajā formātā',
+  ], notesEn:[
+    'Bill reminder push notifications now correctly fire on the 29th, 30th, and 31st (previously silently skipped in months without that day)',
+    'Deleting or completing a savings goal now correctly stops its linked reminder',
+    'Reminder and savings goal dates now display in the correct format when using English',
+  ]},
   { v:'1.39.3', date:'2026-08-20', notes:[
     'Salabota reta kļūda, kas varēja izraisīt datu sajaukšanos starp kontiem, ja lietotnē pārslēdzas uz citu Google kontu bez lapas pārlādes',
     'Datu importēšana no eksportēta JSON faila vairs nedzēš atgādinājumus, uzkrājumu mērķus un algas datuma iestatījumu',

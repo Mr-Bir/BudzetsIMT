@@ -615,7 +615,7 @@ function subscribeSnapshot(uid, isRetry){
 // (openCategoriesModal) rediģē LOKĀLU `draft[]` kopiju un commito visu uzreiz TIKAI uz
 // "Saglabāt" klikšķi — ienākošs attālais snapshot nekad neredz pusē-rediģētu stāvokli,
 // tāpēc var droši pārrakstīt state.categories jebkurā brīdī.
-function subscribeCategoriesSnapshot(uid){
+function subscribeCategoriesSnapshot(uid, isRetry){
   if(categoriesUnsub){ categoriesUnsub(); }
   categoriesUnsub = onSnapshot(collection(db, 'budgets', uid, 'categories'), snap=>{
     let cats = snap.docs.map(d=>({ key: d.id, ...d.data() }));
@@ -623,16 +623,29 @@ function subscribeCategoriesSnapshot(uid){
       // Jauns lietotājs VAI vēl nemigrēti veci dati — sēj noklusējuma kategorijas.
       cats = defaultCategories();
       seedCategories(uid, cats);
-    } else if(!cats.some(c=>c.key==='uzkrajumi')){
-      // Backfill lietotājiem, kas sinhronizējuši PIRMS "Uzkrājumi" kategorijas ieviešanas.
-      const extra = {key:'uzkrajumi', name:'Uzkrājumi', color:'#3f8f7a'};
-      cats.push(extra);
-      seedCategories(uid, [extra]);
+    } else {
+      // Backfill lietotājiem, kas sinhronizējuši PIRMS kāda no PAŠREIZĒJĀM noklusējuma
+      // kategorijām tika ieviesta — diff pret VISU noklusējuma sarakstu (nevis vienu
+      // burtiski hardkodētu atslēgu), lai jebkura NĀKAMĀ jauna noklusējuma kategorija
+      // automātiski nonāktu arī pie esošajiem kontiem, bez vajadzības pievienot vēl vienu
+      // manuālu backfill zaru katru reizi, kad saraksts paplašinās.
+      const existingKeys = new Set(cats.map(c=>c.key));
+      const missing = defaultCategories().filter(c=>!existingKeys.has(c.key));
+      if(missing.length){
+        cats = cats.concat(missing);
+        seedCategories(uid, missing);
+      }
     }
     state.categories = cats;
     render();
   }, err=>{
     console.error('Kļūda ielādējot kategorijas:', err);
+    // Tas pats pašdziedinošais atkārtojums, ko izmanto subscribeSnapshot() — visi 7
+    // klausītāji startē uzreiz pēc tā paša appCheckReady, tāpēc vienlīdz pakļauti tai
+    // pašai App Check tokena sacensībai, ne tikai galvenais dokuments.
+    if(err.code === 'permission-denied' && !isRetry){
+      setTimeout(()=>{ if(currentUser && currentUser.uid === uid) subscribeCategoriesSnapshot(uid, true); }, 2000);
+    }
   });
 }
 
@@ -642,7 +655,7 @@ function subscribeCategoriesSnapshot(uid){
 // galvenajam dokumentam (subscribeSnapshot augstāk) — pretējā gadījumā cita ierīce/cilne
 // varētu pārrakstīt tikko ievadītu, vēl nenosūtītu izmaiņu. Atliktais snapshot pielietots
 // vai nu nākamajā veiksmīgajā pushNow() (sk. turpat), vai focusout handlerī zemāk.
-function subscribeCreditsSnapshot(uid){
+function subscribeCreditsSnapshot(uid, isRetry){
   if(creditsUnsub){ creditsUnsub(); }
   creditsUnsub = onSnapshot(collection(db, 'budgets', uid, 'credits'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
@@ -650,10 +663,13 @@ function subscribeCreditsSnapshot(uid){
     state.credits = list; render();
   }, err=>{
     console.error('Kļūda ielādējot kredītus:', err);
+    if(err.code === 'permission-denied' && !isRetry){
+      setTimeout(()=>{ if(currentUser && currentUser.uid === uid) subscribeCreditsSnapshot(uid, true); }, 2000);
+    }
   });
 }
 
-function subscribeExtraIncomeSnapshot(uid){
+function subscribeExtraIncomeSnapshot(uid, isRetry){
   if(extraIncomeUnsub){ extraIncomeUnsub(); }
   extraIncomeUnsub = onSnapshot(collection(db, 'budgets', uid, 'extraIncome'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
@@ -661,10 +677,13 @@ function subscribeExtraIncomeSnapshot(uid){
     state.extraIncome = list; render();
   }, err=>{
     console.error('Kļūda ielādējot papildu ienākumus:', err);
+    if(err.code === 'permission-denied' && !isRetry){
+      setTimeout(()=>{ if(currentUser && currentUser.uid === uid) subscribeExtraIncomeSnapshot(uid, true); }, 2000);
+    }
   });
 }
 
-function subscribeRemindersSnapshot(uid){
+function subscribeRemindersSnapshot(uid, isRetry){
   if(remindersUnsub){ remindersUnsub(); }
   remindersUnsub = onSnapshot(collection(db, 'budgets', uid, 'reminders'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
@@ -672,10 +691,13 @@ function subscribeRemindersSnapshot(uid){
     state.reminders = list; render(); scheduleReminderNotifications();
   }, err=>{
     console.error('Kļūda ielādējot atgādinājumus:', err);
+    if(err.code === 'permission-denied' && !isRetry){
+      setTimeout(()=>{ if(currentUser && currentUser.uid === uid) subscribeRemindersSnapshot(uid, true); }, 2000);
+    }
   });
 }
 
-function subscribeBillsSnapshot(uid){
+function subscribeBillsSnapshot(uid, isRetry){
   if(billsUnsub){ billsUnsub(); }
   billsUnsub = onSnapshot(collection(db, 'budgets', uid, 'bills'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
@@ -683,10 +705,13 @@ function subscribeBillsSnapshot(uid){
     state.bills = list; render();
   }, err=>{
     console.error('Kļūda ielādējot rēķinus:', err);
+    if(err.code === 'permission-denied' && !isRetry){
+      setTimeout(()=>{ if(currentUser && currentUser.uid === uid) subscribeBillsSnapshot(uid, true); }, 2000);
+    }
   });
 }
 
-function subscribeSavingsGoalsSnapshot(uid){
+function subscribeSavingsGoalsSnapshot(uid, isRetry){
   if(savingsGoalsUnsub){ savingsGoalsUnsub(); }
   savingsGoalsUnsub = onSnapshot(collection(db, 'budgets', uid, 'savingsGoals'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
@@ -694,6 +719,9 @@ function subscribeSavingsGoalsSnapshot(uid){
     state.savingsGoals = list; render();
   }, err=>{
     console.error('Kļūda ielādējot uzkrājuma mērķus:', err);
+    if(err.code === 'permission-denied' && !isRetry){
+      setTimeout(()=>{ if(currentUser && currentUser.uid === uid) subscribeSavingsGoalsSnapshot(uid, true); }, 2000);
+    }
   });
 }
 
@@ -1146,11 +1174,14 @@ function renderExtraIncome(){
   if(empty) empty.classList.toggle('hidden', items.length>0);
 }
 
-function formatDateLv(iso){
+function formatDateLocale(iso){
   if(!iso) return '';
-  const parts = iso.split('-');
-  if(parts.length!==3) return iso;
-  return parts[2]+'.'+parts[1]+'.'+parts[0];
+  // Agrāk vienmēr LV formātā (dd.mm.gggg) neatkarīgi no valodas — pārgājām uz
+  // toLocaleDateString(currentLocale()), to pašu palīgfunkciju, ko jau lieto arhīva
+  // skats, lai EN lietotāji šeit arī redzētu pareizi lokalizētu datumu.
+  const d = new Date(iso + 'T00:00:00');
+  if(isNaN(d)) return iso;
+  return d.toLocaleDateString(currentLocale());
 }
 
 // Renders the Atgādinājumi section lists + the always-visible nav badge/banner.
@@ -1179,12 +1210,12 @@ function renderReminders(){
       if(paused) subHtml = `<span class="rem-sub">${t('reminders.paused_suffix')}${r.billId?t('reminders.paused_bill_inactive'):''}</span>`;
       else if(resolved){
         const nextDue = (status==='overdue'||status==='today') ? reminderNextMonthDueDate(r) : due;
-        subHtml = `<span class="rem-sub">${t('reminders.paid_next', {date: formatDateLv(nextDue)})}</span>`;
+        subHtml = `<span class="rem-sub">${t('reminders.paid_next', {date: formatDateLocale(nextDue)})}</span>`;
       }
       else if(status==='today') subHtml = `<span class="rem-sub due-text">${t('reminders.due_today')}</span>`;
-      else if(status==='overdue') subHtml = `<span class="rem-sub due-text">${t('reminders.overdue', {date: formatDateLv(due)})}</span>`;
-      else if(r.billId) subHtml = `<span class="rem-sub">${t('reminders.monthly_around', {day: Math.min(Math.max(parseInt(r.day,10)||1,1),31), date: formatDateLv(due)})}</span>`;
-      else subHtml = `<span class="rem-sub">${t('reminders.due_date', {date: formatDateLv(due)})}</span>`;
+      else if(status==='overdue') subHtml = `<span class="rem-sub due-text">${t('reminders.overdue', {date: formatDateLocale(due)})}</span>`;
+      else if(r.billId) subHtml = `<span class="rem-sub">${t('reminders.monthly_around', {day: Math.min(Math.max(parseInt(r.day,10)||1,1),31), date: formatDateLocale(due)})}</span>`;
+      else subHtml = `<span class="rem-sub">${t('reminders.due_date', {date: formatDateLocale(due)})}</span>`;
       return `
         <div class="rem-row${(status==='today'||status==='overdue')&&!paused&&!resolved?' due':''}${paused?' paused':''}" data-remidx="${i}">
           <div class="rem-main">
@@ -1245,7 +1276,7 @@ function renderSavingsGoals(){
     const bill = g.billId ? billById(g.billId) : null;
     const paidThisMonth = !!(bill && bill.paid);
     const remaining = Math.max(g.months - g.paidInstallments, 0);
-    const etaTxt = remaining>0 ? t('goals.remaining', {count: remaining, date: formatDateLv(goalProjectedEndDate(remaining))}) : '';
+    const etaTxt = remaining>0 ? t('goals.remaining', {count: remaining, date: formatDateLocale(goalProjectedEndDate(remaining))}) : '';
     const statusTxt = paidThisMonth ? t('goals.paid_this_month') : (bill ? t('goals.not_paid_this_month') : '');
     return `
       <div class="goal-card" data-goalidx="${i}">
@@ -1268,7 +1299,7 @@ function renderSavingsGoals(){
       <div class="goal-card achieved" data-goalidx="${i}">
         <div class="goal-main">
           <span class="goal-name">${escapeHtml(g.name||t('common.no_name'))}</span>
-          <span class="goal-sub">${t('goals.achieved_suffix', {amount: fmt(g.targetAmount)})}${g.achievedAt?t('goals.achieved_date_suffix', {date: formatDateLv(g.achievedAt)}):''}</span>
+          <span class="goal-sub">${t('goals.achieved_suffix', {amount: fmt(g.targetAmount)})}${g.achievedAt?t('goals.achieved_date_suffix', {date: formatDateLocale(g.achievedAt)}):''}</span>
         </div>
         <button class="goal-del" data-goaldel="${i}" title="${t('goals.delete_from_list_title')}">×</button>
       </div>`;
@@ -1292,6 +1323,10 @@ function renderSavingsGoals(){
       if(g.billId){
         const bi = state.bills.findIndex(b=>b.id===g.billId);
         if(bi>=0) state.bills.splice(bi,1);
+        // Tāpat kā parastā rēķina dzēšana — atslēdz (nevis dzēš) jebkuru atgādinājumu, kas
+        // bija piesaistīts šim rēķinam, lai tas nepaliktu mūžīgi "nokavēts" neeksistējošam
+        // rēķinam.
+        (state.reminders||[]).forEach(r=>{ if(r.billId===g.billId) r.active=false; });
       }
       state.savingsGoals.splice(i,1);
       render(); scheduleSave();
@@ -1333,7 +1368,7 @@ function openAddSavingsGoalModal(){
     const preview = $('agPreview');
     if(!selectedMonths || amount<=0){ preview.textContent=''; return; }
     const monthly = Math.round((amount/selectedMonths)*100)/100;
-    preview.textContent = t('goal_modal.monthly_preview', {amount: fmt(monthly), date: formatDateLv(goalProjectedEndDate(selectedMonths))});
+    preview.textContent = t('goal_modal.monthly_preview', {amount: fmt(monthly), date: formatDateLocale(goalProjectedEndDate(selectedMonths))});
   };
   $('agMonths').addEventListener('click', e=>{
     const btn = e.target.closest('[data-months]'); if(!btn) return;
@@ -2027,6 +2062,11 @@ function advanceGoalBill(bill){
       goal.achieved = true;
       goal.achievedAt = todayStr();
       goal.billId = null;
+      // Rēķins pazūd uz visiem laikiem (mērķis sasniegts) — atslēdz arī jebkuru tam
+      // piesaistīto atgādinājumu, tāpat kā dara parastā rēķina dzēšana un pārējā
+      // "Jauns mēnesis" tīrīšana — citādi tas paliktu mūžīgi "nokavēts" neeksistējošam
+      // rēķinam.
+      (state.reminders||[]).forEach(r=>{ if(r.billId===bill.id) r.active=false; });
       return null;
     }
   }

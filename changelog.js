@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.6', date:'2026-08-20', notes:[
+    'Salabota kļūda, kurā izdzēsts rēķins, kredīts, papildu ienākums, atgādinājums vai uzkrājuma mērķis varēja pēc lapas pārlādes vai atkārtotas pieteikšanās parādīties atpakaļ',
+  ], notesEn:[
+    'Fixed a bug where a deleted bill, credit, extra income entry, reminder, or savings goal could reappear after reloading the app or signing in again',
+  ]},
   { v:'1.39.5', date:'2026-08-20', notes:[
     'Jauna konta sākuma stāvoklis tagad ir tukšs (tikai kategoriju piemēri) — iepriekš pievienotie piemēra rēķini un kredīti varēja radīt mulsinošu, nepareizu bilances attēlojumu pirms savu datu ievadīšanas',
   ], notesEn:[

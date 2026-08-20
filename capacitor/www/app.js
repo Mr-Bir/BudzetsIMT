@@ -322,6 +322,33 @@ let pendingBillsSnapshot = null, pendingSavingsGoalsSnapshot = null;
 
 const $ = id => document.getElementById(id);
 
+// Reset ALL account-scoped in-memory caches — not just `state` — so a different user
+// signing in within the same tab (no page reload) never inherits the previous account's
+// data. Broader than an earlier fix that only reset `state`: also clears the debounced-save
+// timer, every deferred pending*Snapshot, the sync diff baselines, and the archive cache,
+// since any of these surviving a sign-out could leak/corrupt the next account's data (an
+// orphaned pushNow() write landing in the new account's document, a deferred snapshot from
+// the old account applied after the switch, stale archive entries shown before the new
+// account's archive loads, etc.).
+function resetAccountState(){
+  clearTimeout(saveTimer); saveTimer = null;
+  localDirty = false;
+  lastSentJSON = null;
+  pendingSnapshot = null;
+  pendingCreditsSnapshot = null;
+  pendingExtraIncomeSnapshot = null;
+  pendingRemindersSnapshot = null;
+  pendingBillsSnapshot = null;
+  pendingSavingsGoalsSnapshot = null;
+  lastSyncedCredits = [];
+  lastSyncedExtraIncome = [];
+  lastSyncedReminders = [];
+  lastSyncedBills = [];
+  lastSyncedSavingsGoals = [];
+  archiveCache = [];
+  state = structuredClone(defaultSeed());
+}
+
 /* ═══════════════════════════════════════════════════════════════
    3. FIREBASE — inicializācija, App Check, pieteikšanās/izrakstīšanās
    Šeit startē Firebase, notiek Google Sign-In, un tiek izveidots
@@ -477,7 +504,7 @@ onAuthStateChanged(auth, user=>{
     // tab (no page reload) never inherits the previous account's data — otherwise the
     // "new user, no doc yet" branch in subscribeSnapshot() would push these stale
     // bills/credits/categories/etc. straight into the new account's Firestore document.
-    state = structuredClone(defaultSeed());
+    resetAccountState();
     if(snapshotUnsub){ snapshotUnsub(); snapshotUnsub = null; }
     if(categoriesUnsub){ categoriesUnsub(); categoriesUnsub = null; }
     if(creditsUnsub){ creditsUnsub(); creditsUnsub = null; }
@@ -547,7 +574,13 @@ function subscribeSnapshot(uid, isRetry){
       // New user: start with empty-ish defaults (no personal data). `categories`/`credits`/
       // `extraIncome`/`reminders`/`bills`/`savingsGoals` NAV šeit — tos pārvalda savi
       // neatkarīgie subkolekciju klausītāji.
-      state = { income: 0, periodName: '', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders, extraIncome: state.extraIncome, salaryDay: null, savingsGoals: state.savingsGoals };
+      const incoming = { income: 0, periodName: '', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders, extraIncome: state.extraIncome, salaryDay: null, savingsGoals: state.savingsGoals };
+      // Tas pats drošības aizsargs, ko izmanto "dokuments eksistē" zars augstāk — šis
+      // zars var nostrādāt arī tad, ja galvenais dokuments tiek dzēsts KAMĒR lietotājs
+      // aktīvi rediģē (piem. paralēla konta dzēšana citā cilnē) — bez šī tas uzreiz
+      // pārrakstītu viņa nesaglabātās izmaiņas ar tukšiem noklusējumiem.
+      if(isEditingActive() || localDirty){ pendingSnapshot = incoming; setSync('ok', t('sync.synced')); return; }
+      state = incoming;
       render(); pushNow();
     }
   }, err=>{
@@ -910,8 +943,13 @@ async function pushNow(){
       state.savingsGoals = pendingSavingsGoalsSnapshot; pendingSavingsGoalsSnapshot = null; render();
     }
   } catch(e){
-    console.error('Kļūda saglabājot datus Firebase:', e); 
+    console.error('Kļūda saglabājot datus Firebase:', e);
     setSync('err', t('sync.save_failed'));
+    // Ja neatiestatām, localDirty paliek `true` uz visiem laikiem — visi turpmākie
+    // onSnapshot klausītāji uzskata šo klientu par "vidū rediģēšanā" un mūžīgi atliek
+    // ienākošos attālinātos atjauninājumus. Nākamais scheduleSave() jebkurā gadījumā to
+    // atkal uzstādīs uz `true`, ja lietotājs turpina rediģēt.
+    localDirty = false;
   }
 }
 
@@ -2416,13 +2454,20 @@ $('fileIn').addEventListener('change', e=>{
       alert(t('categories.save_failed', {msg: err?.message || err}));
       $('fileIn').value=''; return;
     }
+    // Sākam ar `...state` bāzi (nevis tukšu objektu), lai lauki, ko šis imports
+    // neaptver (piem. veca eksporta fails no PIRMS reminders/savingsGoals/salaryDay
+    // pastāvēja), paliktu neskarti, nevis klusi izdzēstos nākamajā pushNow().
     state = {
+      ...state,
       income: Number(data.income)||0,
       periodName: (typeof data.periodName==='string') ? data.periodName : (state.periodName||''),
       bills: Array.isArray(data.bills)?data.bills:[],
       credits: Array.isArray(data.credits)?data.credits:[],
       categories: importedCategories,
-      extraIncome: Array.isArray(data.extraIncome)?data.extraIncome:[]
+      extraIncome: Array.isArray(data.extraIncome)?data.extraIncome:[],
+      reminders: Array.isArray(data.reminders)?data.reminders:(state.reminders||[]),
+      savingsGoals: Array.isArray(data.savingsGoals)?data.savingsGoals:(state.savingsGoals||[]),
+      salaryDay: (data.salaryDay!==undefined && data.salaryDay!==null) ? data.salaryDay : state.salaryDay
     };
     render(); pushNow();
     $('fileIn').value='';

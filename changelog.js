@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.5', date:'2026-08-20', notes:[
+    'Jauna konta sākuma stāvoklis tagad ir tukšs (tikai kategoriju piemēri) — iepriekš pievienotie piemēra rēķini un kredīti varēja radīt mulsinošu, nepareizu bilances attēlojumu pirms savu datu ievadīšanas',
+  ], notesEn:[
+    'A new account now starts empty (only example categories) — previously included sample bills and credits could show a confusing, incorrect balance before you entered your own data',
+  ]},
   { v:'1.39.4', date:'2026-08-20', notes:[
     'Rēķinu atgādinājumu native paziņojumi tagad pareizi uznāk arī uz 29., 30. un 31. datumu (iepriekš klusi neuznāca mēnešos, kuriem šīs dienas nav)',
     'Uzkrājuma mērķa dzēšana vai pabeigšana tagad pareizi aptur tam piesaistīto atgādinājumu',

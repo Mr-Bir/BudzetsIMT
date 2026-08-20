@@ -278,20 +278,18 @@ const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
 function safeColor(c){ return (typeof c==='string' && HEX_COLOR_RE.test(c)) ? c : '#8a8576'; }
 function catColor(key){ const c = catList().find(x=>x.key===key); return safeColor(c ? c.color : '#8a8576'); }
 
+// Jauna konta/atiestatīta konta sākuma stāvoklis — APZINĀTI TUKŠS (bez demo rēķiniem/
+// kredītiem/ienākuma). Iepriekš seit bija piemēra dati (algas summa + 4 rēķini +
+// 3 kredīti), bet reāla testera atsauksme (2026-08-20): ar noklusējuma ienākumu
+// nesakrītošas demo summas radīja mulsinošu, dažkārt SARKANU/negatīvu bilanci pašā
+// pirmajā iespaidā, un lietotājam vēl bija manuāli jādzēš piemēra ieraksti, pirms
+// varēja sākt reāli lietot. Kategorijas PALIEK (strukturāli noklusējumi, ne skaitliski
+// dati — nekad nerada "mīnusā" pārsteigumu), tāpēc tās vienīgās sēj tālāk.
 const DEFAULT = {
-  income: 1850,
+  income: 0,
   periodName: '',
-  bills: [
-    {id:'bill_partika', name:'Pārtika', amount:380, cat:'partika'},
-    {id:'bill_ire', name:'Īre', amount:650, cat:'ire'},
-    {id:'bill_komunalie', name:'Komunālie pakalpojumi', amount:150, cat:'komunalie'},
-    {id:'bill_degviela', name:'Degviela', type:'summing', entries:[], cat:'transports'},
-  ],
-  credits: [
-    {name:'In Credit', amount:550},
-    {name:'Swedbank patēriņa kredīts', amount:2500},
-    {name:'Privātpersonas A. Bērziņa aizdevums', amount:1585},
-  ],
+  bills: [],
+  credits: [],
   categories: structuredClone(DEFAULT_CATEGORIES),
   reminders: [],
   extraIncome: [],
@@ -299,19 +297,10 @@ const DEFAULT = {
   savingsGoals: []
 };
 const DEFAULT_EN = {
-  income: 1850,
+  income: 0,
   periodName: '',
-  bills: [
-    {id:'bill_partika', name:'Groceries', amount:380, cat:'partika'},
-    {id:'bill_ire', name:'Rent', amount:650, cat:'ire'},
-    {id:'bill_komunalie', name:'Utilities', amount:150, cat:'komunalie'},
-    {id:'bill_degviela', name:'Fuel', type:'summing', entries:[], cat:'transports'},
-  ],
-  credits: [
-    {name:'In Credit', amount:550},
-    {name:'Swedbank consumer loan', amount:2500},
-    {name:'Personal loan – A. Bērziņš', amount:1585},
-  ],
+  bills: [],
+  credits: [],
   categories: structuredClone(DEFAULT_CATEGORIES_EN),
   reminders: [],
   extraIncome: [],

@@ -8,6 +8,15 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.3', date:'2026-08-20', notes:[
+    'Salabota reta kļūda, kas varēja izraisīt datu sajaukšanos starp kontiem, ja lietotnē pārslēdzas uz citu Google kontu bez lapas pārlādes',
+    'Datu importēšana no eksportēta JSON faila vairs nedzēš atgādinājumus, uzkrājumu mērķus un algas datuma iestatījumu',
+    'Uzlabota sinhronizācijas uzticamība pēc pagaidu tīkla kļūdām',
+  ], notesEn:[
+    'Fixed a rare bug that could mix up data between accounts when switching Google accounts without reloading the page',
+    'Importing data from an exported JSON backup no longer removes reminders, savings goals, and the salary-day setting',
+    'Improved sync reliability after temporary network errors',
+  ]},
   { v:'1.39.2', date:'2026-08-17', notes:[
     'Lietotnes valoda pirmajā palaišanas reizē tagad tiek noteikta automātiski pēc ierīces/pārlūka valodas (ja angļu — atveras angliski, citādi latviski) — izvēle Iestatījumos joprojām saglabājas un vienmēr uzvar turpmāk',
     'Android app tagad fiksēta portreta orientācijā (vairs negriežas ainavā)',

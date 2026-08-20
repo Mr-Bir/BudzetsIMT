@@ -192,7 +192,20 @@ async function scheduleReminderNotifications(){
       const body = reminderDisplayName(r);
       if(r.billId){
         const day = Math.min(Math.max(parseInt(r.day,10)||1,1),31);
-        notifications.push({ id, title, body, schedule: { on: { day, hour:notifHour, minute:notifMinute }, allowWhileIdle:true } });
+        // Katra mēneša reālais garums atšķiras (28-31 diena). Native atkārtojošais
+        // `on:{day}` trigeris VIENKĀRŠI NEKAD neuzdodas mēnešos, kam nav šīs dienas
+        // (piem. 31. datums februārī/aprīlī/jūnijā/septembrī/novembrī) — tā vietā
+        // ieplānojam vienreizējus paziņojumus tuvākajiem 2 mēnešiem, katru ar TO PAŠU
+        // clamp loģiku, ko jau izmanto reminderDueDate() ekrānā. Šī funkcija tāpat tiek
+        // pārsaukta pēc katras sinhronizācijas, tāpēc 2 mēnešu priekšstats ir droši
+        // pietiekams, lai nekad neizsīktu starp diviem app palaišanas reizēm.
+        const now = new Date();
+        for(let m=0; m<2; m++){
+          const clampedDay = Math.min(day, daysInMonth(now.getFullYear(), now.getMonth()+m));
+          const at = new Date(now.getFullYear(), now.getMonth()+m, clampedDay, notifHour, notifMinute, 0);
+          if(at.getTime() <= Date.now()) continue;
+          notifications.push({ id: id+m, title, body, schedule: { at, allowWhileIdle:true } });
+        }
       } else if(r.date){
         let at = new Date(r.date + 'T' + getReminderNotifTime() + ':00');
         if(isNaN(at)) return;

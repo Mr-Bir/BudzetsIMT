@@ -648,6 +648,11 @@ function subscribeCreditsSnapshot(uid, isRetry){
   if(creditsUnsub){ creditsUnsub(); }
   creditsUnsub = onSnapshot(collection(db, 'budgets', uid, 'credits'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    // Seed the diff baseline from every remote snapshot (not just after a successful local
+    // push) — otherwise a delete as the FIRST edit of a session diffs against an empty
+    // lastSyncedCredits, so syncListSubcollection() never issues a batch.delete() for it and
+    // the "deleted" item silently survives in Firestore, reappearing on next reload.
+    lastSyncedCredits = structuredClone(list);
     if(isEditingActive() || localDirty){ pendingCreditsSnapshot = list; return; }
     state.credits = list; render();
   }, err=>{
@@ -662,6 +667,9 @@ function subscribeExtraIncomeSnapshot(uid, isRetry){
   if(extraIncomeUnsub){ extraIncomeUnsub(); }
   extraIncomeUnsub = onSnapshot(collection(db, 'budgets', uid, 'extraIncome'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    // See subscribeCreditsSnapshot() comment — seeds the delete-diff baseline from every
+    // remote snapshot, not just after a successful local push.
+    lastSyncedExtraIncome = structuredClone(list);
     if(isEditingActive() || localDirty){ pendingExtraIncomeSnapshot = list; return; }
     state.extraIncome = list; render();
   }, err=>{
@@ -676,6 +684,9 @@ function subscribeRemindersSnapshot(uid, isRetry){
   if(remindersUnsub){ remindersUnsub(); }
   remindersUnsub = onSnapshot(collection(db, 'budgets', uid, 'reminders'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    // See subscribeCreditsSnapshot() comment — seeds the delete-diff baseline from every
+    // remote snapshot, not just after a successful local push.
+    lastSyncedReminders = structuredClone(list);
     if(isEditingActive() || localDirty){ pendingRemindersSnapshot = list; return; }
     state.reminders = list; render(); scheduleReminderNotifications();
   }, err=>{
@@ -690,6 +701,9 @@ function subscribeBillsSnapshot(uid, isRetry){
   if(billsUnsub){ billsUnsub(); }
   billsUnsub = onSnapshot(collection(db, 'budgets', uid, 'bills'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    // See subscribeCreditsSnapshot() comment — seeds the delete-diff baseline from every
+    // remote snapshot, not just after a successful local push.
+    lastSyncedBills = structuredClone(list);
     if(isEditingActive() || localDirty){ pendingBillsSnapshot = list; return; }
     state.bills = list; render();
   }, err=>{
@@ -704,6 +718,9 @@ function subscribeSavingsGoalsSnapshot(uid, isRetry){
   if(savingsGoalsUnsub){ savingsGoalsUnsub(); }
   savingsGoalsUnsub = onSnapshot(collection(db, 'budgets', uid, 'savingsGoals'), snap=>{
     const list = snap.docs.map(d=>({ id: d.id, ...d.data() })).sort((a,b)=>(a.order??0)-(b.order??0));
+    // See subscribeCreditsSnapshot() comment — seeds the delete-diff baseline from every
+    // remote snapshot, not just after a successful local push.
+    lastSyncedSavingsGoals = structuredClone(list);
     if(isEditingActive() || localDirty){ pendingSavingsGoalsSnapshot = list; return; }
     state.savingsGoals = list; render();
   }, err=>{

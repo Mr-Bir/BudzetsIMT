@@ -8,6 +8,13 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.7', date:'2026-08-20', notes:[
+    'Augšējā joslā tagad redzams arī dienu skaits līdz algai (vai līdz mēneša beigām, ja algas datums nav iestatīts)',
+    'Sadalījuma pa kategorijām grafikam pievienota mijiedarbība — pieskaroties vai novietojot peli virs kādas sadaļas, redzama tās kategorija, summa un īpatsvars',
+  ], notesEn:[
+    'The top bar now also shows the number of days until payday (or until the end of the month, if no payday is set)',
+    'The category breakdown chart is now interactive — tap or hover a slice to see that category\'s name, amount, and share',
+  ]},
   { v:'1.39.6', date:'2026-08-20', notes:[
     'Salabota kļūda, kurā izdzēsts rēķins, kredīts, papildu ienākums, atgādinājums vai uzkrājuma mērķis varēja pēc lapas pārlādes vai atkārtotas pieteikšanās parādīties atpakaļ',
   ], notesEn:[

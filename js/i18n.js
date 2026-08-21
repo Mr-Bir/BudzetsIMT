@@ -35,6 +35,8 @@ const STRINGS = {
     'popover.spent_today': 'Iztērēts šodien',
     'popover.available_now': 'Pieejams tagad',
     'popover.safe_per_day': 'Droša summa / dienā',
+    'popover.days_left_payday': 'Dienas līdz algai',
+    'popover.days_left_month': 'Dienas līdz mēneša beigām',
     'popover.hint': '"Iztērēts šodien" ieskaita tikai šodien apmaksātos rēķinus un šodienas summējošo rēķinu epizodes. "Pieejams tagad" = alga mīnus viss reāli iztērētais (samaksātie rēķini + summējošo rēķinu epizodes) — atšķiras no "Paliek", kas rēķina arī vēl nesamaksātos rēķinus.',
 
     'drawer.nav_aria': 'Galvenā izvēlne',
@@ -269,6 +271,8 @@ const STRINGS = {
     'pace.per_day_suffix': ' / d.',
     'pace.under_status': 'Šodien iztērēts mazāk nekā drošais temps ({{amount}}/d.)',
     'pace.over_status': 'Šodien iztērēts vairāk nekā drošais temps ({{amount}}/d.)',
+    'pace.days_left_payday_title': 'Dienas līdz algai: {{count}}',
+    'pace.days_left_month_title': 'Dienas līdz mēneša beigām: {{count}}',
 
     'categories.none': 'Nav datu',
     'categories.usage_count': '{{count}} rēķini',
@@ -400,6 +404,8 @@ const STRINGS = {
     'popover.spent_today': 'Spent today',
     'popover.available_now': 'Available now',
     'popover.safe_per_day': 'Safe amount / day',
+    'popover.days_left_payday': 'Days until payday',
+    'popover.days_left_month': 'Days until end of month',
     'popover.hint': '"Spent today" only counts bills paid today and today’s entries on summing bills. "Available now" = income minus everything actually spent (paid bills + summing bill entries) — different from "Remaining", which also counts unpaid bills.',
 
     'drawer.nav_aria': 'Main menu',
@@ -634,6 +640,8 @@ const STRINGS = {
     'pace.per_day_suffix': ' / day',
     'pace.under_status': 'Spent less today than the safe pace ({{amount}}/day)',
     'pace.over_status': 'Spent more today than the safe pace ({{amount}}/day)',
+    'pace.days_left_payday_title': 'Days until payday: {{count}}',
+    'pace.days_left_month_title': 'Days until end of month: {{count}}',
 
     'categories.none': 'No data',
     'categories.usage_count': '{{count}} bills',

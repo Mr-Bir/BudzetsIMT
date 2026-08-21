@@ -1508,11 +1508,16 @@ function updatePace(){
   $('paceAvailable').title = t('pace.available_now_title', {amount: fmt(available)});
   $('paceSafe').textContent = fmtCompact(safeDaily);
   $('paceSafe').title = t('pace.safe_per_day_title', {amount: fmt(safeDaily)});
+  const daysLeftKey = state.salaryDay ? 'pace.days_left_payday_title' : 'pace.days_left_month_title';
+  $('paceDaysLeft').textContent = String(daysRemaining);
+  $('paceDaysLeft').title = t(daysLeftKey, {count: daysRemaining});
 
   // Full-precision popover values
   $('paceDailyFull').textContent = fmt(spentTodayAmt);
   $('paceAvailableFull').textContent = fmt(available);
   $('paceSafeFull').textContent = fmt(safeDaily) + t('pace.per_day_suffix');
+  $('paceDaysLeftLabel').textContent = t(state.salaryDay ? 'popover.days_left_payday' : 'popover.days_left_month');
+  $('paceDaysLeftFull').textContent = String(daysRemaining);
 
   const dot = $('paceDot');
   const status = $('pacePopStatus');
@@ -1533,11 +1538,36 @@ function updatePace(){
   }
 }
 
+// Donut segment hover/tap tooltip — shown above the chart with the category's
+// swatch, name, amount, and share of the total.
+function showDonutTooltip(key, amount, pct){
+  const tip = $('donutTooltip');
+  if(!tip) return;
+  $('dtSwatch').style.background = catColor(key);
+  $('dtName').textContent = catName(key);
+  $('dtAmt').textContent = `${fmt(amount)} · ${pct.toFixed(1)}%`;
+  tip.classList.remove('hidden');
+  $('donut').querySelectorAll('circle.donut-seg').forEach(s=>{
+    s.classList.toggle('dimmed', s.getAttribute('data-cat') !== key);
+  });
+}
+function hideDonutTooltip(){
+  const tip = $('donutTooltip');
+  if(!tip) return;
+  tip.classList.add('hidden');
+  $('donut').querySelectorAll('circle.donut-seg').forEach(s=>s.classList.remove('dimmed'));
+}
+
 function renderCategories(total){
   const sums = {};
   catList().forEach(c=>sums[c.key]=0);
   (state.bills||[]).forEach(b=>{ const c=b.cat||'cits'; sums[c]=(sums[c]||0)+billAmount(b); });
   const entries = Object.entries(sums).filter(([k,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+  // Segments are rebuilt from scratch below, taking any hover state with them —
+  // reset the tooltip so a re-render mid-hover (e.g. a remote sync landing while
+  // the user's pointer is still over the chart) can't leave it stuck open.
+  hideDonutTooltip();
 
   // Donut
   const svg = $('donut');
@@ -1549,12 +1579,20 @@ function renderCategories(total){
   } else {
     entries.forEach(([k,v])=>{
       const frac = v/total;
+      const pct = total>0 ? v/total*100 : 0;
       const seg = document.createElementNS('http://www.w3.org/2000/svg','circle');
       seg.setAttribute('cx','50'); seg.setAttribute('cy','50'); seg.setAttribute('r',r);
       seg.setAttribute('fill','none'); seg.setAttribute('stroke',catColor(k));
       seg.setAttribute('stroke-width','14');
       seg.setAttribute('stroke-dasharray',`${frac*c} ${c}`);
       seg.setAttribute('stroke-dashoffset',`${-offset*c}`);
+      seg.setAttribute('class','donut-seg');
+      seg.setAttribute('data-cat', k);
+      // Hover/tap: dim the other segments and show a tooltip with the category's
+      // name, amount, and share of the total. Pointer events (not mouse-only) so
+      // this also works via tap on touch/Android, not just desktop hover.
+      seg.addEventListener('pointerenter', ()=>showDonutTooltip(k, v, pct));
+      seg.addEventListener('pointerleave', hideDonutTooltip);
       svg.appendChild(seg);
       offset += frac;
     });

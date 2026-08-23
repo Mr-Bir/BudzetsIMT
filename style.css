@@ -392,8 +392,8 @@
   .bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease, background .3s; }
   /* Category breakdown */
   .cat-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); margin-top: 8px; display: grid; grid-template-columns: 220px 1fr; gap: 32px; align-items: center; }
-  .donut { position: relative; width: 200px; height: 200px; margin: 0 auto; }
-  .donut svg { transform: rotate(-90deg); }
+  .donut { position: relative; width: 200px; height: 200px; margin: 0 auto; -webkit-tap-highlight-color: transparent; }
+  .donut svg { transform: rotate(-90deg); touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .donut .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
   .donut .center .big { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .donut .center .small { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }

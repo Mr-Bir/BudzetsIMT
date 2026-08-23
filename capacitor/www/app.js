@@ -1539,7 +1539,10 @@ function updatePace(){
 }
 
 // Donut segment hover/tap tooltip — shown above the chart with the category's
-// swatch, name, amount, and share of the total.
+// swatch, name, amount, and share of the total. Mouse gets true hover
+// (pointerenter/pointerleave); touch gets tap-to-pin (see click handler below)
+// since pointerenter/pointerleave fire too unreliably on touch to use alone.
+let donutPinnedCat = null;
 function showDonutTooltip(key, amount, pct){
   const tip = $('donutTooltip');
   if(!tip) return;
@@ -1552,11 +1555,18 @@ function showDonutTooltip(key, amount, pct){
   });
 }
 function hideDonutTooltip(){
+  donutPinnedCat = null;
   const tip = $('donutTooltip');
   if(!tip) return;
   tip.classList.add('hidden');
   $('donut').querySelectorAll('circle.donut-seg').forEach(s=>s.classList.remove('dimmed'));
 }
+// Tap anywhere outside the donut to dismiss a pinned (tapped) tooltip. Bound
+// once at module load — must NOT go inside renderCategories(), which reruns
+// on every state change and would otherwise stack up duplicate listeners.
+document.addEventListener('click', (e)=>{
+  if(donutPinnedCat && !e.target.closest('.donut')) hideDonutTooltip();
+});
 
 function renderCategories(total){
   const sums = {};
@@ -1588,11 +1598,18 @@ function renderCategories(total){
       seg.setAttribute('stroke-dashoffset',`${-offset*c}`);
       seg.setAttribute('class','donut-seg');
       seg.setAttribute('data-cat', k);
-      // Hover/tap: dim the other segments and show a tooltip with the category's
-      // name, amount, and share of the total. Pointer events (not mouse-only) so
-      // this also works via tap on touch/Android, not just desktop hover.
-      seg.addEventListener('pointerenter', ()=>showDonutTooltip(k, v, pct));
-      seg.addEventListener('pointerleave', hideDonutTooltip);
+      // Desktop: true hover, mouse only — pointerenter/pointerleave fire on
+      // touch too, but too unreliably (no real "leave" on tap) to build a
+      // touch interaction on top of them.
+      seg.addEventListener('pointerenter', (e)=>{ if(e.pointerType==='mouse') showDonutTooltip(k, v, pct); });
+      seg.addEventListener('pointerleave', (e)=>{ if(e.pointerType==='mouse') hideDonutTooltip(); });
+      // Touch (and click in general): tap to pin the tooltip open, tap the
+      // same segment again to close it (tapping elsewhere closes it too, see
+      // the document-level listener next to hideDonutTooltip above).
+      seg.addEventListener('click', ()=>{
+        if(donutPinnedCat === k){ hideDonutTooltip(); }
+        else { donutPinnedCat = k; showDonutTooltip(k, v, pct); }
+      });
       svg.appendChild(seg);
       offset += frac;
     });

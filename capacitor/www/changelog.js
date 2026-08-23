@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.8', date:'2026-08-21', notes:[
+    'Salabota sadalījuma pa kategorijām grafika pieskāriena mijiedarbība tālrunī — iepriekš pieskaroties varēja parādīties dīvains mirgojošs izcēlums',
+  ], notesEn:[
+    'Fixed the category breakdown chart\'s tap interaction on phones — previously tapping a slice could show a distracting flicker',
+  ]},
   { v:'1.39.7', date:'2026-08-20', notes:[
     'Augšējā joslā tagad redzams arī dienu skaits līdz algai (vai līdz mēneša beigām, ja algas datums nav iestatīts)',
     'Sadalījuma pa kategorijām grafikam pievienota mijiedarbība — pieskaroties vai novietojot peli virs kādas sadaļas, redzama tās kategorija, summa un īpatsvars',

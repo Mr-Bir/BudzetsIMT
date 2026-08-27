@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.39.9', date:'2026-08-27', notes:[
+    'Nomainīta atgādinājumu paziņojumu ikona telefona statusa joslā — iepriekš rādījās vispārīga izsaukuma zīme',
+  ], notesEn:[
+    'Changed the reminder notification icon shown in the phone\'s status bar — previously it showed a generic exclamation mark',
+  ]},
   { v:'1.39.8', date:'2026-08-21', notes:[
     'Salabota sadalījuma pa kategorijām grafika pieskāriena mijiedarbība tālrunī — iepriekš pieskaroties varēja parādīties dīvains mirgojošs izcēlums',
   ], notesEn:[

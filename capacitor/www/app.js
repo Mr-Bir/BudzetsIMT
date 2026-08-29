@@ -1716,7 +1716,12 @@ function renderTrends(){
   }
   emptyNote.classList.add('hidden');
 
-  const barW = 56, gap = 18, padTop = 24, padBottom = 40, chartH = 220;
+  // padBottom must fit TWO stacked text lines below the plot floor (amount label
+  // for a negative bar, then the month label) — a negative bar at max height
+  // reaches exactly the plot floor, so there's no slack unless these offsets are
+  // spaced apart deliberately (an earlier version had them only 4px apart, which
+  // visually merged into one blob).
+  const barW = 56, gap = 18, padTop = 28, padBottom = 56, chartH = 220;
   const midY = padTop + (chartH - padTop - padBottom) / 2;
   const halfH = (chartH - padTop - padBottom) / 2;
   const maxAbs = Math.max(...months.map(m => Math.abs(m.remaining)), 1);
@@ -1748,14 +1753,14 @@ function renderTrends(){
 
     const amt = document.createElementNS(ns,'text');
     amt.setAttribute('x', x + barW/2);
-    amt.setAttribute('y', m.remaining>=0 ? y - 6 : y + barH + 14);
+    amt.setAttribute('y', m.remaining>=0 ? y - 6 : y + barH + 16);
     amt.setAttribute('class', 'trend-amount');
     amt.textContent = fmt(m.remaining);
     svg.appendChild(amt);
 
     const label = document.createElementNS(ns,'text');
     label.setAttribute('x', x + barW/2);
-    label.setAttribute('y', chartH - padBottom + 18);
+    label.setAttribute('y', chartH - padBottom + 34);
     label.setAttribute('class', 'trend-label');
     label.textContent = m.label;
     svg.appendChild(label);

@@ -1704,6 +1704,7 @@ $('closeMonthBtn').addEventListener('click', async ()=>{
       bills: structuredClone(state.bills),
       credits: structuredClone(state.credits),
       extraIncome: structuredClone(state.extraIncome||[]),
+      categories: structuredClone(catList()),
       archivedAt: Date.now()
     };
     if(label) snapshot.name = label;
@@ -2187,6 +2188,7 @@ function openNewMonthModal(){
           bills: structuredClone(state.bills),
           credits: structuredClone(state.credits),
           extraIncome: structuredClone(state.extraIncome||[]),
+          categories: structuredClone(catList()),
           archivedAt: Date.now()
         };
         if(label) snapshot.name = label;

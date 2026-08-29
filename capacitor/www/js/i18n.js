@@ -49,6 +49,7 @@ const STRINGS = {
     'nav.credits': 'Kredīti',
     'nav.reminders': 'Atgādinājumi',
     'nav.savings': 'Uzkrājuma mērķi',
+    'nav.trends': 'Tendences',
     'nav.settings': 'Iestatījumi',
     'nav.install': '⭳ Instalēt lietotni',
 
@@ -97,6 +98,9 @@ const STRINGS = {
     'savings.add': '+ Pievienot jaunu mērķi',
     'savings.group_achieved': 'Sasniegtie',
     'savings.empty': 'Vēl nav neviena uzkrājuma mērķa. Pievieno pirmo ar pogu augšā — izvēlies summu un mēnešu skaitu, un aplikācija pati sadalīs to ikmēneša maksājumos.',
+
+    'trends.title': 'Atlikums pa mēnešiem',
+    'trends.empty': 'Vajag vismaz 2 arhivētus mēnešus, lai redzētu tendenci. Aizver mēnešus sadaļā "Budžets", lai sāktu vākt vēsturi.',
 
     'common.no_name': '(bez nosaukuma)',
     'common.deleted_bill': '(dzēsts rēķins)',
@@ -418,6 +422,7 @@ const STRINGS = {
     'nav.credits': 'Credits',
     'nav.reminders': 'Reminders',
     'nav.savings': 'Savings goals',
+    'nav.trends': 'Trends',
     'nav.settings': 'Settings',
     'nav.install': '⭳ Install app',
 
@@ -466,6 +471,9 @@ const STRINGS = {
     'savings.add': '+ Add new goal',
     'savings.group_achieved': 'Achieved',
     'savings.empty': 'No savings goals yet. Add the first one with the button above — pick an amount and number of months, and the app will split it into monthly payments for you.',
+
+    'trends.title': 'Remaining balance by month',
+    'trends.empty': 'You need at least 2 archived months to see a trend. Close out months in the "Budget" section to start building history.',
 
     'common.no_name': '(unnamed)',
     'common.deleted_bill': '(deleted bill)',

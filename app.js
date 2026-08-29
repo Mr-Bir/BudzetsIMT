@@ -1657,9 +1657,19 @@ async function loadArchive(){
     snap.forEach(d => archiveCache.push({ id: d.id, ...d.data() }));
     archiveCache.sort((a,b)=> (b.archivedAt||0) - (a.archivedAt||0) || String(b.id).localeCompare(String(a.id)));
     renderArchive();
+    renderTrends();
   } catch(e){
     $('archiveList').innerHTML = `<div class="empty-note">${t('archive.load_failed', {code: e.code})}</div>`;
   }
+}
+
+// Shared by renderArchive() (per-row figures) and renderTrends() (chart values) —
+// one archived month's totals, computed the same way both places need them.
+function archiveMonthStats(a){
+  const total = (a.bills||[]).reduce((s,b)=>s+billAmount(b),0);
+  const extraTotal = (a.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const archIncome = (Number(a.income)||0) + extraTotal;
+  return { total, extraTotal, archIncome, remaining: archIncome - total };
 }
 
 function renderArchive(){
@@ -1670,10 +1680,7 @@ function renderArchive(){
   }
   list.innerHTML = '';
   archiveCache.forEach(a=>{
-    const total = (a.bills||[]).reduce((s,b)=>s+billAmount(b),0);
-    const extraTotal = (a.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
-    const archIncome = (Number(a.income)||0) + extraTotal;
-    const remaining = archIncome - total;
+    const { total, extraTotal, archIncome, remaining } = archiveMonthStats(a);
     const row = document.createElement('div');
     row.className = 'arch-row';
     row.innerHTML = `
@@ -1686,6 +1693,72 @@ function renderArchive(){
         <button class="btn ghost sm" data-adel="${a.id}">×</button>
       </div>`;
     list.appendChild(row);
+  });
+}
+
+// "Atlikums pa mēnešiem" stabiņu diagramma — izmanto TIKAI ierakstus ar reālu
+// mēneša atslēgu (YYYY-MM), kārtotus hronoloģiski augoši. Manuāli dublētie arhīva
+// ieraksti ("kopija-{timestamp}" ID, sk. archiveList klikšķu handleri) neattiecas
+// uz konkrētu mēnesi laika rindā, tāpēc tiek izslēgti no grafika (bet paliek
+// redzami parastajā arhīva sarakstā virs tā).
+function renderTrends(){
+  const svg = $('trendsChart');
+  const emptyNote = $('trendsEmptyNote');
+  const months = archiveCache
+    .filter(a => /^\d{4}-\d{2}$/.test(a.id))
+    .sort((a,b) => a.id.localeCompare(b.id))
+    .map(a => ({ id: a.id, label: monthLabel(a.id), ...archiveMonthStats(a) }));
+
+  if(months.length < 2){
+    svg.innerHTML = '';
+    emptyNote.classList.remove('hidden');
+    return;
+  }
+  emptyNote.classList.add('hidden');
+
+  const barW = 56, gap = 18, padTop = 24, padBottom = 40, chartH = 220;
+  const midY = padTop + (chartH - padTop - padBottom) / 2;
+  const halfH = (chartH - padTop - padBottom) / 2;
+  const maxAbs = Math.max(...months.map(m => Math.abs(m.remaining)), 1);
+  const width = months.length * (barW + gap) + gap;
+
+  svg.setAttribute('viewBox', `0 0 ${width} ${chartH}`);
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', chartH);
+  svg.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const zeroLine = document.createElementNS(ns,'line');
+  zeroLine.setAttribute('x1', 0); zeroLine.setAttribute('x2', width);
+  zeroLine.setAttribute('y1', midY); zeroLine.setAttribute('y2', midY);
+  zeroLine.setAttribute('class', 'trend-zero-line');
+  svg.appendChild(zeroLine);
+
+  months.forEach((m,i)=>{
+    const x = gap + i*(barW+gap);
+    const barH = Math.max((Math.abs(m.remaining)/maxAbs) * halfH, 2);
+    const y = m.remaining >= 0 ? midY - barH : midY;
+
+    const bar = document.createElementNS(ns,'rect');
+    bar.setAttribute('x', x); bar.setAttribute('y', y);
+    bar.setAttribute('width', barW); bar.setAttribute('height', barH);
+    bar.setAttribute('rx', 4);
+    bar.setAttribute('class', 'trend-bar ' + (m.remaining>=0 ? 'trend-bar-pos' : 'trend-bar-neg'));
+    svg.appendChild(bar);
+
+    const amt = document.createElementNS(ns,'text');
+    amt.setAttribute('x', x + barW/2);
+    amt.setAttribute('y', m.remaining>=0 ? y - 6 : y + barH + 14);
+    amt.setAttribute('class', 'trend-amount');
+    amt.textContent = fmt(m.remaining);
+    svg.appendChild(amt);
+
+    const label = document.createElementNS(ns,'text');
+    label.setAttribute('x', x + barW/2);
+    label.setAttribute('y', chartH - padBottom + 18);
+    label.setAttribute('class', 'trend-label');
+    label.textContent = m.label;
+    svg.appendChild(label);
   });
 }
 
@@ -2785,7 +2858,7 @@ function setReminderNotifTime(t){
 })();
 
 // ---- Section navigation (inside the drawer) ----
-const SECTIONS = ['budget','extra-income','credits','reminders','savings'];
+const SECTIONS = ['budget','extra-income','credits','reminders','savings','trends'];
 function showSection(name){
   if(!SECTIONS.includes(name)) return;
   document.querySelectorAll('.panel').forEach(p=>{

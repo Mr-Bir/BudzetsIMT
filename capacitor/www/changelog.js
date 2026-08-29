@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.40.0', date:'2026-08-29', notes:[
+    'Jauna sadaļa "Tendences" — redzi, kā atlikusī nauda mainījusies mēnesi pa mēnesim, balstoties uz arhivētajiem mēnešiem',
+  ], notesEn:[
+    'New "Trends" section — see how your remaining balance has changed month by month, based on your archived months',
+  ]},
   { v:'1.39.9', date:'2026-08-27', notes:[
     'Nomainīta atgādinājumu paziņojumu ikona telefona statusa joslā — iepriekš rādījās vispārīga izsaukuma zīme',
   ], notesEn:[

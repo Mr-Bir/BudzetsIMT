@@ -172,6 +172,7 @@
         <button class="drawer-nav-item" data-section="credits" type="button"><span data-i18n="nav.credits">Kredīti</span></button>
         <button class="drawer-nav-item" data-section="reminders" type="button"><span data-i18n="nav.reminders">Atgādinājumi</span><span class="nav-badge hidden" id="remindersBadge">0</span></button>
         <button class="drawer-nav-item" data-section="savings" type="button"><span data-i18n="nav.savings">Uzkrājuma mērķi</span></button>
+        <button class="drawer-nav-item" data-section="trends" type="button"><span data-i18n="nav.trends">Tendences</span></button>
       </div>
 
       <div class="drawer-section">
@@ -325,6 +326,17 @@
         <div class="empty-note hidden" id="goalEmptyNote" data-i18n="savings.empty">Vēl nav neviena uzkrājuma mērķa. Pievieno pirmo ar pogu augšā — izvēlies summu un mēnešu skaitu, un aplikācija pati sadalīs to ikmēneša maksājumos.</div>
       </section>
     </div><!-- /panel-savings -->
+
+    <!-- ============ PANEL: TRENDS ============ -->
+    <div class="panel hidden" id="panel-trends">
+      <section>
+        <div class="sec-head"><h2 data-i18n="trends.title">Atlikums pa mēnešiem</h2></div>
+        <div class="trends-chart-wrap">
+          <svg id="trendsChart" class="trends-chart"></svg>
+        </div>
+        <div class="empty-note hidden" id="trendsEmptyNote" data-i18n="trends.empty">Vajag vismaz 2 arhivētus mēnešus, lai redzētu tendenci. Aizver mēnešus sadaļā "Budžets", lai sāktu vākt vēsturi.</div>
+      </section>
+    </div><!-- /panel-trends -->
   </div>
 </div>
 

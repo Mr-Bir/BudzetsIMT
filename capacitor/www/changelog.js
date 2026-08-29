@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.41.0', date:'2026-08-29', notes:[
+    '"Tendences" sadaļai pievienoti divi jauni grafiki — ienākumi vs izdevumi, un izdevumi pa kategorijām, abi pa mēnešiem',
+  ], notesEn:[
+    'Two new charts added to the "Trends" section — income vs expenses, and spending by category, both by month',
+  ]},
   { v:'1.40.0', date:'2026-08-29', notes:[
     'Jauna sadaļa "Tendences" — redzi, kā atlikusī nauda mainījusies mēnesi pa mēnesim, balstoties uz arhivētajiem mēnešiem',
   ], notesEn:[

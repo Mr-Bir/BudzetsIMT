@@ -1696,26 +1696,48 @@ function renderArchive(){
   });
 }
 
-// "Atlikums pa mēnešiem" stabiņu diagramma — izmanto TIKAI ierakstus ar reālu
-// mēneša atslēgu (YYYY-MM), kārtotus hronoloģiski augoši. Manuāli dublētie arhīva
-// ieraksti ("kopija-{timestamp}" ID, sk. archiveList klikšķu handleri) neattiecas
-// uz konkrētu mēnesi laika rindā, tāpēc tiek izslēgti no grafika (bet paliek
-// redzami parastajā arhīva sarakstā virs tā).
-function renderTrends(){
-  const svg = $('trendsChart');
-  const emptyNote = $('trendsEmptyNote');
-  const months = archiveCache
+// Kopīga hronoloģisko mēnešu sagatavošana VISIEM trim "Tendences" grafikiem —
+// izmanto TIKAI ierakstus ar reālu mēneša atslēgu (YYYY-MM), kārtotus hronoloģiski
+// augoši. Manuāli dublētie arhīva ieraksti ("kopija-{timestamp}" ID, sk. archiveList
+// klikšķu handleri) neattiecas uz konkrētu mēnesi laika rindā, tāpēc tiek izslēgti
+// (bet paliek redzami parastajā arhīva sarakstā virs grafikiem).
+function trendMonths(){
+  return archiveCache
     .filter(a => /^\d{4}-\d{2}$/.test(a.id))
     .sort((a,b) => a.id.localeCompare(b.id))
-    .map(a => ({ id: a.id, label: monthLabel(a.id), ...archiveMonthStats(a) }));
+    .map(a => ({ id: a.id, label: monthLabel(a.id), categories: a.categories, bills: a.bills||[], ...archiveMonthStats(a) }));
+}
+
+// Kategorijas nosaukums/krāsa TĀ MĒNEŠA snapshot, kad rēķins reāli bija iztērēts —
+// ja lietotājs vēlāk pārdēvē/maina krāsu, VECIE grafika segmenti paliek vēsturiski
+// pareizi. Vecākiem (pirms categories-snapshot labojuma) arhīva ierakstiem bez šī
+// lauka — fallback uz dzīvo catList() (catName()/catColor() to jau dara pašas).
+function catFromSnapshot(categories, key){
+  const c = (categories||[]).find(x=>x.key===key);
+  return c ? { name: c.name, color: safeColor(c.color) } : { name: catName(key), color: catColor(key) };
+}
+
+function renderTrends(){
+  const emptyNote = $('trendsEmptyNote');
+  const chartsWrap = $('trendsCharts');
+  const months = trendMonths();
 
   if(months.length < 2){
-    svg.innerHTML = '';
+    chartsWrap.classList.add('hidden');
     emptyNote.classList.remove('hidden');
     return;
   }
+  chartsWrap.classList.remove('hidden');
   emptyNote.classList.add('hidden');
+  renderRemainingChart(months);
+  renderIncomeExpenseChart(months);
+  renderCategoryChart(months);
+}
 
+// "Atlikums pa mēnešiem" — viens stabiņš/mēnesī, aug uz augšu (pozitīvs) vai uz
+// leju (negatīvs) no nulles līnijas.
+function renderRemainingChart(months){
+  const svg = $('trendsChart');
   // padBottom must fit TWO stacked text lines below the plot floor (amount label
   // for a negative bar, then the month label) — a negative bar at max height
   // reaches exactly the plot floor, so there's no slack unless these offsets are
@@ -1764,6 +1786,153 @@ function renderTrends(){
     label.setAttribute('class', 'trend-label');
     label.textContent = m.label;
     svg.appendChild(label);
+  });
+}
+
+// "Ienākumi vs izdevumi" — divi stabiņi blakus katram mēnesim, kopīga bāzes līnija
+// apakšā (abas vērtības vienmēr >=0, nav zero-crossing kā atlikuma grafikā).
+function renderIncomeExpenseChart(months){
+  const svg = $('trendsIncomeExpenseChart');
+  const pairW = 56, barW = 24, gap = 18, padTop = 28, padBottom = 40, chartH = 220;
+  const plotH = chartH - padTop - padBottom;
+  const maxAbs = Math.max(...months.map(m => Math.max(m.archIncome, m.total)), 1);
+  const width = months.length * (pairW + gap) + gap;
+
+  svg.setAttribute('viewBox', `0 0 ${width} ${chartH}`);
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', chartH);
+  svg.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const baseY = chartH - padBottom;
+  const baseLine = document.createElementNS(ns,'line');
+  baseLine.setAttribute('x1', 0); baseLine.setAttribute('x2', width);
+  baseLine.setAttribute('y1', baseY); baseLine.setAttribute('y2', baseY);
+  baseLine.setAttribute('class', 'trend-zero-line');
+  svg.appendChild(baseLine);
+
+  months.forEach((m,i)=>{
+    const pairX = gap + i*(pairW+gap);
+    [
+      { val: m.archIncome, cls: 'trend-bar-pos', x: pairX },
+      { val: m.total, cls: 'trend-bar-neg', x: pairX + barW + 4 }
+    ].forEach((bar,bi)=>{
+      const barH = Math.max((bar.val/maxAbs) * plotH, 2);
+      const rect = document.createElementNS(ns,'rect');
+      rect.setAttribute('x', bar.x); rect.setAttribute('y', baseY - barH);
+      rect.setAttribute('width', barW); rect.setAttribute('height', barH);
+      rect.setAttribute('rx', 3);
+      rect.setAttribute('class', 'trend-bar ' + bar.cls);
+      svg.appendChild(rect);
+
+      // The two bars in a pair often land at nearly the same height (income ≈
+      // expenses), which would put both amount labels at the same y — since
+      // they're horizontally close (narrow bars), that merges into one
+      // unreadable blob. Giving the second label a fixed extra lift avoids the
+      // collision unconditionally, not just when heights happen to differ.
+      const amt = document.createElementNS(ns,'text');
+      amt.setAttribute('x', bar.x + barW/2);
+      amt.setAttribute('y', baseY - barH - 6 - (bi===1 ? 12 : 0));
+      amt.setAttribute('class', 'trend-amount trend-amount-sm');
+      amt.textContent = fmt(bar.val);
+      svg.appendChild(amt);
+    });
+
+    const label = document.createElementNS(ns,'text');
+    label.setAttribute('x', pairX + pairW/2);
+    label.setAttribute('y', baseY + 18);
+    label.setAttribute('class', 'trend-label');
+    label.textContent = m.label;
+    svg.appendChild(label);
+  });
+}
+
+// "Izdevumi pa kategorijām laika gaitā" — sakrauti (stacked) stabiņi, segmenti
+// KONSEKVENTĀ secībā (kopējais tēriņš DESC visos redzamajos mēnešos) visiem
+// mēnešiem, lai salīdzināšana starp stabiņiem būtu viegla. Katra segmenta krāsa/
+// nosaukums nāk no TĀ PAŠA mēneša categories snapshot (sk. catFromSnapshot()).
+function renderCategoryChart(months){
+  const svg = $('trendsCategoryChart');
+  const legend = $('trendsCategoryLegend');
+  const barW = 56, gap = 18, padTop = 28, padBottom = 40, chartH = 220;
+  const plotH = chartH - padTop - padBottom;
+
+  // Katra mēneša izdevumi sagrupēti pa kategorijām (tāda pati loģika kā
+  // renderCategories() dara dzīvajiem datiem, tikai uz arhivētajiem a.bills).
+  const monthSums = months.map(m=>{
+    const sums = {};
+    m.bills.forEach(b=>{ const c=b.cat||'cits'; sums[c]=(sums[c]||0)+billAmount(b); });
+    return sums;
+  });
+
+  const totalByKey = {};
+  monthSums.forEach(sums=>{
+    Object.entries(sums).forEach(([k,v])=>{ totalByKey[k]=(totalByKey[k]||0)+v; });
+  });
+  const orderedKeys = Object.entries(totalByKey).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
+
+  const maxTotal = Math.max(...months.map(m=>m.total), 1);
+  const width = months.length * (barW + gap) + gap;
+
+  svg.setAttribute('viewBox', `0 0 ${width} ${chartH}`);
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', chartH);
+  svg.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const baseY = chartH - padBottom;
+  const baseLine = document.createElementNS(ns,'line');
+  baseLine.setAttribute('x1', 0); baseLine.setAttribute('x2', width);
+  baseLine.setAttribute('y1', baseY); baseLine.setAttribute('y2', baseY);
+  baseLine.setAttribute('class', 'trend-zero-line');
+  svg.appendChild(baseLine);
+
+  months.forEach((m,i)=>{
+    const x = gap + i*(barW+gap);
+    let stackY = baseY;
+    orderedKeys.forEach(key=>{
+      const val = monthSums[i][key];
+      if(!val) return;
+      const segH = (val/maxTotal) * plotH;
+      const { color } = catFromSnapshot(m.categories, key);
+      const rect = document.createElementNS(ns,'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', stackY - segH);
+      rect.setAttribute('width', barW); rect.setAttribute('height', segH);
+      rect.setAttribute('fill', color);
+      rect.setAttribute('class', 'trend-seg');
+      svg.appendChild(rect);
+      stackY -= segH;
+    });
+
+    if(m.total>0){
+      const amt = document.createElementNS(ns,'text');
+      amt.setAttribute('x', x + barW/2);
+      amt.setAttribute('y', baseY - (m.total/maxTotal)*plotH - 6);
+      amt.setAttribute('class', 'trend-amount trend-amount-sm');
+      amt.textContent = fmt(m.total);
+      svg.appendChild(amt);
+    }
+
+    const label = document.createElementNS(ns,'text');
+    label.setAttribute('x', x + barW/2);
+    label.setAttribute('y', baseY + 18);
+    label.setAttribute('class', 'trend-label');
+    label.textContent = m.label;
+    svg.appendChild(label);
+  });
+
+  // Leģenda no PĒDĒJĀ (jaunākā) redzamā mēneša kategoriju saraksta — vienkāršošanas
+  // lēmums, sk. plāna piezīmi; atsevišķie stabiņu segmenti tik un tā paliek
+  // vēsturiski precīzi neatkarīgi no leģendas.
+  legend.innerHTML = '';
+  const lastMonth = months[months.length-1];
+  orderedKeys.forEach(key=>{
+    if(!totalByKey[key]) return;
+    const { name, color } = catFromSnapshot(lastMonth.categories, key);
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.innerHTML = `<span class="cat-swatch" style="background:${color}"></span><span class="cat-name">${escapeHtml(name)}</span>`;
+    legend.appendChild(row);
   });
 }
 

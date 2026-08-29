@@ -431,14 +431,22 @@
   .arch-actions { display: flex; gap: 6px; }
   .empty-note { color: var(--muted); font-size: 14px; padding: 20px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
 
-  /* Trends — "Atlikums pa mēnešiem" stabiņu diagramma */
+  /* Trends — visi trīs "Tendences" grafiki (atlikums / ien.vs izd. / kategorijas) */
+  #trendsCharts { display: flex; flex-direction: column; gap: 20px; }
   .trends-chart-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; box-shadow: var(--shadow); overflow-x: auto; }
   .trends-chart { display: block; }
   .trend-zero-line { stroke: var(--line); stroke-width: 1; }
   .trend-bar-pos { fill: var(--green); }
   .trend-bar-neg { fill: var(--red); }
+  .trend-seg { stroke: var(--card); stroke-width: 1; }
   .trend-amount { font-size: 11px; font-weight: 700; fill: var(--ink); text-anchor: middle; font-variant-numeric: tabular-nums; }
+  .trend-amount-sm { font-size: 9.5px; }
   .trend-label { font-size: 11px; fill: var(--muted); text-anchor: middle; }
+  .trends-mini-legend { display: flex; gap: 18px; margin-bottom: 12px; }
+  .trends-mini-legend .cat-row { display: flex; align-items: center; gap: 6px; padding: 0; border-bottom: none; }
+  .trend-swatch-pos { background: var(--green); }
+  .trend-swatch-neg { background: var(--red); }
+  .trends-cat-legend { margin-top: 16px; }
 
   /* ---- Reminder banner (visible above panels when something is due today/overdue) ---- */
   .reminder-banner { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--red); border-left: 4px solid var(--red); border-radius: 10px; padding: 10px 12px; margin: 0 0 14px; box-shadow: var(--shadow); }

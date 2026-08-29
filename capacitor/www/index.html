@@ -329,13 +329,35 @@
 
     <!-- ============ PANEL: TRENDS ============ -->
     <div class="panel hidden" id="panel-trends">
-      <section>
-        <div class="sec-head"><h2 data-i18n="trends.title">Atlikums pa mēnešiem</h2></div>
-        <div class="trends-chart-wrap">
-          <svg id="trendsChart" class="trends-chart"></svg>
-        </div>
-        <div class="empty-note hidden" id="trendsEmptyNote" data-i18n="trends.empty">Vajag vismaz 2 arhivētus mēnešus, lai redzētu tendenci. Aizver mēnešus sadaļā "Budžets", lai sāktu vākt vēsturi.</div>
-      </section>
+      <div id="trendsCharts">
+        <section>
+          <div class="sec-head"><h2 data-i18n="trends.title">Atlikums pa mēnešiem</h2></div>
+          <div class="trends-chart-wrap">
+            <svg id="trendsChart" class="trends-chart"></svg>
+          </div>
+        </section>
+
+        <section>
+          <div class="sec-head"><h2 data-i18n="trends.income_expense_title">Ienākumi vs izdevumi</h2></div>
+          <div class="trends-chart-wrap">
+            <div class="trends-mini-legend">
+              <span class="cat-row"><span class="cat-swatch trend-swatch-pos"></span><span class="cat-name" data-i18n="budget.income_label">Ienākumi</span></span>
+              <span class="cat-row"><span class="cat-swatch trend-swatch-neg"></span><span class="cat-name" data-i18n="archive.bills_label">Rēķini</span></span>
+            </div>
+            <svg id="trendsIncomeExpenseChart" class="trends-chart"></svg>
+          </div>
+        </section>
+
+        <section>
+          <div class="sec-head"><h2 data-i18n="trends.category_title">Izdevumi pa kategorijām</h2></div>
+          <div class="trends-chart-wrap">
+            <svg id="trendsCategoryChart" class="trends-chart"></svg>
+            <div class="cat-legend trends-cat-legend" id="trendsCategoryLegend"></div>
+          </div>
+        </section>
+      </div><!-- /trendsCharts -->
+
+      <div class="empty-note hidden" id="trendsEmptyNote" data-i18n="trends.empty">Vajag vismaz 2 arhivētus mēnešus, lai redzētu tendenci. Aizver mēnešus sadaļā "Budžets", lai sāktu vākt vēsturi.</div>
     </div><!-- /panel-trends -->
   </div>
 </div>

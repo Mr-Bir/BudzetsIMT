@@ -100,6 +100,8 @@ const STRINGS = {
     'savings.empty': 'Vēl nav neviena uzkrājuma mērķa. Pievieno pirmo ar pogu augšā — izvēlies summu un mēnešu skaitu, un aplikācija pati sadalīs to ikmēneša maksājumos.',
 
     'trends.title': 'Atlikums pa mēnešiem',
+    'trends.income_expense_title': 'Ienākumi vs izdevumi',
+    'trends.category_title': 'Izdevumi pa kategorijām',
     'trends.empty': 'Vajag vismaz 2 arhivētus mēnešus, lai redzētu tendenci. Aizver mēnešus sadaļā "Budžets", lai sāktu vākt vēsturi.',
 
     'common.no_name': '(bez nosaukuma)',
@@ -473,6 +475,8 @@ const STRINGS = {
     'savings.empty': 'No savings goals yet. Add the first one with the button above — pick an amount and number of months, and the app will split it into monthly payments for you.',
 
     'trends.title': 'Remaining balance by month',
+    'trends.income_expense_title': 'Income vs expenses',
+    'trends.category_title': 'Spending by category',
     'trends.empty': 'You need at least 2 archived months to see a trend. Close out months in the "Budget" section to start building history.',
 
     'common.no_name': '(unnamed)',

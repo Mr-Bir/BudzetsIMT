@@ -1156,6 +1156,10 @@ function render(){
   updateTotals();
   renderReminders();
   renderSavingsGoals();
+  // Tikai pārzīmē no jau esošās <select> izvēles — NEIZSAUC populateDailyMonthSelect(),
+  // lai nepārrakstītu lietotāja izvēlētu arhivētu mēnesi ar "current" ikreiz, kad
+  // kaut kas mainās Budžeta sadaļā (šī funkcija darbojas uz katru state izmaiņu).
+  renderDailySpendingChart();
 }
 
 // Papildus ienākumu saraksts ("Papildus ienākumi" panelis) — epizodes ar datumu,
@@ -1717,7 +1721,141 @@ function catFromSnapshot(categories, key){
   return c ? { name: c.name, color: safeColor(c.color) } : { name: catName(key), color: catColor(key) };
 }
 
+// Dienas tēriņi VIENAM izvēlētam mēnesim (kārtējam VAI arhivētam) — atšķirībā no
+// pārējiem 3 grafikiem, šis NEsalīdzina mēnešus savā starpā, tāpēc darbojas pat ar
+// 0 arhivētiem mēnešiem (tikai kārtējais). Parastam rēķinam summa pieskaitāma
+// dienai no `paidDate` (uzstādīts uz šodienu, kad atzīmē kā samaksātu — sk.
+// pushNow()/pay handleri), summējošam — katrai `entries[]` epizodei tās pašas
+// `date`. Abiem laukiem jau bija reāli datumi PIRMS šī grafika — nekas jauns
+// nav jāsāk vākt, tikai jāagregē esošais.
+function dailySpendingTotals(bills, year, monthIdx0){
+  const days = daysInMonth(year, monthIdx0);
+  const totals = new Array(days).fill(0);
+  const prefix = year + '-' + String(monthIdx0+1).padStart(2,'0') + '-';
+  const addOnDate = (dateStr, amount) => {
+    if(typeof dateStr !== 'string' || !dateStr.startsWith(prefix)) return;
+    const day = parseInt(dateStr.slice(prefix.length, prefix.length+2), 10);
+    if(day>=1 && day<=days) totals[day-1] += amount;
+  };
+  (bills||[]).forEach(b=>{
+    if(b.type==='summing'){
+      (b.entries||[]).forEach(e=> addOnDate(e.date, Number(e.amount)||0));
+    } else if(b.paid && b.paidDate){
+      addOnDate(b.paidDate, Number(b.amount)||0);
+    }
+  });
+  return totals;
+}
+
+// Vienkārša kustīgā vidējā vērtība "trenda līnijai" — logs sarūk pie mēneša
+// malām (nevis pieprasa pilnu logu), lai pirmajām/pēdējām dienām nebūtu
+// nedefinētu vērtību.
+function movingAverage(arr, window=5){
+  const half = Math.floor(window/2);
+  return arr.map((_,i)=>{
+    const from = Math.max(0, i-half), to = Math.min(arr.length-1, i+half);
+    let sum=0; for(let j=from;j<=to;j++) sum+=arr[j];
+    return sum/(to-from+1);
+  });
+}
+
+// Select opciju uzbūve — "Šis mēnesis" vienmēr pirmais, tad arhivētie mēneši
+// jaunākais-vispirms. Saglabā lietotāja esošo izvēli, ja tā joprojām derīga —
+// šo izsauc renderTrends() ik reizi, kad ielādējas arhīvs, un NEDRĪKST katru
+// reizi pārrakstīt uz "current", ja lietotājs jau skatās kādu arhivētu mēnesi.
+function populateDailyMonthSelect(){
+  const sel = $('trendsDailyMonthSelect');
+  const prevValue = sel.value;
+  const archivedIds = archiveCache
+    .filter(a => /^\d{4}-\d{2}$/.test(a.id))
+    .sort((a,b) => b.id.localeCompare(a.id))
+    .map(a=>a.id);
+  sel.innerHTML = `<option value="current">${escapeHtml(t('trends.daily_current_month'))}</option>` +
+    archivedIds.map(id=>`<option value="${id}">${escapeHtml(monthLabel(id))}</option>`).join('');
+  if(prevValue && [...sel.options].some(o=>o.value===prevValue)) sel.value = prevValue;
+}
+
+function renderDailySpendingChart(){
+  const svg = $('trendsDailyChart');
+  const sel = $('trendsDailyMonthSelect');
+  const selected = sel.value || 'current';
+
+  let bills, year, monthIdx0;
+  if(selected === 'current'){
+    const now = new Date();
+    bills = state.bills||[]; year = now.getFullYear(); monthIdx0 = now.getMonth();
+  } else {
+    const a = archiveCache.find(x=>x.id===selected);
+    if(!a){ svg.innerHTML=''; return; }
+    const m = /^(\d{4})-(\d{2})$/.exec(a.id);
+    bills = a.bills||[]; year = +m[1]; monthIdx0 = +m[2]-1;
+  }
+
+  const totals = dailySpendingTotals(bills, year, monthIdx0);
+  const trend = movingAverage(totals, 5);
+  const days = totals.length;
+
+  const barW = 14, gap = 4, padTop = 24, padBottom = 30, chartH = 180;
+  const plotH = chartH - padTop - padBottom;
+  const maxVal = Math.max(...totals, 1);
+  const width = days*(barW+gap)+gap;
+  const baseY = chartH - padBottom;
+  const xCenter = i => gap + i*(barW+gap) + barW/2;
+  const yFor = v => baseY - (v/maxVal)*plotH;
+
+  svg.setAttribute('viewBox', `0 0 ${width} ${chartH}`);
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', chartH);
+  svg.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const baseLine = document.createElementNS(ns,'line');
+  baseLine.setAttribute('x1', 0); baseLine.setAttribute('x2', width);
+  baseLine.setAttribute('y1', baseY); baseLine.setAttribute('y2', baseY);
+  baseLine.setAttribute('class', 'trend-zero-line');
+  svg.appendChild(baseLine);
+
+  totals.forEach((v,i)=>{
+    const barH = v>0 ? Math.max((v/maxVal)*plotH, 2) : 0;
+    if(barH>0){
+      const rect = document.createElementNS(ns,'rect');
+      rect.setAttribute('x', gap+i*(barW+gap)); rect.setAttribute('y', baseY-barH);
+      rect.setAttribute('width', barW); rect.setAttribute('height', barH);
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('class', 'daily-bar');
+      svg.appendChild(rect);
+    }
+    // Reta dienu numerācija (1/5/10/15/20/25/pēdējā) — visu 31 uzrakstīt nesalasāmi šaurā vietā.
+    if(i===0 || i===days-1 || (i+1)%5===0){
+      const label = document.createElementNS(ns,'text');
+      label.setAttribute('x', xCenter(i)); label.setAttribute('y', chartH-8);
+      label.setAttribute('class', 'trend-label');
+      label.textContent = i+1;
+      svg.appendChild(label);
+    }
+  });
+
+  // Gluda trenda līkne — kvadrātiskās Bezjē līknes caur katru punktu (vadības
+  // punkts = pats punkts, beigu punkts = nākamā punkta viduspunkts), vienkārša
+  // lēta gludināšanas tehnika bez ārējām bibliotēkām.
+  let d = `M ${xCenter(0)} ${yFor(trend[0])}`;
+  for(let i=0;i<trend.length-1;i++){
+    const x1=xCenter(i), y1=yFor(trend[i]), x2=xCenter(i+1), y2=yFor(trend[i+1]);
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    d += ` Q ${x1} ${y1} ${mx} ${my}`;
+  }
+  d += ` T ${xCenter(trend.length-1)} ${yFor(trend[trend.length-1])}`;
+  const path = document.createElementNS(ns,'path');
+  path.setAttribute('d', d);
+  path.setAttribute('class', 'daily-trend-line');
+  svg.appendChild(path);
+}
+$('trendsDailyMonthSelect').addEventListener('change', renderDailySpendingChart);
+
 function renderTrends(){
+  populateDailyMonthSelect();
+  renderDailySpendingChart();
+
   const emptyNote = $('trendsEmptyNote');
   const chartsWrap = $('trendsCharts');
   const months = trendMonths();

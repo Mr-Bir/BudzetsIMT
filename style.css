@@ -451,6 +451,9 @@
   .trends-cat-legend .cat-row { cursor: pointer; transition: opacity .12s ease; }
   .trends-cat-legend .cat-row.dim { opacity: .4; }
   .trends-cat-legend .cat-row.lit .cat-name { font-weight: 800; }
+  .trends-daily-select { font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); }
+  .daily-bar { fill: var(--accent); }
+  .daily-trend-line { fill: none; stroke: var(--amber); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   #trendsCatLegendToggle { margin-top: 10px; }
   .trends-cat-legend { margin-top: 16px; }
 

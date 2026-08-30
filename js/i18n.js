@@ -99,6 +99,8 @@ const STRINGS = {
     'savings.group_achieved': 'Sasniegtie',
     'savings.empty': 'Vēl nav neviena uzkrājuma mērķa. Pievieno pirmo ar pogu augšā — izvēlies summu un mēnešu skaitu, un aplikācija pati sadalīs to ikmēneša maksājumos.',
 
+    'trends.daily_title': 'Dienas tēriņi',
+    'trends.daily_current_month': 'Šis mēnesis',
     'trends.title': 'Atlikums pa mēnešiem',
     'trends.income_expense_title': 'Ienākumi vs izdevumi',
     'trends.category_title': 'Izdevumi pa kategorijām',
@@ -476,6 +478,8 @@ const STRINGS = {
     'savings.group_achieved': 'Achieved',
     'savings.empty': 'No savings goals yet. Add the first one with the button above — pick an amount and number of months, and the app will split it into monthly payments for you.',
 
+    'trends.daily_title': 'Daily spending',
+    'trends.daily_current_month': 'This month',
     'trends.title': 'Remaining balance by month',
     'trends.income_expense_title': 'Income vs expenses',
     'trends.category_title': 'Spending by category',

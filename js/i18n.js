@@ -101,8 +101,8 @@ const STRINGS = {
 
     'trends.daily_title': 'Dienas tēriņi',
     'trends.daily_current_month': 'Šis mēnesis',
-    'trends.daily_bars_label': 'Tēriņi dienā',
     'trends.daily_trend_label': 'Tendence (5 dienu vidējais)',
+    'trends.daily_hint': 'Stabiņa krāsas = kategorijas. Pieskaries vai novieto peli virs sadaļas, lai redzētu konkrētos rēķinus.',
     'trends.title': 'Atlikums pa mēnešiem',
     'trends.income_expense_title': 'Ienākumi vs izdevumi',
     'trends.category_title': 'Izdevumi pa kategorijām',
@@ -482,8 +482,8 @@ const STRINGS = {
 
     'trends.daily_title': 'Daily spending',
     'trends.daily_current_month': 'This month',
-    'trends.daily_bars_label': 'Daily spending',
     'trends.daily_trend_label': 'Trend (5-day average)',
+    'trends.daily_hint': 'Bar colors = categories. Tap or hover a segment to see the specific bills.',
     'trends.title': 'Remaining balance by month',
     'trends.income_expense_title': 'Income vs expenses',
     'trends.category_title': 'Spending by category',

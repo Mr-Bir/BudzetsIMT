@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.43.0', date:'2026-08-29', notes:[
+    '"Dienas tēriņi" grafika stabiņi tagad sadalās pa kategorijām, un pieskaroties vai novietojot peli virs sadaļas, redzami konkrētie tajā dienā apmaksātie rēķini',
+  ], notesEn:[
+    '"Daily spending" chart bars are now broken down by category, and tapping or hovering a segment shows the specific bills paid that day',
+  ]},
   { v:'1.42.0', date:'2026-08-29', notes:[
     '"Tendences" sadaļai pievienots jauns grafiks "Dienas tēriņi" — izvēlies jebkuru mēnesi (kārtējo vai arhivētu) un redzi tēriņus pa dienām, ar izlīdzinātu tendences līniju un leģendu',
   ], notesEn:[

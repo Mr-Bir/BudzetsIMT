@@ -1727,24 +1727,26 @@ function catFromSnapshot(categories, key){
 // dienai no `paidDate` (uzstādīts uz šodienu, kad atzīmē kā samaksātu — sk.
 // pushNow()/pay handleri), summējošam — katrai `entries[]` epizodei tās pašas
 // `date`. Abiem laukiem jau bija reāli datumi PIRMS šī grafika — nekas jauns
-// nav jāsāk vākt, tikai jāagregē esošais.
-function dailySpendingTotals(bills, year, monthIdx0){
+// nav jāsāk vākt, tikai jāagregē esošais. Atgriež PILNU sarakstu ({name,amount,cat})
+// katrai dienai (nevis tikai summu) — vajadzīgs gan stabiņu sadalīšanai pa
+// kategorijām, gan hover tooltip ar konkrētiem rēķinu/epizožu nosaukumiem.
+function dailySpendingDetails(bills, year, monthIdx0){
   const days = daysInMonth(year, monthIdx0);
-  const totals = new Array(days).fill(0);
+  const perDay = Array.from({length: days}, () => []);
   const prefix = year + '-' + String(monthIdx0+1).padStart(2,'0') + '-';
-  const addOnDate = (dateStr, amount) => {
+  const addOnDate = (dateStr, amount, name, cat) => {
     if(typeof dateStr !== 'string' || !dateStr.startsWith(prefix)) return;
     const day = parseInt(dateStr.slice(prefix.length, prefix.length+2), 10);
-    if(day>=1 && day<=days) totals[day-1] += amount;
+    if(day>=1 && day<=days) perDay[day-1].push({ name, amount, cat: cat||'cits' });
   };
   (bills||[]).forEach(b=>{
     if(b.type==='summing'){
-      (b.entries||[]).forEach(e=> addOnDate(e.date, Number(e.amount)||0));
+      (b.entries||[]).forEach(e=> addOnDate(e.date, Number(e.amount)||0, e.note || b.name, b.cat));
     } else if(b.paid && b.paidDate){
-      addOnDate(b.paidDate, Number(b.amount)||0);
+      addOnDate(b.paidDate, Number(b.amount)||0, b.name, b.cat);
     }
   });
-  return totals;
+  return perDay;
 }
 
 // Vienkārša kustīgā vidējā vērtība "trenda līnijai" — logs sarūk pie mēneša
@@ -1775,25 +1777,72 @@ function populateDailyMonthSelect(){
   if(prevValue && [...sel.options].some(o=>o.value===prevValue)) sel.value = prevValue;
 }
 
+// Dienas stabiņa segmenta hover/tap — tā pati "hover pelei, tap-to-pin touch
+// ierīcēm" pieeja, kas jau strādā donut/kategoriju grafikam. Atšķirībā no
+// kategoriju-laika-gaitā grafika (kur izceļas VISI mēneši ar to pašu kategoriju),
+// šeit izcelšana NAV vajadzīga — katra diena/kategorija ir sava unikāla vieta,
+// tāpēc pietiek TIKAI ar tooltip, kas rāda konkrētos rēķinu/epizožu nosaukumus.
+let dailyTooltipPinned = false;
+function showDailyTooltip(segEl, name, amount, color, items){
+  const wrap = segEl.closest('.trends-chart-wrap');
+  const tooltip = $('trendsDailyTooltip');
+  const segRect = segEl.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  $('tdtSwatch').style.background = color;
+  $('tdtName').textContent = name;
+  $('tdtAmt').textContent = fmt(amount);
+  // Ja segmentā TIKAI VIENS rēķins/epizode, galvene jau pilnībā to apraksta —
+  // saraksta rinda tikai dublētu to pašu informāciju.
+  $('tdtItems').textContent = items.length > 1 ? items.map(it => `${it.name} ${fmt(it.amount)}`).join(' · ') : '';
+  let x = segRect.left - wrapRect.left + segRect.width/2 + wrap.scrollLeft;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = (segRect.top - wrapRect.top + wrap.scrollTop) + 'px';
+  tooltip.classList.remove('hidden');
+  // Segmenti tuvu wrap malai (piem., mēneša 1. diena) citādi izietu ārpus
+  // redzamā `overflow-x:auto` apgabala un tiktu apgriezti — pēc pirmās
+  // pozicionēšanas izmēra reālo tooltip platumu un koriģē, ja tas pārsniedz malu.
+  const tRect = tooltip.getBoundingClientRect();
+  if(tRect.left < wrapRect.left) x += (wrapRect.left - tRect.left) + 4;
+  else if(tRect.right > wrapRect.right) x -= (tRect.right - wrapRect.right) + 4;
+  tooltip.style.left = x + 'px';
+}
+function hideDailyTooltip(){
+  dailyTooltipPinned = false;
+  $('trendsDailyTooltip').classList.add('hidden');
+}
+document.addEventListener('click', (e)=>{
+  if(dailyTooltipPinned && !e.target.closest('#trendsDailyChart')) hideDailyTooltip();
+});
+
 function renderDailySpendingChart(){
   const svg = $('trendsDailyChart');
   const sel = $('trendsDailyMonthSelect');
   const selected = sel.value || 'current';
 
-  let bills, year, monthIdx0;
+  let bills, year, monthIdx0, categoriesSnapshot;
   if(selected === 'current'){
     const now = new Date();
     bills = state.bills||[]; year = now.getFullYear(); monthIdx0 = now.getMonth();
+    categoriesSnapshot = null; // catFromSnapshot() fallback uz dzīvo catList()
   } else {
     const a = archiveCache.find(x=>x.id===selected);
     if(!a){ svg.innerHTML=''; return; }
     const m = /^(\d{4})-(\d{2})$/.exec(a.id);
     bills = a.bills||[]; year = +m[1]; monthIdx0 = +m[2]-1;
+    categoriesSnapshot = a.categories;
   }
 
-  const totals = dailySpendingTotals(bills, year, monthIdx0);
+  const dayItems = dailySpendingDetails(bills, year, monthIdx0);
+  const totals = dayItems.map(items => items.reduce((s,it)=>s+it.amount,0));
   const trend = movingAverage(totals, 5);
   const days = totals.length;
+
+  // Konsekventa kategoriju secība visā mēnesī (tāda pati loģika kā
+  // renderCategoryChart() — kopējais tēriņš DESC), lai viena kategorija vienmēr
+  // ieņem to pašu vietu stabiņa iekšā neatkarīgi no dienas.
+  const totalByCat = {};
+  dayItems.forEach(items => items.forEach(it => { totalByCat[it.cat] = (totalByCat[it.cat]||0) + it.amount; }));
+  const catOrder = Object.entries(totalByCat).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
 
   const barW = 14, gap = 4, padTop = 24, padBottom = 30, chartH = 180;
   const plotH = chartH - padTop - padBottom;
@@ -1807,6 +1856,7 @@ function renderDailySpendingChart(){
   svg.setAttribute('width', width);
   svg.setAttribute('height', chartH);
   svg.innerHTML = '';
+  hideDailyTooltip();
 
   const ns = 'http://www.w3.org/2000/svg';
   const baseLine = document.createElementNS(ns,'line');
@@ -1815,16 +1865,37 @@ function renderDailySpendingChart(){
   baseLine.setAttribute('class', 'trend-zero-line');
   svg.appendChild(baseLine);
 
-  totals.forEach((v,i)=>{
-    const barH = v>0 ? Math.max((v/maxVal)*plotH, 2) : 0;
-    if(barH>0){
+  dayItems.forEach((items,i)=>{
+    let stackY = baseY;
+    const dayByCat = {};
+    items.forEach(it => { (dayByCat[it.cat] = dayByCat[it.cat]||[]).push(it); });
+    catOrder.forEach(cat=>{
+      const catItems = dayByCat[cat];
+      if(!catItems || !catItems.length) return;
+      const catTotal = catItems.reduce((s,it)=>s+it.amount,0);
+      // Minimums nedaudz augstāks par citiem grafikiem (1.5) — dienas stabiņā var
+      // sakrāties vairākas mazas kategorijas vienlaicīgi, un pārāk plāni segmenti
+      // kļūst praktiski neiespējami precīzi trāpīt ar pirkstu touch ierīcē.
+      const segH = Math.max((catTotal/maxVal)*plotH, 3);
+      const { name, color } = catFromSnapshot(categoriesSnapshot, cat);
       const rect = document.createElementNS(ns,'rect');
-      rect.setAttribute('x', gap+i*(barW+gap)); rect.setAttribute('y', baseY-barH);
-      rect.setAttribute('width', barW); rect.setAttribute('height', barH);
-      rect.setAttribute('rx', 2);
+      rect.setAttribute('x', gap+i*(barW+gap)); rect.setAttribute('y', stackY-segH);
+      rect.setAttribute('width', barW); rect.setAttribute('height', segH);
+      rect.setAttribute('rx', 1.5);
+      rect.setAttribute('fill', color);
       rect.setAttribute('class', 'daily-bar');
+      const dayLabel = `${i+1}.` + ' ' + name;
+      rect.addEventListener('pointerenter', e=>{ if(e.pointerType==='mouse' && !dailyTooltipPinned) showDailyTooltip(rect, dayLabel, catTotal, color, catItems); });
+      rect.addEventListener('pointerleave', e=>{ if(e.pointerType==='mouse' && !dailyTooltipPinned) hideDailyTooltip(); });
+      rect.addEventListener('click', e=>{
+        e.stopPropagation();
+        dailyTooltipPinned = false;
+        showDailyTooltip(rect, dayLabel, catTotal, color, catItems);
+        dailyTooltipPinned = true;
+      });
       svg.appendChild(rect);
-    }
+      stackY -= segH;
+    });
     // Reta dienu numerācija (1/5/10/15/20/25/pēdējā) — visu 31 uzrakstīt nesalasāmi šaurā vietā.
     if(i===0 || i===days-1 || (i+1)%5===0){
       const label = document.createElementNS(ns,'text');
@@ -2014,12 +2085,18 @@ function showCatSegTooltip(segEl, name, amount, color){
   const tooltip = $('trendsCatTooltip');
   const segRect = segEl.getBoundingClientRect();
   const wrapRect = wrap.getBoundingClientRect();
-  tooltip.style.left = (segRect.left - wrapRect.left + segRect.width/2 + wrap.scrollLeft) + 'px';
-  tooltip.style.top = (segRect.top - wrapRect.top + wrap.scrollTop) + 'px';
   $('tctSwatch').style.background = color;
   $('tctName').textContent = name;
   $('tctAmt').textContent = fmt(amount);
+  let x = segRect.left - wrapRect.left + segRect.width/2 + wrap.scrollLeft;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = (segRect.top - wrapRect.top + wrap.scrollTop) + 'px';
   tooltip.classList.remove('hidden');
+  // Sk. showDailyTooltip() komentāru — tā pati malas apgriešanas korekcija.
+  const tRect = tooltip.getBoundingClientRect();
+  if(tRect.left < wrapRect.left) x += (wrapRect.left - tRect.left) + 4;
+  else if(tRect.right > wrapRect.right) x -= (tRect.right - wrapRect.right) + 4;
+  tooltip.style.left = x + 'px';
 }
 // Tap jebkur ārpus kategoriju grafika/leģendas aizver piespraustu izcēlumu —
 // piesiets VIENU REIZI moduļa ielādes brīdī, ne katrā renderCategoryChart()

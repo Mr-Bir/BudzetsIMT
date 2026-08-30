@@ -336,10 +336,14 @@
         </div>
         <div class="trends-chart-wrap">
           <div class="trends-mini-legend">
-            <span class="cat-row"><span class="cat-swatch trend-swatch-daily-bar"></span><span class="cat-name" data-i18n="trends.daily_bars_label">Tēriņi dienā</span></span>
             <span class="cat-row"><span class="trend-swatch-line"></span><span class="cat-name" data-i18n="trends.daily_trend_label">Tendence (5 dienu vidējais)</span></span>
           </div>
+          <p class="trends-daily-hint" data-i18n="trends.daily_hint">Stabiņa krāsas = kategorijas. Pieskaries vai novieto peli virs sadaļas, lai redzētu konkrētos rēķinus.</p>
           <svg id="trendsDailyChart" class="trends-chart"></svg>
+          <div class="donut-tooltip trend-daily-tooltip hidden" id="trendsDailyTooltip">
+            <div class="tdt-head"><span class="dt-swatch" id="tdtSwatch"></span><span class="dt-name" id="tdtName"></span><span class="dt-amt" id="tdtAmt"></span></div>
+            <div class="tdt-items" id="tdtItems"></div>
+          </div>
         </div>
       </section>
 

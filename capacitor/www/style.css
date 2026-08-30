@@ -452,10 +452,17 @@
   .trends-cat-legend .cat-row.dim { opacity: .4; }
   .trends-cat-legend .cat-row.lit .cat-name { font-weight: 800; }
   .trends-daily-select { font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); }
-  .trend-swatch-daily-bar { background: var(--accent); }
   .trend-swatch-line { display: inline-block; width: 14px; height: 2px; border-radius: 1px; background: var(--amber); flex: none; }
-  .daily-bar { fill: var(--accent); }
+  .trends-daily-hint { font-size: 11.5px; color: var(--muted); margin: -4px 0 10px; }
+  /* fill iestatīts individuāli caur JS (setAttribute) katram segmentam pēc
+     kategorijas krāsas — TE NEDRĪKST likt `fill`, jo CSS klase uzvarētu pār
+     SVG presentation atribūtu un pārrakstītu visas kategoriju krāsas uz vienu. */
+  .daily-bar { stroke: var(--card); stroke-width: .5; cursor: pointer; transition: filter .12s ease; }
+  .daily-bar:hover { filter: brightness(1.15); }
   .daily-trend-line { fill: none; stroke: var(--amber); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .trend-daily-tooltip { flex-direction: column; align-items: flex-start; gap: 4px; white-space: normal; max-width: 220px; z-index: 6; }
+  .trend-daily-tooltip .tdt-head { display: flex; align-items: center; gap: 6px; }
+  .trend-daily-tooltip .tdt-items { font-size: 11px; color: var(--muted); line-height: 1.4; }
   #trendsCatLegendToggle { margin-top: 10px; }
   .trends-cat-legend { margin-top: 16px; }
 

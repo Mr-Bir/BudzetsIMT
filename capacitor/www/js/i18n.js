@@ -105,6 +105,8 @@ const STRINGS = {
     'trends.empty': 'Vajag vismaz 2 arhivētus mēnešus, lai redzētu tendenci. Aizver mēnešus sadaļā "Budžets", lai sāktu vākt vēsturi.',
 
     'common.no_name': '(bez nosaukuma)',
+    'common.show_more': 'Rādīt vairāk',
+    'common.show_less': 'Rādīt mazāk',
     'common.deleted_bill': '(dzēsts rēķins)',
     'common.delete_title': 'Dzēst',
     'common.cancel': 'Atcelt',
@@ -480,6 +482,8 @@ const STRINGS = {
     'trends.empty': 'You need at least 2 archived months to see a trend. Close out months in the "Budget" section to start building history.',
 
     'common.no_name': '(unnamed)',
+    'common.show_more': 'Show more',
+    'common.show_less': 'Show less',
     'common.deleted_bill': '(deleted bill)',
     'common.delete_title': 'Delete',
     'common.cancel': 'Cancel',

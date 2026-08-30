@@ -433,12 +433,14 @@
 
   /* Trends — visi trīs "Tendences" grafiki (atlikums / ien.vs izd. / kategorijas) */
   #trendsCharts { display: flex; flex-direction: column; gap: 20px; }
-  .trends-chart-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; box-shadow: var(--shadow); overflow-x: auto; }
-  .trends-chart { display: block; }
+  .trends-chart-wrap { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; box-shadow: var(--shadow); overflow-x: auto; }
+  .trends-chart { display: block; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   .trend-zero-line { stroke: var(--line); stroke-width: 1; }
   .trend-bar-pos { fill: var(--green); }
   .trend-bar-neg { fill: var(--red); }
-  .trend-seg { stroke: var(--card); stroke-width: 1; }
+  .trend-seg { stroke: var(--card); stroke-width: 1; cursor: pointer; transition: opacity .12s ease, filter .12s ease; }
+  .trend-seg.dim { opacity: .3; }
+  .trend-seg.lit { filter: brightness(1.15); }
   .trend-amount { font-size: 11px; font-weight: 700; fill: var(--ink); text-anchor: middle; font-variant-numeric: tabular-nums; }
   .trend-amount-sm { font-size: 9.5px; }
   .trend-label { font-size: 11px; fill: var(--muted); text-anchor: middle; }
@@ -446,6 +448,10 @@
   .trends-mini-legend .cat-row { display: flex; align-items: center; gap: 6px; padding: 0; border-bottom: none; }
   .trend-swatch-pos { background: var(--green); }
   .trend-swatch-neg { background: var(--red); }
+  .trends-cat-legend .cat-row { cursor: pointer; transition: opacity .12s ease; }
+  .trends-cat-legend .cat-row.dim { opacity: .4; }
+  .trends-cat-legend .cat-row.lit .cat-name { font-weight: 800; }
+  #trendsCatLegendToggle { margin-top: 10px; }
   .trends-cat-legend { margin-top: 16px; }
 
   /* ---- Reminder banner (visible above panels when something is due today/overdue) ---- */

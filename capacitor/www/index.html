@@ -352,7 +352,9 @@
           <div class="sec-head"><h2 data-i18n="trends.category_title">Izdevumi pa kategorijām</h2></div>
           <div class="trends-chart-wrap">
             <svg id="trendsCategoryChart" class="trends-chart"></svg>
+            <div class="donut-tooltip hidden" id="trendsCatTooltip"><span class="dt-swatch" id="tctSwatch"></span><span class="dt-name" id="tctName"></span><span class="dt-amt" id="tctAmt"></span></div>
             <div class="cat-legend trends-cat-legend" id="trendsCategoryLegend"></div>
+            <button class="btn ghost sm hidden" id="trendsCatLegendToggle" type="button"></button>
           </div>
         </section>
       </div><!-- /trendsCharts -->

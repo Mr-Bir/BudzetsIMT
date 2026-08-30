@@ -1851,6 +1851,52 @@ function renderIncomeExpenseChart(months){
 // KONSEKVENTĀ secībā (kopējais tēriņš DESC visos redzamajos mēnešos) visiem
 // mēnešiem, lai salīdzināšana starp stabiņiem būtu viegla. Katra segmenta krāsa/
 // nosaukums nāk no TĀ PAŠA mēneša categories snapshot (sk. catFromSnapshot()).
+// Kategoriju grafika hover/tap — tāpat kā donut grafikam: īsts hover TIKAI pelei
+// (pointerType==='mouse'), tap-to-pin touch ierīcēm (sk. showDonutTooltip()/
+// hideDonutTooltip() vēsturi — pointerenter/pointerleave paši par sevi neuzticami
+// strādā uz touch, tāpēc nešķiro pēc pointerType, atkārtotu to pašu kļūdu).
+// Uzbrauc/pieskaries VAI nu segmentam VAI leģendas rindai ar to pašu kategorijas
+// atslēgu — izgaismojas VISI segmenti/rindas ar to pašu atslēgu VISOS mēnešos,
+// pārējie pieblāvējas, lai vienas kategorijas tendenci būtu viegli izsekot.
+let trendCatPinnedKey = null;
+function highlightTrendCat(key){
+  document.querySelectorAll('.trend-seg, .trends-cat-legend .cat-row').forEach(el=>{
+    const match = el.dataset.catKey === key;
+    el.classList.toggle('dim', !match);
+    el.classList.toggle('lit', match);
+  });
+}
+function clearTrendCatHighlight(){
+  trendCatPinnedKey = null;
+  $('trendsCatTooltip').classList.add('hidden');
+  document.querySelectorAll('.trend-seg, .trends-cat-legend .cat-row').forEach(el=>el.classList.remove('dim','lit'));
+}
+function showCatSegTooltip(segEl, name, amount, color){
+  const wrap = segEl.closest('.trends-chart-wrap');
+  const tooltip = $('trendsCatTooltip');
+  const segRect = segEl.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  tooltip.style.left = (segRect.left - wrapRect.left + segRect.width/2 + wrap.scrollLeft) + 'px';
+  tooltip.style.top = (segRect.top - wrapRect.top + wrap.scrollTop) + 'px';
+  $('tctSwatch').style.background = color;
+  $('tctName').textContent = name;
+  $('tctAmt').textContent = fmt(amount);
+  tooltip.classList.remove('hidden');
+}
+// Tap jebkur ārpus kategoriju grafika/leģendas aizver piespraustu izcēlumu —
+// piesiets VIENU REIZI moduļa ielādes brīdī, ne katrā renderCategoryChart()
+// izsaukumā (citādi dublētos ar katru re-renderēšanu).
+document.addEventListener('click', (e)=>{
+  if(trendCatPinnedKey && !e.target.closest('#trendsCategoryChart') && !e.target.closest('.trends-cat-legend')){
+    clearTrendCatHighlight();
+  }
+});
+let trendCatLegendExpanded = false;
+$('trendsCatLegendToggle').addEventListener('click', ()=>{
+  trendCatLegendExpanded = !trendCatLegendExpanded;
+  renderTrends();
+});
+
 function renderCategoryChart(months){
   const svg = $('trendsCategoryChart');
   const legend = $('trendsCategoryLegend');
@@ -1894,12 +1940,19 @@ function renderCategoryChart(months){
       const val = monthSums[i][key];
       if(!val) return;
       const segH = (val/maxTotal) * plotH;
-      const { color } = catFromSnapshot(m.categories, key);
+      const { name, color } = catFromSnapshot(m.categories, key);
       const rect = document.createElementNS(ns,'rect');
       rect.setAttribute('x', x); rect.setAttribute('y', stackY - segH);
       rect.setAttribute('width', barW); rect.setAttribute('height', segH);
       rect.setAttribute('fill', color);
       rect.setAttribute('class', 'trend-seg');
+      rect.dataset.catKey = key;
+      rect.addEventListener('pointerenter', e=>{ if(e.pointerType==='mouse'){ highlightTrendCat(key); showCatSegTooltip(rect, name, val, color); } });
+      rect.addEventListener('pointerleave', e=>{ if(e.pointerType==='mouse') clearTrendCatHighlight(); });
+      rect.addEventListener('click', ()=>{
+        if(trendCatPinnedKey === key){ clearTrendCatHighlight(); }
+        else { trendCatPinnedKey = key; highlightTrendCat(key); showCatSegTooltip(rect, name, val, color); }
+      });
       svg.appendChild(rect);
       stackY -= segH;
     });
@@ -1923,17 +1976,35 @@ function renderCategoryChart(months){
 
   // Leģenda no PĒDĒJĀ (jaunākā) redzamā mēneša kategoriju saraksta — vienkāršošanas
   // lēmums, sk. plāna piezīmi; atsevišķie stabiņu segmenti tik un tā paliek
-  // vēsturiski precīzi neatkarīgi no leģendas.
+  // vēsturiski precīzi neatkarīgi no leģendas. Rādīti TIKAI pirmie 5 pēc noklusējuma —
+  // "Rādīt vairāk" poga (piesieta VIENU REIZI ārpus šīs funkcijas) atklāj pārējos.
+  const CAT_LEGEND_LIMIT = 5;
   legend.innerHTML = '';
   const lastMonth = months[months.length-1];
-  orderedKeys.forEach(key=>{
-    if(!totalByKey[key]) return;
+  const visibleKeys = orderedKeys.filter(key=>totalByKey[key]);
+  const keysToShow = trendCatLegendExpanded ? visibleKeys : visibleKeys.slice(0, CAT_LEGEND_LIMIT);
+  keysToShow.forEach(key=>{
     const { name, color } = catFromSnapshot(lastMonth.categories, key);
     const row = document.createElement('div');
     row.className = 'cat-row';
+    row.dataset.catKey = key;
     row.innerHTML = `<span class="cat-swatch" style="background:${color}"></span><span class="cat-name">${escapeHtml(name)}</span>`;
+    row.addEventListener('pointerenter', e=>{ if(e.pointerType==='mouse') highlightTrendCat(key); });
+    row.addEventListener('pointerleave', e=>{ if(e.pointerType==='mouse') clearTrendCatHighlight(); });
+    row.addEventListener('click', ()=>{
+      if(trendCatPinnedKey === key){ clearTrendCatHighlight(); }
+      else { trendCatPinnedKey = key; highlightTrendCat(key); }
+    });
     legend.appendChild(row);
   });
+
+  const toggleBtn = $('trendsCatLegendToggle');
+  if(visibleKeys.length > CAT_LEGEND_LIMIT){
+    toggleBtn.classList.remove('hidden');
+    toggleBtn.textContent = trendCatLegendExpanded ? t('common.show_less') : t('common.show_more');
+  } else {
+    toggleBtn.classList.add('hidden');
+  }
 }
 
 $('closeMonthBtn').addEventListener('click', async ()=>{

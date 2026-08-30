@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.41.1', date:'2026-08-29', notes:[
+    '"Izdevumi pa kategorijām" grafikam pievienota mijiedarbība — pieskaroties vai novietojot peli virs sadaļas, redzama tā mēneša summa; garš kategoriju saraksts zem grafika tagad sākumā rāda tikai 5, ar pogu "Rādīt vairāk"',
+  ], notesEn:[
+    'The "Spending by category" chart is now interactive — tap or hover a segment to see that month\'s amount; a long category list below the chart now starts collapsed to 5, with a "Show more" button',
+  ]},
   { v:'1.41.0', date:'2026-08-29', notes:[
     '"Tendences" sadaļai pievienoti divi jauni grafiki — ienākumi vs izdevumi, un izdevumi pa kategorijām, abi pa mēnešiem',
   ], notesEn:[

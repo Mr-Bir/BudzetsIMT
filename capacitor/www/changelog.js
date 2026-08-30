@@ -9,9 +9,9 @@
 
 export const CHANGELOG = [
   { v:'1.42.0', date:'2026-08-29', notes:[
-    '"Tendences" sadaļai pievienots jauns grafiks "Dienas tēriņi" — izvēlies jebkuru mēnesi (kārtējo vai arhivētu) un redzi tēriņus pa dienām, ar izlīdzinātu tendences līniju',
+    '"Tendences" sadaļai pievienots jauns grafiks "Dienas tēriņi" — izvēlies jebkuru mēnesi (kārtējo vai arhivētu) un redzi tēriņus pa dienām, ar izlīdzinātu tendences līniju un leģendu',
   ], notesEn:[
-    'Added a new "Daily spending" chart to the "Trends" section — pick any month (current or archived) to see spending by day, with a smoothed trend line',
+    'Added a new "Daily spending" chart to the "Trends" section — pick any month (current or archived) to see spending by day, with a smoothed trend line and legend',
   ]},
   { v:'1.41.1', date:'2026-08-29', notes:[
     '"Izdevumi pa kategorijām" grafikam pievienota mijiedarbība — pieskaroties vai novietojot peli virs sadaļas, redzama tā mēneša summa; garš kategoriju saraksts zem grafika tagad sākumā rāda tikai 5, ar pogu "Rādīt vairāk"',

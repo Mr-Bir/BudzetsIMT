@@ -55,6 +55,9 @@ const STRINGS = {
 
     'reminder_banner.view': 'Skatīt',
     'reminder_banner.dismiss_title': 'Atzīmēt kā redzētu',
+    'new_month_banner.text': 'Ir sācies {{current}}, bet tu joprojām rediģē {{label}}. Sākt jaunu mēnesi tagad?',
+    'new_month_banner.start': 'Sākt jaunu mēnesi',
+    'new_month_banner.dismiss_title': 'Turpināt rediģēt šo mēnesi',
 
     'budget.summary_pin_title': 'Piespraust kopsavilkumu',
     'budget.summary_unpin_title': 'Atspraust kopsavilkumu',
@@ -436,6 +439,9 @@ const STRINGS = {
 
     'reminder_banner.view': 'View',
     'reminder_banner.dismiss_title': 'Mark as seen',
+    'new_month_banner.text': '{{current}} has started, but you\'re still editing {{label}}. Start the new month now?',
+    'new_month_banner.start': 'Start new month',
+    'new_month_banner.dismiss_title': 'Keep editing this month',
 
     'budget.summary_pin_title': 'Pin summary',
     'budget.summary_unpin_title': 'Unpin summary',

@@ -197,6 +197,14 @@
       <button class="rb-dismiss" id="reminderBannerDismiss" type="button" data-i18n-attr="title:reminder_banner.dismiss_title" title="Atzīmēt kā redzētu">✓</button>
     </div>
 
+    <!-- Jauna mēneša baneris — redzams, kad kalendārais mēnesis jau mainījies, bet dati ekrānā vēl pieder iepriekšējam -->
+    <div class="reminder-banner info hidden" id="newMonthBanner">
+      <span class="rb-icon" aria-hidden="true">📅</span>
+      <span class="rb-text" id="newMonthBannerText"></span>
+      <button class="rb-view" id="newMonthBannerStart" type="button" data-i18n="new_month_banner.start">Sākt jaunu mēnesi</button>
+      <button class="rb-dismiss" id="newMonthBannerDismiss" type="button" data-i18n-attr="title:new_month_banner.dismiss_title" title="Turpināt rediģēt">✓</button>
+    </div>
+
     <!-- ============ PANEL: BUDGET ============ -->
     <div class="panel" id="panel-budget">
     <div class="summary-wrap">

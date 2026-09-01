@@ -1155,6 +1155,7 @@ function render(){
   });
   updateTotals();
   renderReminders();
+  updateNewMonthBanner();
   renderSavingsGoals();
   // Tikai pārzīmē no jau esošās <select> izvēles — NEIZSAUC populateDailyMonthSelect(),
   // lai nepārrakstītu lietotāja izvēlētu arhivētu mēnesi ar "current" ikreiz, kad
@@ -1192,6 +1193,26 @@ function formatDateLocale(iso){
   const d = new Date(iso + 'T00:00:00');
   if(isNaN(d)) return iso;
   return d.toLocaleDateString(currentLocale());
+}
+
+// Baneris: kalendārais mēnesis ir pagājis tālāk par datiem, ko lietotājs vēl nav
+// "aizvēris" ar Jauns mēnesis. Necenšas uzminēt pareizo brīdi pēc šodienas datuma
+// (tieši tā radās 2x-Augusts kļūda) — vienkārši salīdzina liveMonthKey() (dati uz
+// ekrāna) ar monthKey() (reālā šodiena). newMonthBannerDismissed ir TIKAI atmiņā
+// (nevis saglabāts Firestore) — apzināti pazūd, kad lietotājs pats atgriežas nākamajā
+// sesijā/pārlādē, lai atgādinājums neapklustu uz visiem laikiem, kamēr mēnesis vēl
+// nav aizvērts.
+let newMonthBannerDismissed = false;
+function updateNewMonthBanner(){
+  const banner = $('newMonthBanner');
+  if(!banner) return;
+  const live = liveMonthKey();
+  const today = monthKey();
+  const mismatch = live !== today && (state.bills||[]).length > 0;
+  if(!mismatch || newMonthBannerDismissed){ banner.classList.add('hidden'); return; }
+  const textEl = $('newMonthBannerText');
+  if(textEl) textEl.textContent = t('new_month_banner.text', {label: monthLabel(live), current: monthLabel(today)});
+  banner.classList.remove('hidden');
 }
 
 // Renders the Atgādinājumi section lists + the always-visible nav badge/banner.
@@ -1651,6 +1672,25 @@ function renderCategories(total){
 let archiveCache = [];
 
 function monthKey(d=new Date()){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+// Mēnesis, ko FAKTISKI attēlo pašreizējie (vēl nearhivētie) dati — atšķirībā no
+// monthKey(), kas vienmēr atgriež ŠODIENAS reālo kalendāra mēnesi. Tie sakrīt, KAMĒR
+// lietotājs regulāri pāriet uz jaunu mēnesi tajā pašā dienā, kad tas sākas — bet, ja
+// lietotājs "Jauns mēnesis" nospiež VĒLĀK (piem. 1. septembrī vēl skata augusta datus),
+// monthKey() jau būtu "nākamais" mēnesis, kaut gan ekrānā redzamie/arhivējamie dati
+// joprojām pieder IEPRIEKŠĒJAM mēnesim. Tā vietā, lai minētu pēc šodienas datuma,
+// atvasinām no pēdējā JAU arhivētā mēneša + 1 — tas vienmēr pareizi seko darba plūsmai
+// neatkarīgi no tā, cik dienas vēlu lietotājs faktiski nospiež pogu.
+function liveMonthKey(){
+  const validIds = archiveCache
+    .map(a=>a.id)
+    .filter(id=>/^\d{4}-\d{2}$/.test(id))
+    .sort();
+  if(!validIds.length) return monthKey();
+  const last = validIds[validIds.length-1];
+  const [y,m] = last.split('-').map(Number);
+  const next = new Date(y, m, 1); // m ir 1-indeksēts (jau "+1 mēnesis" no pēdējā arhīva)
+  return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0');
+}
 function monthLabel(key){
   const m = /^(\d{4})-(\d{2})$/.exec(key||'');
   if(!m) return t('archive.default_entry_name');
@@ -1666,6 +1706,7 @@ async function loadArchive(){
     archiveCache.sort((a,b)=> (b.archivedAt||0) - (a.archivedAt||0) || String(b.id).localeCompare(String(a.id)));
     renderArchive();
     renderTrends();
+    updateNewMonthBanner();
   } catch(e){
     $('archiveList').innerHTML = `<div class="empty-note">${t('archive.load_failed', {code: e.code})}</div>`;
   }
@@ -2227,7 +2268,7 @@ function renderCategoryChart(months){
 }
 
 $('closeMonthBtn').addEventListener('click', async ()=>{
-  const key = monthKey();
+  const key = liveMonthKey();
   const existing = archiveCache.find(a=>a.id===key);
   const label = (state.periodName||'').trim();
   const displayLabel = label || monthLabel(key);
@@ -2717,7 +2758,7 @@ function openNewMonthModal(){
     if(!confirm(t('new_month.confirm_removal', {count: removedCount}))) return;
     if($('nmArchiveFirst').checked){
       try {
-        const key = monthKey();
+        const key = liveMonthKey();
         const existing = archiveCache.find(a=>a.id===key);
         const label = (state.periodName||'').trim();
         const snapshot = {
@@ -2866,6 +2907,14 @@ $('reminderBannerDismiss')?.addEventListener('click', ()=>{
     if(r.active){ const st = reminderStatus(r); if(st==='overdue'||st==='today') r.dismissedFor = reminderDueDate(r); }
   });
   renderReminders(); scheduleSave();
+});
+
+// Jauna mēneša baneris: "Sākt jaunu mēnesi" atver TIEŠI TO PAŠU modāli, ko atver
+// nav poga; "Turpināt" tikai apklusina baneri šai sesijai (sk. updateNewMonthBanner).
+$('newMonthBannerStart')?.addEventListener('click', ()=>{ openNewMonthModal(); });
+$('newMonthBannerDismiss')?.addEventListener('click', ()=>{
+  newMonthBannerDismissed = true;
+  updateNewMonthBanner();
 });
 
 /* ═══════════════════════════════════════════════════════════════

@@ -474,6 +474,11 @@
   .reminder-banner .rb-view:hover { background: var(--red); color: #fff; }
   .reminder-banner .rb-dismiss { border: none; background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; padding: 4px 6px; border-radius: 6px; line-height: 1; }
   .reminder-banner .rb-dismiss:hover { background: var(--red-soft); color: var(--red); }
+  /* Neitrāla (nesteidzīga) baneru versija — piem. jauna mēneša atgādinājumam, kas nav "kavēts" tāpat kā rēķini */
+  .reminder-banner.info { border-color: var(--accent); border-left-color: var(--accent); }
+  .reminder-banner.info .rb-view { border-color: var(--accent); color: var(--accent); }
+  .reminder-banner.info .rb-view:hover { background: var(--accent); color: #fff; }
+  .reminder-banner.info .rb-dismiss:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
 
   /* ---- Reminders section ---- */
   .rem-group { margin-bottom: 18px; }

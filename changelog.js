@@ -12,10 +12,12 @@ export const CHANGELOG = [
     'Salabota kļūda, kad mēneša aizvēršana pēc jauna kalendārā mēneša sākšanās (piem., 1. septembrī, ja augusts vēl nebija aizvērts) izveidoja arhīvā divkāršu vai nepareizi datētu mēneša ierakstu',
     'Pievienots atgādinājums — ja kalendārais mēnesis jau mainījies, bet dati ekrānā vēl pieder iepriekšējam, lietotne to parāda ar iespēju uzreiz sākt jaunu mēnesi vai turpināt rediģēt veco',
     'Salabota kļūda, kad daži arhivētie mēneši (pārdēvēti no "Dublēt" izveidotiem ierakstiem) netika rādīti Tendences sadaļā un dienas tēriņu izvēlnē, lai gan arhīva sarakstā izskatījās pareizi',
+    'Salabota kļūda "Dienas tēriņi" grafikā, kad daži rēķini/kategorijas nerādījās konkrētos mēnešos — tas notika, ja rēķins tika atzīmēts kā samaksāts pāris dienas pēc mēneša beigām (pirms "Jauns mēnesis" nospiešanas)',
   ], notesEn:[
     'Fixed a bug where closing a month after the calendar had already rolled into a new one (e.g. Sept 1st, if August wasn\'t closed yet) could create a duplicate or mis-dated archive entry',
     'Added a notice — if the calendar month has moved on but the data on screen still belongs to the previous one, the app now shows a banner to either start the new month right away or keep editing the old one',
     'Fixed a bug where some archived months (renamed from "Duplicate"-created entries) were missing from the Trends section and the daily spending picker, even though they looked correct in the archive list',
+    'Fixed a bug in the "Daily spending" chart where some bills/categories were missing from certain months — this happened when a bill was marked paid a few days after the month ended (before pressing "New month")',
   ]},
   { v:'1.43.1', date:'2026-09-01', notes:[
     'Salabota kļūda "Dienas līdz algai" aprēķinā — pēc algas datuma dienas iestāšanās jaunajā mēnesī rādīja dienu skaitu līdz PĀRNĀKAMAJAI algai, nevis nākamajai',

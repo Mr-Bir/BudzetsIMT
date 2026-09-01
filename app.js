@@ -1820,8 +1820,19 @@ function dailySpendingDetails(bills, year, monthIdx0){
   const perDay = Array.from({length: days}, () => []);
   const prefix = year + '-' + String(monthIdx0+1).padStart(2,'0') + '-';
   const addOnDate = (dateStr, amount, name, cat) => {
-    if(typeof dateStr !== 'string' || !dateStr.startsWith(prefix)) return;
-    const day = parseInt(dateStr.slice(prefix.length, prefix.length+2), 10);
+    if(typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+    let day;
+    if(dateStr.startsWith(prefix)){
+      day = parseInt(dateStr.slice(prefix.length, prefix.length+2), 10);
+    } else {
+      // paidDate/entry.date ir reālais kalendāra datums, kad tas atzīmēts — ja
+      // lietotājs mēnesi aizver dažas dienas VĒLU (piem. dažus augusta rēķinus
+      // atzīmē par samaksātiem septembra sākumā, pirms nospiest "Jauns mēnesis"),
+      // šis datums var iekrist ĀRPUS attēlotā mēneša robežām. Klusi to izlaist
+      // radītu neatbilstību ar mēneša kopsummu (Arhīvs/Tendences to jau summē
+      // neatkarīgi no datuma) — tā vietā piespiežam uz tuvāko derīgo dienu.
+      day = dateStr < prefix ? 1 : days;
+    }
     if(day>=1 && day<=days) perDay[day-1].push({ name, amount, cat: cat||'cits' });
   };
   (bills||[]).forEach(b=>{

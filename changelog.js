@@ -11,9 +11,11 @@ export const CHANGELOG = [
   { v:'1.44.0', date:'2026-09-01', notes:[
     'Salabota kļūda, kad mēneša aizvēršana pēc jauna kalendārā mēneša sākšanās (piem., 1. septembrī, ja augusts vēl nebija aizvērts) izveidoja arhīvā divkāršu vai nepareizi datētu mēneša ierakstu',
     'Pievienots atgādinājums — ja kalendārais mēnesis jau mainījies, bet dati ekrānā vēl pieder iepriekšējam, lietotne to parāda ar iespēju uzreiz sākt jaunu mēnesi vai turpināt rediģēt veco',
+    'Salabota kļūda, kad daži arhivētie mēneši (pārdēvēti no "Dublēt" izveidotiem ierakstiem) netika rādīti Tendences sadaļā un dienas tēriņu izvēlnē, lai gan arhīva sarakstā izskatījās pareizi',
   ], notesEn:[
     'Fixed a bug where closing a month after the calendar had already rolled into a new one (e.g. Sept 1st, if August wasn\'t closed yet) could create a duplicate or mis-dated archive entry',
     'Added a notice — if the calendar month has moved on but the data on screen still belongs to the previous one, the app now shows a banner to either start the new month right away or keep editing the old one',
+    'Fixed a bug where some archived months (renamed from "Duplicate"-created entries) were missing from the Trends section and the daily spending picker, even though they looked correct in the archive list',
   ]},
   { v:'1.43.1', date:'2026-09-01', notes:[
     'Salabota kļūda "Dienas līdz algai" aprēķinā — pēc algas datuma dienas iestāšanās jaunajā mēnesī rādīja dienu skaitu līdz PĀRNĀKAMAJAI algai, nevis nākamajai',

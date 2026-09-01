@@ -1682,14 +1682,47 @@ function monthKey(d=new Date()){ return d.getFullYear()+'-'+String(d.getMonth()+
 // neatkarīgi no tā, cik dienas vēlu lietotājs faktiski nospiež pogu.
 function liveMonthKey(){
   const validIds = archiveCache
-    .map(a=>a.id)
-    .filter(id=>/^\d{4}-\d{2}$/.test(id))
+    .map(a=>archiveMonthId(a))
+    .filter(id=>id)
     .sort();
   if(!validIds.length) return monthKey();
   const last = validIds[validIds.length-1];
   const [y,m] = last.split('-').map(Number);
   const next = new Date(y, m, 1); // m ir 1-indeksēts (jau "+1 mēnesis" no pēdējā arhīva)
   return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0');
+}
+// Mēneša nosaukumu tabulas TIKAI parseMonthName() vajadzībām — neatkarīgas no i18n
+// sistēmas un no lietotāja PAŠREIZĒJĀS valodas, jo arhīva ieraksta `name` lauks
+// reiz tika saglabāts VIENĀ konkrētā valodā (tajā brīdī aktīvajā), neatkarīgi no tā,
+// kādā valodā lietotne strādā tagad.
+const MONTH_NAMES_LV = ['Janvāris','Februāris','Marts','Aprīlis','Maijs','Jūnijs','Jūlijs','Augusts','Septembris','Oktobris','Novembris','Decembris'];
+const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// Atgriež "YYYY-MM", ja `name` izskatās pēc "Mēnesis Gads" (jebkurā no abām
+// atbalstītajām valodām), citādi null. Vajadzīgs, lai atgūtu arhīva ierakstus, kuru
+// Firestore DOKUMENTA ID nav derīgs YYYY-MM (piem., "Dublēt" pogas izveidoti
+// "kopija-<laikspiedols>" ieraksti, ko lietotājs vēlāk pārdēvējis, noņemot "(kopija)"
+// piedēkli) — pēc izskata tie arhīva sarakstā neatšķiras no parasta mēneša, bet bez
+// šī fallback tie klusi tiktu izslēgti no Tendences/dienas-tēriņu izvēlnes, jo tā
+// filtrē TIEŠI pēc dokumenta ID formāta.
+function parseMonthName(name){
+  const s = String(name||'').trim();
+  const m = /^(.+?)\s+(\d{4})$/.exec(s);
+  if(!m) return null;
+  const monthText = m[1].trim().toLowerCase();
+  const year = m[2];
+  for(const table of [MONTH_NAMES_LV, MONTH_NAMES_EN]){
+    const idx = table.findIndex(name=>name.toLowerCase()===monthText);
+    if(idx !== -1) return year + '-' + String(idx+1).padStart(2,'0');
+  }
+  return null;
+}
+// Hronoloģiskā atslēga arhīva ierakstam: dokumenta ID, ja tas jau derīgs YYYY-MM,
+// citādi mēģina to atgūt no `name` lauka (sk. parseMonthName), citādi null (patiess
+// dublikāts/pārdēvēts ieraksts bez atpazīstama mēneša — apzināti paliek ārpus
+// hronoloģiskajiem skatiem, jo nav droša veida, KUR to novietot laika skalā).
+function archiveMonthId(a){
+  if(/^\d{4}-\d{2}$/.test(a.id)) return a.id;
+  return parseMonthName(a.name);
 }
 function monthLabel(key){
   const m = /^(\d{4})-(\d{2})$/.exec(key||'');
@@ -1746,15 +1779,17 @@ function renderArchive(){
 }
 
 // Kopīga hronoloģisko mēnešu sagatavošana VISIEM trim "Tendences" grafikiem —
-// izmanto TIKAI ierakstus ar reālu mēneša atslēgu (YYYY-MM), kārtotus hronoloģiski
-// augoši. Manuāli dublētie arhīva ieraksti ("kopija-{timestamp}" ID, sk. archiveList
-// klikšķu handleri) neattiecas uz konkrētu mēnesi laika rindā, tāpēc tiek izslēgti
-// (bet paliek redzami parastajā arhīva sarakstā virs grafikiem).
+// izmanto TIKAI ierakstus ar atpazīstamu mēneša atslēgu (sk. archiveMonthId —
+// dokumenta ID, ja tas jau YYYY-MM, citādi atgūts no `name`), kārtotus hronoloģiski
+// augoši. Ieraksti bez atpazīstama mēneša (patiesi dublikāti/pārdēvēti bez mēneša
+// nosaukuma) neattiecas uz konkrētu vietu laika rindā, tāpēc tiek izslēgti (bet
+// paliek redzami parastajā arhīva sarakstā virs grafikiem).
 function trendMonths(){
   return archiveCache
-    .filter(a => /^\d{4}-\d{2}$/.test(a.id))
-    .sort((a,b) => a.id.localeCompare(b.id))
-    .map(a => ({ id: a.id, label: monthLabel(a.id), categories: a.categories, bills: a.bills||[], ...archiveMonthStats(a) }));
+    .map(a => ({ a, key: archiveMonthId(a) }))
+    .filter(x => x.key)
+    .sort((x,y) => x.key.localeCompare(y.key))
+    .map(({a,key}) => ({ id: key, label: monthLabel(key), categories: a.categories, bills: a.bills||[], ...archiveMonthStats(a) }));
 }
 
 // Kategorijas nosaukums/krāsa TĀ MĒNEŠA snapshot, kad rēķins reāli bija iztērēts —
@@ -1813,12 +1848,15 @@ function movingAverage(arr, window=5){
 function populateDailyMonthSelect(){
   const sel = $('trendsDailyMonthSelect');
   const prevValue = sel.value;
-  const archivedIds = archiveCache
-    .filter(a => /^\d{4}-\d{2}$/.test(a.id))
-    .sort((a,b) => b.id.localeCompare(a.id))
-    .map(a=>a.id);
+  // Kārtošanai/etiķetei izmanto archiveMonthId() (ID vai atgūts no name), bet
+  // <option value> paliek ĪSTAIS dokumenta ID — pēc tā renderDailySpendingChart()
+  // vēlāk meklē ierakstu archiveCache sarakstā.
+  const archived = archiveCache
+    .map(a => ({ a, key: archiveMonthId(a) }))
+    .filter(x => x.key)
+    .sort((x,y) => y.key.localeCompare(x.key));
   sel.innerHTML = `<option value="current">${escapeHtml(t('trends.daily_current_month'))}</option>` +
-    archivedIds.map(id=>`<option value="${id}">${escapeHtml(monthLabel(id))}</option>`).join('');
+    archived.map(({a,key})=>`<option value="${a.id}">${escapeHtml(monthLabel(key))}</option>`).join('');
   if(prevValue && [...sel.options].some(o=>o.value===prevValue)) sel.value = prevValue;
 }
 
@@ -1872,7 +1910,8 @@ function renderDailySpendingChart(){
   } else {
     const a = archiveCache.find(x=>x.id===selected);
     if(!a){ svg.innerHTML=''; return; }
-    const m = /^(\d{4})-(\d{2})$/.exec(a.id);
+    const m = /^(\d{4})-(\d{2})$/.exec(archiveMonthId(a));
+    if(!m){ svg.innerHTML=''; return; }
     bills = a.bills||[]; year = +m[1]; monthIdx0 = +m[2]-1;
     categoriesSnapshot = a.categories;
   }

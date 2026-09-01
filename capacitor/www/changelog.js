@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.43.1', date:'2026-09-01', notes:[
+    'Salabota kļūda "Dienas līdz algai" aprēķinā — pēc algas datuma dienas iestāšanās jaunajā mēnesī rādīja dienu skaitu līdz PĀRNĀKAMAJAI algai, nevis nākamajai',
+  ], notesEn:[
+    'Fixed a bug in the "Days until payday" calculation — right after the payday date in a new month it showed days until the payday AFTER next, instead of the next one',
+  ]},
   { v:'1.43.0', date:'2026-08-29', notes:[
     '"Dienas tēriņi" grafika stabiņi tagad sadalās pa kategorijām, un pieskaroties vai novietojot peli virs sadaļas, redzami konkrētie tajā dienā apmaksātie rēķini',
   ], notesEn:[

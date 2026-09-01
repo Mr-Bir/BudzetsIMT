@@ -1479,9 +1479,13 @@ function daysUntilNextSalary(day){
   if(!d || d<1 || d>31) return null;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const ny = now.getFullYear() + (now.getMonth()===11 ? 1 : 0);
-  const nm = (now.getMonth()+1) % 12;
-  const candidate = new Date(ny, nm, Math.min(d, daysInMonth(ny, nm)));
+  const thisMonthCandidate = new Date(now.getFullYear(), now.getMonth(), Math.min(d, daysInMonth(now.getFullYear(), now.getMonth())));
+  let candidate = thisMonthCandidate;
+  if(thisMonthCandidate < today){
+    const ny = now.getFullYear() + (now.getMonth()===11 ? 1 : 0);
+    const nm = (now.getMonth()+1) % 12;
+    candidate = new Date(ny, nm, Math.min(d, daysInMonth(ny, nm)));
+  }
   return Math.max(Math.round((candidate - today) / 86400000), 1);
 }
 

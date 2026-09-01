@@ -1208,7 +1208,12 @@ function updateNewMonthBanner(){
   if(!banner) return;
   const live = liveMonthKey();
   const today = monthKey();
-  const mismatch = live !== today && (state.bills||[]).length > 0;
+  // TIKAI "live < today" (t.i. darba mēnesis atpaliek no reālā kalendāra) ir jēga
+  // rādīt baneri — "YYYY-MM" virknes salīdzināmas leksikogrāfiski. Ja live > today,
+  // tas nozīmē kādu NEATBILSTĪBU arhīva datos (piem., ieraksts ar nepareizu ID no
+  // senākas kļūdas), nevis to, ka lietotājam PATIEŠĀM jāsāk mēnesis, kas vēl nav
+  // pienācis — tādu stāvokli klusējot ignorējam, nevis rādām mulsinošu ziņu "otrādi".
+  const mismatch = live < today && (state.bills||[]).length > 0;
   if(!mismatch || newMonthBannerDismissed){ banner.classList.add('hidden'); return; }
   const textEl = $('newMonthBannerText');
   if(textEl) textEl.textContent = t('new_month_banner.text', {label: monthLabel(live), current: monthLabel(today)});

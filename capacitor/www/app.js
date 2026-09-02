@@ -1693,8 +1693,17 @@ function liveMonthKey(){
   if(!validIds.length) return monthKey();
   const last = validIds[validIds.length-1];
   const [y,m] = last.split('-').map(Number);
-  const next = new Date(y, m, 1); // m ir 1-indeksēts (jau "+1 mēnesis" no pēdējā arhīva)
-  return next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0');
+  const nextDate = new Date(y, m, 1); // m ir 1-indeksēts (jau "+1 mēnesis" no pēdējā arhīva)
+  const next = nextDate.getFullYear()+'-'+String(nextDate.getMonth()+1).padStart(2,'0');
+  // "Saglabāt aktuālo mēnesi → arhīvā" (closeMonthBtn) ir STARPSAGLABĀJUMS —
+  // to var nospiest atkārtoti, kamēr mēnesis vēl NAV formāli aizvērts ar
+  // "Jauns mēnesis". Ja to izdara, `last` iepriekš minētajā aprēķinā vairs
+  // NAV patiesi noslēgts iepriekšējais mēnesis, bet gan paša VĒL AKTĪVĀ
+  // (nearhivētā) perioda starpsaglabājums — un "last + 1" katru reizi virzītos
+  // tālāk (Septembris → Oktobris → Novembris...). Atpazīstam šo gadījumu: ja
+  // "nākamais" mēnesis vēl pat nav pienācis reālajā kalendārā, tas nozīmē
+  // `last` PATS IR pašreizējais darba mēnesis, nevis tā priekštecis.
+  return next <= monthKey() ? next : last;
 }
 // Mēneša nosaukumu tabulas TIKAI parseMonthName() vajadzībām — neatkarīgas no i18n
 // sistēmas un no lietotāja PAŠREIZĒJĀS valodas, jo arhīva ieraksta `name` lauks

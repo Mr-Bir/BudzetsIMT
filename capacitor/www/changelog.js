@@ -10,8 +10,10 @@
 export const CHANGELOG = [
   { v:'1.44.1', date:'2026-09-01', notes:[
     'Salabota vēl viena kļūda "Dienas tēriņi" grafikā, kad rēķins atzīmēts kā samaksāts Arhīva rediģēšanas logā — tam nebija sava datuma, tāpēc tas nekad neparādījās grafikā, kaut arī summā jau bija ieskaitīts',
+    'Arhīva rediģēšanas logā tagad var izvēlēties konkrētu samaksas datumu katram rēķinam (nevis vienmēr mēneša 1. datumu pēc noklusējuma)',
   ], notesEn:[
     'Fixed another "Daily spending" chart bug, for a bill marked paid inside the Archive edit screen — it had no date of its own, so it never showed up in the chart even though it already counted toward the total',
+    'The Archive edit screen now lets you pick an exact payment date for each bill (instead of always defaulting to the 1st of the month)',
   ]},
   { v:'1.44.0', date:'2026-09-01', notes:[
     'Salabota kļūda, kad mēneša aizvēršana pēc jauna kalendārā mēneša sākšanās (piem., 1. septembrī, ja augusts vēl nebija aizvērts) izveidoja arhīvā divkāršu vai nepareizi datētu mēneša ierakstu',

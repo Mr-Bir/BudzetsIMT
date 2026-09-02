@@ -2465,7 +2465,10 @@ function openArchiveModal(key){
           ? `<div class="echk echk-auto" title="${t('archive_modal.summing_auto_title')}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
           : `<button class="echk" data-echk="${i}" title="${t('archive_modal.paid_title')}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`}
         <input class="ename" value="${escapeHtml(b.name||'')}" data-ei="${i}" data-ef="name" placeholder="${t('bills.name_placeholder')}">
-        <span class="pay-badge ${isBillPaid(b)?'yes':'no'}">${isSumB?t('archive_modal.auto_paid_badge'):(b.paid?t('archive_modal.paid_badge'):t('archive_modal.unpaid_badge'))}</span>
+        <div class="epaid-info">
+          <span class="pay-badge ${isBillPaid(b)?'yes':'no'}">${isSumB?t('archive_modal.auto_paid_badge'):(b.paid?t('archive_modal.paid_badge'):t('archive_modal.unpaid_badge'))}</span>
+          ${(!isSumB && b.paid) ? `<input class="edate" type="date" value="${b.paidDate||''}" data-ei="${i}" data-ef="paidDate" title="${t('archive_modal.paid_date_title')}">` : ''}
+        </div>
         <div class="eamt-wrap"><span class="e-eur">€</span>${b.type==='summing' ? `<span class="eamt" style="display:inline-block;" title="${t('archive_modal.sum_from_entries_title', {count: (b.entries||[]).length})}">${billAmount(b).toFixed(2)}</span>` : `<input class="eamt" type="number" step="0.01" inputmode="decimal" value="${Number(b.amount)||0}" data-ei="${i}" data-ef="amount">`}</div>
         <div style="display:flex;gap:4px;align-items:center;">
           <select class="ecat" data-ei="${i}" data-ef="cat">${catOpts(b.cat||'cits')}</select>
@@ -2510,11 +2513,14 @@ function openArchiveModal(key){
   // Bills input
   $('mBills').addEventListener('input', e=>{
     const i=e.target.dataset.ei, f=e.target.dataset.ef; if(i===undefined) return;
-    if(f==='amount') draft.bills[i].amount = parseFloat(e.target.value)||0; else draft.bills[i].name = e.target.value;
-    if(f==='amount') renderMini(); markDirty();
+    if(f==='amount'){ draft.bills[i].amount = parseFloat(e.target.value)||0; renderMini(); }
+    else if(f==='name'){ draft.bills[i].name = e.target.value; }
+    markDirty();
   });
   $('mBills').addEventListener('change', e=>{
-    if(e.target.dataset.ef==='cat'){ const i=e.target.dataset.ei; draft.bills[i].cat=e.target.value; const rowEl=e.target.closest('.ebill'); rowEl.dataset.cat=e.target.value; const h=rowEl.querySelector('.ehandle'); if(h) h.style.borderLeftColor=catColor(e.target.value); markDirty(); }
+    const f = e.target.dataset.ef;
+    if(f==='cat'){ const i=e.target.dataset.ei; draft.bills[i].cat=e.target.value; const rowEl=e.target.closest('.ebill'); rowEl.dataset.cat=e.target.value; const h=rowEl.querySelector('.ehandle'); if(h) h.style.borderLeftColor=catColor(e.target.value); markDirty(); }
+    else if(f==='paidDate'){ const i=e.target.dataset.ei; draft.bills[i].paidDate = e.target.value || null; markDirty(); }
   });
   $('mBills').addEventListener('click', e=>{
     const del=e.target.closest('[data-edel]'); const chk=e.target.closest('[data-echk]');

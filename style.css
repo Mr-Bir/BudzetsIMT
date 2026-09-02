@@ -611,6 +611,9 @@
   .pay-badge { font-size: 11px; font-weight: 600; letter-spacing: .03em; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
   .pay-badge.yes { background: var(--badge-yes-bg); color: var(--green); }
   .pay-badge.no { background: var(--badge-no-bg); color: var(--muted); }
+  .epaid-info { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+  .epaid-info .edate { border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--muted); font: inherit; font-size: 11px; padding: 2px 4px; }
+  .epaid-info .edate:focus { outline: none; border-color: var(--accent); color: var(--ink); }
   @media (max-width: 620px) {
     .sec-head { flex-wrap: wrap; row-gap: 8px; }
     .sec-head > div { flex-wrap: wrap; }

@@ -1820,9 +1820,14 @@ function dailySpendingDetails(bills, year, monthIdx0){
   const perDay = Array.from({length: days}, () => []);
   const prefix = year + '-' + String(monthIdx0+1).padStart(2,'0') + '-';
   const addOnDate = (dateStr, amount, name, cat) => {
-    if(typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
     let day;
-    if(dateStr.startsWith(prefix)){
+    if(typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)){
+      // Nav derīga datuma vispār (piem., rēķins atzīmēts kā samaksāts Arhīva
+      // rediģēšanas logā, kur nav sava datuma lauka) — labāk parādīt to mēneša
+      // 1. dienā, nekā klusi izlaist un padarīt kategoriju "neredzamu" grafikā,
+      // kaut arī summā (Arhīvs/pārējie Tendences grafiki) tas jau tiek ieskaitīts.
+      day = 1;
+    } else if(dateStr.startsWith(prefix)){
       day = parseInt(dateStr.slice(prefix.length, prefix.length+2), 10);
     } else {
       // paidDate/entry.date ir reālais kalendāra datums, kad tas atzīmēts — ja
@@ -1838,7 +1843,7 @@ function dailySpendingDetails(bills, year, monthIdx0){
   (bills||[]).forEach(b=>{
     if(b.type==='summing'){
       (b.entries||[]).forEach(e=> addOnDate(e.date, Number(e.amount)||0, e.note || b.name, b.cat));
-    } else if(b.paid && b.paidDate){
+    } else if(b.paid){
       addOnDate(b.paidDate, Number(b.amount)||0, b.name, b.cat);
     }
   });
@@ -2514,7 +2519,21 @@ function openArchiveModal(key){
   $('mBills').addEventListener('click', e=>{
     const del=e.target.closest('[data-edel]'); const chk=e.target.closest('[data-echk]');
     if(del){ const i=+del.dataset.edel; const nm=(draft.bills[i].name||'').trim(); if(confirm(nm?t('archive_modal.confirm_delete_bill_named',{name:nm}):t('archive_modal.confirm_delete_bill'))){ draft.bills.splice(i,1); renderAll(); markDirty(); } return; }
-    if(chk){ const i=+chk.dataset.echk; draft.bills[i].paid=!draft.bills[i].paid; renderAll(); markDirty(); }
+    if(chk){
+      const i=+chk.dataset.echk;
+      draft.bills[i].paid = !draft.bills[i].paid;
+      // Šeit (atšķirībā no parastā "atzīmēt kā samaksātu" pogas Budžeta sadaļā)
+      // nav sava datuma lauka rediģēšanai — bez šī paidDate paliktu tukšs, un
+      // "Dienas tēriņi" grafiks šo rēķinu NEKAD neparādītu (tas tur meklē pēc
+      // paidDate), kaut arī summā (Arhīvs/pārējie Tendences grafiki) tas jau tiek
+      // ieskaitīts neatkarīgi no paid statusa. 1. datums šajā mēnesī ir labākais
+      // pieejamais minējums, ja precīzā diena nav zināma.
+      if(draft.bills[i].paid && !draft.bills[i].paidDate){
+        const mk = archiveMonthId(a);
+        draft.bills[i].paidDate = mk ? (mk + '-01') : todayStr();
+      }
+      renderAll(); markDirty();
+    }
   });
   $('mAddBill').addEventListener('click', ()=>{ draft.bills.push({name:'',amount:0,cat:'cits'}); renderAll(); markDirty(); });
 

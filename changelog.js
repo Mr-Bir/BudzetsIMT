@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.44.1', date:'2026-09-01', notes:[
+    'Salabota vēl viena kļūda "Dienas tēriņi" grafikā, kad rēķins atzīmēts kā samaksāts Arhīva rediģēšanas logā — tam nebija sava datuma, tāpēc tas nekad neparādījās grafikā, kaut arī summā jau bija ieskaitīts',
+  ], notesEn:[
+    'Fixed another "Daily spending" chart bug, for a bill marked paid inside the Archive edit screen — it had no date of its own, so it never showed up in the chart even though it already counted toward the total',
+  ]},
   { v:'1.44.0', date:'2026-09-01', notes:[
     'Salabota kļūda, kad mēneša aizvēršana pēc jauna kalendārā mēneša sākšanās (piem., 1. septembrī, ja augusts vēl nebija aizvērts) izveidoja arhīvā divkāršu vai nepareizi datētu mēneša ierakstu',
     'Pievienots atgādinājums — ja kalendārais mēnesis jau mainījies, bet dati ekrānā vēl pieder iepriekšējam, lietotne to parāda ar iespēju uzreiz sākt jaunu mēnesi vai turpināt rediģēt veco',

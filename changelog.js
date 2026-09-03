@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.44.2', date:'2026-09-01', notes:[
+    'Salabota kļūda — Arhīva rediģēšanas logā mainītais rēķina samaksas datums netika saglabāts',
+  ], notesEn:[
+    'Fixed a bug where a bill\'s payment date, edited in the Archive edit screen, was not actually saved',
+  ]},
   { v:'1.44.1', date:'2026-09-01', notes:[
     'Salabota vēl viena kļūda "Dienas tēriņi" grafikā, kad rēķins atzīmēts kā samaksāts Arhīva rediģēšanas logā — tam nebija sava datuma, tāpēc tas nekad neparādījās grafikā, kaut arī summā jau bija ieskaitīts',
     'Arhīva rediģēšanas logā tagad var izvēlēties konkrētu samaksas datumu katram rēķinam (nevis vienmēr mēneša 1. datumu pēc noklusējuma)',

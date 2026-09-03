@@ -2614,7 +2614,7 @@ function openArchiveModal(key){
       income: draft.income,
       bills: draft.bills.map(b=> b.type==='summing'
         ? ({ name:b.name||'', type:'summing', limit:Number(b.limit)||0, entries:(b.entries||[]).map(e=>({amount:Number(e.amount)||0, note:e.note||'', date:e.date||''})), cat:b.cat||'cits', paid:!!b.paid })
-        : ({ name:b.name||'', amount:Number(b.amount)||0, cat:b.cat||'cits', paid:!!b.paid })),
+        : ({ name:b.name||'', amount:Number(b.amount)||0, cat:b.cat||'cits', paid:!!b.paid, ...(b.paid && b.paidDate ? {paidDate:String(b.paidDate).slice(0,10)} : {}) })),
       credits: draft.credits.map(c=>({ name:c.name||'', amount:Number(c.amount)||0 })),
       extraIncome: a.extraIncome || [],
       archivedAt: a.archivedAt || Date.now()

@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Mārtiņš Barons. Visas tiesības paturētas.
  * Skatīt LICENSE failu repozitorija saknē.
  */
-const CACHE_NAME = 'finanses-shell-v102';
+const CACHE_NAME = 'finanses-shell-v103';
 const SHELL_FILES = [
   './',
   './index.html',

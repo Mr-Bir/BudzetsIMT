@@ -2823,6 +2823,13 @@ function openNewMonthModal(){
     + t('new_month.hint_archive', {label: `<strong>${escapeHtml(currentPeriodLabel())}</strong>`}) + ' '
     + t('new_month.hint_rename', {label: `<strong>${escapeHtml(monthLabel(monthKey()))}</strong>`})
     + (hasGoalBills ? t('new_month.hint_goals') : '');
+  // Šī darbība NEATGRIEZENISKI notīra summējošo rēķinu epizodes un papildu
+  // ienākumus (arhivē tos, bet dzīvajā skatā tie pazūd) — reāls incidents parādīja,
+  // ka telefons kabatā spēj "izgāt cauri" gan pogas klikšķim, gan pārlūka
+  // confirm() dialogam. Rakstīšanas apstiprinājums (jāieraksta nākamā mēneša
+  // nosaukums) ir daudz drošāks pret nejaušiem pieskārieniem, jo prasa reālu
+  // teksta ievadi caur ekrāna tastatūru, ne tikai pieskārienu jebkurā vietā.
+  const nextMonthLabel = monthLabel(monthKey());
   root.innerHTML = `
     <div class="modal-back" id="nmBack">
       <div class="modal" style="max-width:460px;">
@@ -2831,9 +2838,13 @@ function openNewMonthModal(){
         <div class="msub">${hintHtml}</div>
         <div class="nm-list">${rowsHtml}</div>
         <label class="nm-archive-opt"><input type="checkbox" id="nmArchiveFirst" checked> ${t('new_month.archive_first')}</label>
+        <div class="nm-type-confirm">
+          <label for="nmTypeConfirm">${t('new_month.type_confirm_label', {label: `<strong>${escapeHtml(nextMonthLabel)}</strong>`})}</label>
+          <input type="text" id="nmTypeConfirm" autocomplete="off" placeholder="${escapeHtml(nextMonthLabel)}">
+        </div>
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
           <button class="btn ghost sm" id="nmCancel">${t('common.cancel')}</button>
-          <button class="btn" id="nmConfirm">${t('new_month.confirm_btn')}</button>
+          <button class="btn" id="nmConfirm" disabled>${t('new_month.confirm_btn')}</button>
         </div>
       </div>
     </div>`;
@@ -2841,6 +2852,10 @@ function openNewMonthModal(){
   $('nmBack').addEventListener('click', e=>{ if(e.target.id==='nmBack') close(); });
   $('nmClose').addEventListener('click', close);
   $('nmCancel').addEventListener('click', close);
+  $('nmTypeConfirm').addEventListener('input', e=>{
+    const match = e.target.value.trim().toLowerCase() === nextMonthLabel.trim().toLowerCase();
+    $('nmConfirm').disabled = !match;
+  });
   $('nmConfirm').addEventListener('click', async ()=>{
     const keepIdx = new Set([...root.querySelectorAll('.nm-keep:checked')].map(el=>+el.dataset.i));
     const removedCount = state.bills.filter(b=>!b.goalId).length - keepIdx.size;

@@ -8,6 +8,11 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.44.3', date:'2026-09-09', notes:[
+    'Papildu aizsardzība pret nejaušu "Jauns mēnesis" nospiešanu — tagad jāieraksta nākamā mēneša nosaukums, lai poga kļūtu aktīva',
+  ], notesEn:[
+    'Added extra protection against accidentally triggering "New month" — you now need to type the upcoming month\'s name before the button becomes active',
+  ]},
   { v:'1.44.2', date:'2026-09-01', notes:[
     'Salabota kļūda — Arhīva rediģēšanas logā mainītais rēķina samaksas datums netika saglabāts',
   ], notesEn:[

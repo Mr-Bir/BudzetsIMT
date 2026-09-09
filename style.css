@@ -430,7 +430,7 @@
   .arch-figure { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
   .arch-figure .lbl { display:block; font-size: 10px; letter-spacing:.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
   .arch-figure.rem-pos { color: var(--green); } .arch-figure.rem-neg { color: var(--red); }
-  .arch-actions { display: flex; gap: 6px; }
+  .arch-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .empty-note { color: var(--muted); font-size: 14px; padding: 20px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
 
   /* Trends — visi trīs "Tendences" grafiki (atlikums / ien.vs izd. / kategorijas) */

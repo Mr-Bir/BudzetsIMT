@@ -1786,6 +1786,7 @@ function renderArchive(){
       <div class="arch-actions">
         <button class="btn ghost sm" data-view="${a.id}">${t('archive.view')}</button>
         <button class="btn ghost sm" data-adup="${a.id}">${t('archive.duplicate')}</button>
+        <button class="btn ghost sm" data-arestore="${a.id}" title="${t('archive.restore_title')}">${t('archive.restore')}</button>
         <button class="btn ghost sm" data-adel="${a.id}">×</button>
       </div>`;
     list.appendChild(row);
@@ -2396,6 +2397,26 @@ $('archiveList').addEventListener('click', async e=>{
       try { await deleteDoc(doc(db, 'budgets', roomId, 'archive', key)); await loadArchive(); }
       catch(err){ alert(t('archive.delete_failed', {msg: err.message})); }
     }
+  }
+  // "Atjaunot" — pārkopē arhivētā mēneša ienākumu/rēķinu/kredītu/papildu ienākumu
+  // datus 1:1 atpakaļ AKTUĀLAJĀ (dzīvajā) budžetā. Domāts, lai atgūtu no nejaušas
+  // "Jauns mēnesis" nospiešanas (sk. incidentu 2026-09-09) BEZ manuālas pārrakstīšanas
+  // pa vienam ierakstam. Kategorijas UN reminders/savingsGoals/salaryDay APZINĀTI
+  // netiek skartas — tās nav mēnesim-specifiskas, un arhīva `categories` lauks ir
+  // tikai vēsturisks snapshot krāsu/nosaukumu vajadzībām, ne dzīvais avots.
+  if(e.target.dataset.arestore){
+    const key = e.target.dataset.arestore;
+    const src = archiveCache.find(x=>x.id===key);
+    if(!src) return;
+    const label = archName(src);
+    if(!confirm(t('archive.confirm_restore', {label, current: currentPeriodLabel()}))) return;
+    state.income = Number(src.income)||0;
+    state.bills = structuredClone(src.bills||[]);
+    state.credits = structuredClone(src.credits||[]);
+    state.extraIncome = structuredClone(src.extraIncome||[]);
+    if(label) state.periodName = label;
+    render(); pushNow();
+    alert(t('archive.restore_done', {label}));
   }
 });
 

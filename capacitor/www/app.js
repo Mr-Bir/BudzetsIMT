@@ -2428,7 +2428,8 @@ function openArchiveModal(key){
     name: (a.name||'').trim(),
     income: Number(a.income)||0,
     bills: structuredClone(a.bills||[]),
-    credits: structuredClone(a.credits||[])
+    credits: structuredClone(a.credits||[]),
+    extraIncome: structuredClone(a.extraIncome||[])
   };
   let dirty = false;
   let locked = true;
@@ -2452,6 +2453,10 @@ function openArchiveModal(key){
         <div id="mBills"></div>
         <button class="btn ghost sm add-line" id="mAddBill">${t('archive_modal.add_bill')}</button>
 
+        <h4 style="margin:18px 0 4px;font-family:Georgia,serif;">${t('archive_modal.extra_income_title')}</h4>
+        <div id="mExtraIncome"></div>
+        <button class="btn ghost sm add-line" id="mAddExtraIncome">${t('archive_modal.add_extra_income')}</button>
+
         <h4 style="margin:18px 0 4px;font-family:Georgia,serif;">${t('archive_modal.credits_title')}</h4>
         <div id="mCredits"></div>
         <button class="btn ghost sm add-line" id="mAddCredit">${t('archive_modal.add_credit')}</button>
@@ -2470,7 +2475,7 @@ function openArchiveModal(key){
   function markDirty(){ dirty = true; $('mStatus').textContent = t('archive_modal.unsaved'); $('mStatus').style.color = 'var(--amber)'; }
 
   function renderMini(){
-    const extraTotal = (a.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
+    const extraTotal = (draft.extraIncome||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
     const income = (Number(draft.income)||0) + extraTotal;
     const total = draft.bills.reduce((s,b)=>s+billAmount(b),0);
     const remaining = income - total;
@@ -2505,6 +2510,39 @@ function openArchiveModal(key){
           <button class="edel" data-edel="${i}" title="${t('common.delete_title')}">×</button>
         </div>`;
       c.appendChild(row);
+      // Summējoša rēķina epizodes — pati summa rindā augstāk ir tikai to kopsumma;
+      // bez šī sub-bloka atsevišķie ieraksti (datums/piezīme/summa) vispār nekad
+      // nebija redzami Arhīva skatā, kaut arī tie visu laiku bija saglabāti datos
+      // (izmantoti Tendences "Dienas tēriņi" grafikā) — lietotājs pamanīja šo spraugu.
+      if(isSumB){
+        const sub = document.createElement('div');
+        sub.className = 'entries';
+        const entriesHtml = (b.entries||[]).length
+          ? (b.entries||[]).map((e,ei)=>`
+            <div class="entry-row">
+              <span class="entry-date">${escapeHtml(e.date||'')}</span>
+              <span class="entry-note">${escapeHtml(e.note||'')}</span>
+              <span class="entry-amt">${fmt(Number(e.amount)||0)}</span>
+              <button class="entry-del" data-eentrydel="${i}" data-eentryidx="${ei}" title="${t('bills.delete_entry_title')}">×</button>
+            </div>`).join('')
+          : `<div class="entry-empty">${t('bills.no_entries_yet')}</div>`;
+        sub.innerHTML = `<div class="entries-list">${entriesHtml}</div>`;
+        c.appendChild(sub);
+      }
+    });
+  }
+
+  function renderExtraIncome(){
+    const c = $('mExtraIncome'); c.innerHTML = '';
+    (draft.extraIncome||[]).forEach((it,i)=>{
+      const row = document.createElement('div');
+      row.className = 'extra-income-row';
+      row.innerHTML = `
+        <input type="date" class="eidate" value="${escapeHtml(it.date||'')}" data-eii="${i}" data-eif="date">
+        <input class="einame" value="${escapeHtml(it.name||'')}" data-eii="${i}" data-eif="name" placeholder="${t('extra_income.name_placeholder')}">
+        <div class="eamount-wrap"><span class="eur">€</span><input class="eamount" type="number" step="0.01" inputmode="decimal" value="${(Number(it.amount)||0).toFixed(2)}" data-eii="${i}" data-eif="amount"></div>
+        <button class="edel" data-eidel="${i}" title="${t('extra_income.delete_title')}">×</button>`;
+      c.appendChild(row);
     });
   }
 
@@ -2528,7 +2566,7 @@ function openArchiveModal(key){
     }
   }
 
-  function renderAll(){ renderMini(); renderBills(); renderCredits(); applyLock(); }
+  function renderAll(){ renderMini(); renderBills(); renderExtraIncome(); renderCredits(); applyLock(); }
   function applyLock(){
     const modalEl = root.querySelector('.modal');
     if(modalEl) modalEl.classList.toggle('locked', locked);
@@ -2554,7 +2592,14 @@ function openArchiveModal(key){
   });
   $('mBills').addEventListener('click', e=>{
     const del=e.target.closest('[data-edel]'); const chk=e.target.closest('[data-echk]');
+    const entryDel=e.target.closest('[data-eentrydel]');
     if(del){ const i=+del.dataset.edel; const nm=(draft.bills[i].name||'').trim(); if(confirm(nm?t('archive_modal.confirm_delete_bill_named',{name:nm}):t('archive_modal.confirm_delete_bill'))){ draft.bills.splice(i,1); renderAll(); markDirty(); } return; }
+    if(entryDel){
+      const i=+entryDel.dataset.eentrydel, ei=+entryDel.dataset.eentryidx;
+      draft.bills[i].entries.splice(ei,1);
+      renderAll(); markDirty();
+      return;
+    }
     if(chk){
       const i=+chk.dataset.echk;
       draft.bills[i].paid = !draft.bills[i].paid;
@@ -2572,6 +2617,27 @@ function openArchiveModal(key){
     }
   });
   $('mAddBill').addEventListener('click', ()=>{ draft.bills.push({name:'',amount:0,cat:'cits'}); renderAll(); markDirty(); });
+
+  // Extra income input
+  $('mExtraIncome').addEventListener('input', e=>{
+    const i=e.target.dataset.eii, f=e.target.dataset.eif; if(i===undefined) return;
+    if(f==='amount') draft.extraIncome[i].amount = Math.round((parseFloat(e.target.value)||0)*100)/100;
+    else draft.extraIncome[i][f] = e.target.value;
+    if(f==='amount') renderMini();
+    markDirty();
+  });
+  $('mExtraIncome').addEventListener('click', e=>{
+    const del=e.target.closest('[data-eidel]'); if(!del) return;
+    const i=+del.dataset.eidel; const nm=(draft.extraIncome[i].name||'').trim();
+    if(confirm(nm?t('extra_income.confirm_delete_named',{name:nm}):t('extra_income.confirm_delete'))){
+      draft.extraIncome.splice(i,1); renderAll(); markDirty();
+    }
+  });
+  $('mAddExtraIncome').addEventListener('click', ()=>{
+    draft.extraIncome.push({name:'', amount:0, date:todayStr()});
+    renderAll(); markDirty();
+    const n=document.querySelectorAll('#mExtraIncome .einame'); n[n.length-1]?.focus();
+  });
 
   // Credits input
   $('mCredits').addEventListener('input', e=>{
@@ -2637,7 +2703,7 @@ function openArchiveModal(key){
         ? ({ name:b.name||'', type:'summing', limit:Number(b.limit)||0, entries:(b.entries||[]).map(e=>({amount:Number(e.amount)||0, note:e.note||'', date:e.date||''})), cat:b.cat||'cits', paid:!!b.paid })
         : ({ name:b.name||'', amount:Number(b.amount)||0, cat:b.cat||'cits', paid:!!b.paid, ...(b.paid && b.paidDate ? {paidDate:String(b.paidDate).slice(0,10)} : {}) })),
       credits: draft.credits.map(c=>({ name:c.name||'', amount:Number(c.amount)||0 })),
-      extraIncome: a.extraIncome || [],
+      extraIncome: (draft.extraIncome||[]).map(e=>({ name:e.name||'', amount:Number(e.amount)||0, date:e.date||'' })),
       archivedAt: a.archivedAt || Date.now()
     };
     const btn = $('mSave'); btn.textContent=t('archive_modal.saving'); btn.disabled=true;

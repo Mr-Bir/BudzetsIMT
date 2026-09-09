@@ -11,9 +11,11 @@ export const CHANGELOG = [
   { v:'1.44.3', date:'2026-09-09', notes:[
     'Papildu aizsardzība pret nejaušu "Jauns mēnesis" nospiešanu — tagad jāieraksta nākamā mēneša nosaukums, lai poga kļūtu aktīva',
     'Arhīva sarakstā pievienota poga "Atjaunot" — ļauj jebkuru arhivētu mēnesi 1:1 pārkopēt atpakaļ aktuālajā budžetā (piem., ja mēnesis nejauši aizvērts)',
+    'Arhīva rediģēšanas logā tagad redzamas un rediģējamas arī summējošo rēķinu atsevišķās epizodes, un pievienota jauna "Papildu ienākumi" sadaļa — iepriekš šie dati bija saglabāti, bet nekur nebija redzami',
   ], notesEn:[
     'Added extra protection against accidentally triggering "New month" — you now need to type the upcoming month\'s name before the button becomes active',
     'Added a "Restore" button to the archive list — copies any archived month 1:1 back into the current budget (e.g. if a month was closed by accident)',
+    'The Archive edit screen now shows and lets you edit summing bills\' individual entries, and has a new "Extra income" section — that data was already saved but was never visible anywhere',
   ]},
   { v:'1.44.2', date:'2026-09-01', notes:[
     'Salabota kļūda — Arhīva rediģēšanas logā mainītais rēķina samaksas datums netika saglabāts',

@@ -8,6 +8,13 @@
 // ierakstu, tas AUTOMĀTISKI kļūst par jauno lietotnes versiju.
 
 export const CHANGELOG = [
+  { v:'1.44.4', date:'2026-10-10', notes:[
+    'Salabota kļūda mēneša maiņā: ja pēc jauna mēneša sākšanās (piem., 1. oktobrī) saglabāja iepriekšējā mēneša datus arhīvā, izveidojās divi vienādi mēneši. Lietotne tagad pati precīzi atceras, kuru mēnesi attēlo pašreizējie dati',
+    'Atgādinājums "sākt jaunu mēnesi" tagad uzticami parādās pēc kalendārā mēneša maiņas, un "Dienas tēriņi" sadaļas "Šis mēnesis" rāda to mēnesi, kuru tu patiešām rediģē',
+  ], notesEn:[
+    'Fixed a month-rollover bug: saving the previous month to the archive after a new calendar month had started (e.g. on Oct 1st) created two identical months. The app now keeps track of exactly which month the current data belongs to',
+    'The "start a new month" reminder now reliably appears after the calendar month changes, and "This month" in Daily spending shows the month you are actually editing',
+  ]},
   { v:'1.44.3', date:'2026-09-09', notes:[
     'Papildu aizsardzība pret nejaušu "Jauns mēnesis" nospiešanu — tagad jāieraksta nākamā mēneša nosaukums, lai poga kļūtu aktīva',
     'Arhīva sarakstā pievienota poga "Atjaunot" — ļauj jebkuru arhivētu mēnesi 1:1 pārkopēt atpakaļ aktuālajā budžetā (piem., ja mēnesis nejauši aizvērts)',

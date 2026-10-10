@@ -288,6 +288,7 @@ function catColor(key){ const c = catList().find(x=>x.key===key); return safeCol
 const DEFAULT = {
   income: 0,
   periodName: '',
+  periodKey: '',
   bills: [],
   credits: [],
   categories: structuredClone(DEFAULT_CATEGORIES),
@@ -299,6 +300,7 @@ const DEFAULT = {
 const DEFAULT_EN = {
   income: 0,
   periodName: '',
+  periodKey: '',
   bills: [],
   credits: [],
   categories: structuredClone(DEFAULT_CATEGORIES_EN),
@@ -348,6 +350,7 @@ function resetAccountState(){
   lastSyncedBills = [];
   lastSyncedSavingsGoals = [];
   archiveCache = [];
+  archiveLoaded = false;
   state = structuredClone(defaultSeed());
 }
 
@@ -555,6 +558,7 @@ function subscribeSnapshot(uid, isRetry){
       const incoming = {
         income: d.income ?? DEFAULT.income,
         periodName: d.periodName || '',
+        periodKey: validMonthKey(d.periodKey) ? d.periodKey : '',
         bills: state.bills,
         credits: state.credits,
         categories: state.categories,
@@ -563,7 +567,7 @@ function subscribeSnapshot(uid, isRetry){
         salaryDay: (d.salaryDay !== undefined && d.salaryDay !== null) ? Number(d.salaryDay) : null,
         savingsGoals: state.savingsGoals
       };
-      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, salaryDay: incoming.salaryDay });
+      const incomingJSON = JSON.stringify({ income: incoming.income, periodName: incoming.periodName, salaryDay: incoming.salaryDay, periodKey: incoming.periodKey || null });
       if(incomingJSON === lastSentJSON){ setSync('ok', t('sync.synced')); return; }
       // localDirty: kamēr lokālā izmaiņa vēl nav veiksmīgi nosūtīta uz Firestore (600ms
       // debounce + pats setDoc), NEKAD nepārrakstīt state ar ienākošo snapshot — tas ir
@@ -576,7 +580,7 @@ function subscribeSnapshot(uid, isRetry){
       // New user: start with empty-ish defaults (no personal data). `categories`/`credits`/
       // `extraIncome`/`reminders`/`bills`/`savingsGoals` NAV šeit — tos pārvalda savi
       // neatkarīgie subkolekciju klausītāji.
-      const incoming = { income: 0, periodName: '', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders, extraIncome: state.extraIncome, salaryDay: null, savingsGoals: state.savingsGoals };
+      const incoming = { income: 0, periodName: '', periodKey: '', bills: state.bills, credits: state.credits, categories: state.categories, reminders: state.reminders, extraIncome: state.extraIncome, salaryDay: null, savingsGoals: state.savingsGoals };
       // Tas pats drošības aizsargs, ko izmanto "dokuments eksistē" zars augstāk — šis
       // zars var nostrādāt arī tad, ja galvenais dokuments tiek dzēsts KAMĒR lietotājs
       // aktīvi rediģē (piem. paralēla konta dzēšana citā cilnē) — bez šī tas uzreiz
@@ -945,11 +949,17 @@ async function pushNow(){
     if(state.salaryDay !== undefined && state.salaryDay !== null && state.salaryDay !== ''){
       payload.salaryDay = Math.min(Math.max(parseInt(state.salaryDay,10)||1, 1), 31);
     }
+    // periodKey — kuru kalendāro mēnesi attēlo pašreizējie (nearhivētie) dati. Neobligāts
+    // lauks (veciem kontiem vēl nav): ja trūkst, vienreiz atvasinām un saglabājam, lai
+    // turpmāk tas būtu STABILS un nebūtu jāmin no arhīva (sk. resolveLivePeriodKey()).
+    const pk = resolveLivePeriodKey(true);
+    if(pk){ payload.periodKey = pk; state.periodKey = pk; }
 
     lastSentJSON = JSON.stringify({
       income: payload.income,
       periodName: payload.periodName,
-      salaryDay: payload.salaryDay ?? null
+      salaryDay: payload.salaryDay ?? null,
+      periodKey: payload.periodKey ?? null
     });
 
     // 2. SŪTĀM UZ MĀKONI
@@ -1015,7 +1025,7 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':
 const collapsedBills = new Set();
 
 // ---- Working month label (shown next to "Rēķini", editable) ----
-function currentPeriodLabel(){ return (state.periodName||'').trim() || monthLabel(monthKey()); }
+function currentPeriodLabel(){ return (state.periodName||'').trim() || monthLabel(liveMonthKey()); }
 function renderPeriodLabel(){ const el = $('periodLabel'); if(el) el.textContent = '· ' + currentPeriodLabel(); }
 function openPeriodLabelEdit(){
   const span = $('periodLabel'), input = $('periodLabelInput');
@@ -1677,33 +1687,50 @@ function renderCategories(total){
 let archiveCache = [];
 
 function monthKey(d=new Date()){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-// Mēnesis, ko FAKTISKI attēlo pašreizējie (vēl nearhivētie) dati — atšķirībā no
-// monthKey(), kas vienmēr atgriež ŠODIENAS reālo kalendāra mēnesi. Tie sakrīt, KAMĒR
-// lietotājs regulāri pāriet uz jaunu mēnesi tajā pašā dienā, kad tas sākas — bet, ja
-// lietotājs "Jauns mēnesis" nospiež VĒLĀK (piem. 1. septembrī vēl skata augusta datus),
-// monthKey() jau būtu "nākamais" mēnesis, kaut gan ekrānā redzamie/arhivējamie dati
-// joprojām pieder IEPRIEKŠĒJAM mēnesim. Tā vietā, lai minētu pēc šodienas datuma,
-// atvasinām no pēdējā JAU arhivētā mēneša + 1 — tas vienmēr pareizi seko darba plūsmai
-// neatkarīgi no tā, cik dienas vēlu lietotājs faktiski nospiež pogu.
-function liveMonthKey(){
-  const validIds = archiveCache
-    .map(a=>archiveMonthId(a))
-    .filter(id=>id)
-    .sort();
+function validMonthKey(k){ return typeof k==='string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(k); }
+let archiveLoaded = false;
+
+// Mēnesis, ko FAKTISKI attēlo pašreizējie (vēl nearhivētie) dati ("dzīvais periods").
+// Tas ir NEATKARĪGS gan no šodienas datuma (monthKey()), gan no arhīva satura:
+// glabājas tieši kā `state.periodKey` (galvenajā budgets/{uid} dokumentā) un mainās
+// TIKAI divos gadījumos — "Jauns mēnesis" (→ nākamais periods) un "Atjaunot" no arhīva.
+// Iepriekš to atvasināja no arhīva ("pēdējais arhivētais + 1"), bet arhīvs nevar atšķirt
+// starpsaglabājumu ("Saglabāt") no aizvērta mēneša — tāpēc pirmā saglabāšana pēc
+// kalendārā mēneša maiņas (1. oktobrī, kad arhīvā jau bija septembra starpsaglabājums)
+// ierakstīja septembra datus ar atslēgu 2026-10 un radīja divus vienādus mēnešus.
+function legacyLiveMonthKey(){
+  const validIds = archiveCache.map(a=>archiveMonthId(a)).filter(id=>id).sort();
   if(!validIds.length) return monthKey();
   const last = validIds[validIds.length-1];
   const [y,m] = last.split('-').map(Number);
-  const nextDate = new Date(y, m, 1); // m ir 1-indeksēts (jau "+1 mēnesis" no pēdējā arhīva)
-  const next = nextDate.getFullYear()+'-'+String(nextDate.getMonth()+1).padStart(2,'0');
-  // "Saglabāt aktuālo mēnesi → arhīvā" (closeMonthBtn) ir STARPSAGLABĀJUMS —
-  // to var nospiest atkārtoti, kamēr mēnesis vēl NAV formāli aizvērts ar
-  // "Jauns mēnesis". Ja to izdara, `last` iepriekš minētajā aprēķinā vairs
-  // NAV patiesi noslēgts iepriekšējais mēnesis, bet gan paša VĒL AKTĪVĀ
-  // (nearhivētā) perioda starpsaglabājums — un "last + 1" katru reizi virzītos
-  // tālāk (Septembris → Oktobris → Novembris...). Atpazīstam šo gadījumu: ja
-  // "nākamais" mēnesis vēl pat nav pienācis reālajā kalendārā, tas nozīmē
-  // `last` PATS IR pašreizējais darba mēnesis, nevis tā priekštecis.
+  const next = monthKey(new Date(y, m, 1));
   return next <= monthKey() ? next : last;
+}
+// forSave=true: ja nevar droši noteikt (arhīvs vēl nav ielādēts un periodName nav
+// atpazīstams), atgriež null — pushNow tad lauku neraksta, nevis ieraksta minējumu.
+// Migrācijai (veciem kontiem bez periodKey): vispirms periodName ("Oktobris 2026"),
+// tad vecā arhīva heiristika, tikai pēc tam šodienas mēnesis.
+function resolveLivePeriodKey(forSave){
+  if(validMonthKey(state.periodKey)) return state.periodKey;
+  const fromName = parseMonthName(state.periodName);
+  if(validMonthKey(fromName)) return fromName;
+  if(archiveLoaded) return legacyLiveMonthKey();
+  return forSave ? null : monthKey();
+}
+function liveMonthKey(){ return resolveLivePeriodKey(false); }
+// Nākamais dzīvais periods pēc "Jauns mēnesis": mēnesis pēc pašreizējā, bet ne agrāk
+// par šodienas kalendāro mēnesi (ja aizver vēlu vai izlaiž mēnešus).
+function nextPeriodKey(){
+  const next = monthKey((()=>{ const [y,m]=liveMonthKey().split('-').map(Number); return new Date(y, m, 1); })());
+  const today = monthKey();
+  return next > today ? next : today;
+}
+// Ieraksta nosaukums arhīvā: periodName, ja tas neatrunā atslēgai (custom teksts vai
+// tā paša mēneša nosaukums); ja periodName atpazīstami norāda UZ CITU mēnesi, nosaukumu
+// nesaglabājam — arhīvs tad rāda monthLabel(atslēga) un nav "nepareizi iezīmēts".
+function archiveNameForKey(label, key){
+  const parsed = parseMonthName(label);
+  return (label && (!parsed || parsed===key)) ? label : '';
 }
 // Mēneša nosaukumu tabulas TIKAI parseMonthName() vajadzībām — neatkarīgas no i18n
 // sistēmas un no lietotāja PAŠREIZĒJĀS valodas, jo arhīva ieraksta `name` lauks
@@ -1751,6 +1778,7 @@ async function loadArchive(){
     archiveCache = [];
     snap.forEach(d => archiveCache.push({ id: d.id, ...d.data() }));
     archiveCache.sort((a,b)=> (b.archivedAt||0) - (a.archivedAt||0) || String(b.id).localeCompare(String(a.id)));
+    archiveLoaded = true;
     renderArchive();
     renderTrends();
     updateNewMonthBanner();
@@ -1935,8 +1963,11 @@ function renderDailySpendingChart(){
 
   let bills, year, monthIdx0, categoriesSnapshot;
   if(selected === 'current'){
-    const now = new Date();
-    bills = state.bills||[]; year = now.getFullYear(); monthIdx0 = now.getMonth();
+    // "Šis mēnesis" = DZĪVAIS periods (periodKey), nevis šodienas kalendārais mēnesis —
+    // citādi pēc mēneša maiņas, kamēr vēl rediģē iepriekšējo, visi maksājumi tiktu
+    // sabīdīti uz jaunā mēneša 1. dienu.
+    const [ly, lm] = liveMonthKey().split('-').map(Number);
+    bills = state.bills||[]; year = ly; monthIdx0 = lm-1;
     categoriesSnapshot = null; // catFromSnapshot() fallback uz dzīvo catList()
   } else {
     const a = archiveCache.find(x=>x.id===selected);
@@ -2340,7 +2371,7 @@ function renderCategoryChart(months){
 $('closeMonthBtn').addEventListener('click', async ()=>{
   const key = liveMonthKey();
   const existing = archiveCache.find(a=>a.id===key);
-  const label = (state.periodName||'').trim();
+  const label = archiveNameForKey((state.periodName||'').trim(), key);
   const displayLabel = label || monthLabel(key);
   const msg = existing
     ? t('archive.confirm_overwrite', {label: displayLabel})
@@ -2415,6 +2446,8 @@ $('archiveList').addEventListener('click', async e=>{
     state.credits = structuredClone(src.credits||[]);
     state.extraIncome = structuredClone(src.extraIncome||[]);
     if(label) state.periodName = label;
+    const restoredKey = archiveMonthId(src);
+    if(validMonthKey(restoredKey)) state.periodKey = restoredKey;
     render(); pushNow();
     alert(t('archive.restore_done', {label}));
   }
@@ -2908,7 +2941,7 @@ function openNewMonthModal(){
     </label>`).join('');
   const hintHtml = t('new_month.hint') + '<br><br>'
     + t('new_month.hint_archive', {label: `<strong>${escapeHtml(currentPeriodLabel())}</strong>`}) + ' '
-    + t('new_month.hint_rename', {label: `<strong>${escapeHtml(monthLabel(monthKey()))}</strong>`})
+    + t('new_month.hint_rename', {label: `<strong>${escapeHtml(monthLabel(nextPeriodKey()))}</strong>`})
     + (hasGoalBills ? t('new_month.hint_goals') : '');
   // Šī darbība NEATGRIEZENISKI notīra summējošo rēķinu epizodes un papildu
   // ienākumus (arhivē tos, bet dzīvajā skatā tie pazūd) — reāls incidents parādīja,
@@ -2916,7 +2949,7 @@ function openNewMonthModal(){
   // confirm() dialogam. Rakstīšanas apstiprinājums (jāieraksta nākamā mēneša
   // nosaukums) ir daudz drošāks pret nejaušiem pieskārieniem, jo prasa reālu
   // teksta ievadi caur ekrāna tastatūru, ne tikai pieskārienu jebkurā vietā.
-  const nextMonthLabel = monthLabel(monthKey());
+  const nextMonthLabel = monthLabel(nextPeriodKey());
   root.innerHTML = `
     <div class="modal-back" id="nmBack">
       <div class="modal" style="max-width:460px;">
@@ -2951,7 +2984,7 @@ function openNewMonthModal(){
       try {
         const key = liveMonthKey();
         const existing = archiveCache.find(a=>a.id===key);
-        const label = (state.periodName||'').trim();
+        const label = archiveNameForKey((state.periodName||'').trim(), key);
         const snapshot = {
           income: state.income,
           bills: structuredClone(state.bills),
@@ -2981,7 +3014,9 @@ function openNewMonthModal(){
     // Papildus ienākumi ir piesaistīti konkrētajam mēnesim (kā rēķinu epizodes) —
     // arhivēti augstāk, tagad notīrīti jaunajam mēnesim.
     state.extraIncome = [];
-    state.periodName = monthLabel(monthKey());
+    const newKey = nextPeriodKey();
+    state.periodKey = newKey;
+    state.periodName = monthLabel(newKey);
     close(); render(); updateTotals(); scheduleSave();
     alert(t('new_month.done'));
   });
@@ -3354,6 +3389,7 @@ $('fileIn').addEventListener('change', e=>{
       ...state,
       income: Number(data.income)||0,
       periodName: (typeof data.periodName==='string') ? data.periodName : (state.periodName||''),
+      periodKey: validMonthKey(data.periodKey) ? data.periodKey : (state.periodKey||''),
       bills: Array.isArray(data.bills)?data.bills:[],
       credits: Array.isArray(data.credits)?data.credits:[],
       categories: importedCategories,
